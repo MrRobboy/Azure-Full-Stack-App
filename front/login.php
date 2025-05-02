@@ -93,7 +93,7 @@ ob_start();
 
 		try {
 			console.log('Tentative de connexion...');
-			const response = await fetch('http://localhost:727/back/api/auth/login', {
+			const response = await fetch('http://localhost:727/api/auth/login', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'

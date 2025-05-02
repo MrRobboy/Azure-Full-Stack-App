@@ -16,10 +16,10 @@ RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 RewriteLog "/var/log/apache2/rewrite.log"
 RewriteLogLevel 3
 
-# Redirection de toutes les requêtes vers routes/api.php
+# Redirection de toutes les requêtes API vers routes/api.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^api/(.*)$ routes/api.php [QSA,L]
+RewriteRule ^api/(.*)$ back/routes/api.php [QSA,L]
 
 # Désactivation de l'affichage du contenu des répertoires
 Options -Indexes
