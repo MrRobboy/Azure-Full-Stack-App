@@ -17,25 +17,34 @@ class Prof
 	public function authenticate($email, $password)
 	{
 		try {
-			$stmt = $this->db->prepare("SELECT * FROM PROF WHERE email = ?");
-			if (!$stmt) {
-				throw new Exception('Erreur de préparation de la requête', 500);
-			}
+			error_log("Tentative d'authentification pour l'email: " . $email);
 
-			$stmt->execute([$email]);
+			$stmt = $this->db->prepare("SELECT * FROM PROF WHERE email = :email");
+			$stmt->bindParam(':email', $email);
+			$stmt->execute();
+
 			$prof = $stmt->fetch();
 
 			if (!$prof) {
-				throw new Exception('Email non trouvé', 401);
+				error_log("Email non trouvé dans la base de données");
+				throw new Exception("Email non trouvé", 404);
 			}
+
+			error_log("Utilisateur trouvé, vérification du mot de passe");
 
 			if (!password_verify($password, $prof['password'])) {
-				throw new Exception('Mot de passe incorrect', 401);
+				error_log("Mot de passe incorrect");
+				throw new Exception("Mot de passe incorrect", 401);
 			}
 
+			error_log("Authentification réussie pour l'utilisateur: " . $email);
 			return $prof;
 		} catch (PDOException $e) {
-			throw new Exception('Erreur lors de l\'authentification', 500);
+			error_log("Erreur PDO lors de l'authentification: " . $e->getMessage());
+			throw new Exception("Erreur lors de la vérification des identifiants", 500);
+		} catch (Exception $e) {
+			error_log("Erreur lors de l'authentification: " . $e->getMessage());
+			throw $e;
 		}
 	}
 

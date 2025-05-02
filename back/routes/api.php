@@ -52,10 +52,20 @@ function checkAuth()
 }
 
 try {
+	error_log("Début de la requête API");
+
 	// Routes d'authentification
 	if ($segments[0] === 'auth') {
 		if ($method === 'POST' && $segments[1] === 'login') {
+			error_log("Traitement de la requête de login");
+
 			$data = json_decode(file_get_contents('php://input'), true);
+
+			if (!$data) {
+				error_log("Données JSON invalides");
+				throw new Exception("Données invalides", 400);
+			}
+
 			$result = $authController->login($data['email'], $data['password']);
 
 			if ($result['success']) {
@@ -64,12 +74,17 @@ try {
 				sendResponse(['error' => $result['error']], $result['code']);
 			}
 		} elseif ($method === 'POST' && $segments[1] === 'logout') {
+			error_log("Traitement de la requête de logout");
+
 			$result = $authController->logout();
 			if ($result['success']) {
 				sendResponse(['message' => $result['message']]);
 			} else {
 				sendResponse(['error' => $result['error']], $result['code']);
 			}
+		} else {
+			error_log("Route d'authentification non trouvée");
+			throw new Exception("Route non trouvée", 404);
 		}
 	}
 
@@ -204,5 +219,11 @@ try {
 	// Route non trouvée
 	sendResponse(['error' => 'Route non trouvée'], 404);
 } catch (Exception $e) {
-	sendResponse(['error' => $e->getMessage()], 400);
+	error_log("Erreur dans l'API: " . $e->getMessage());
+	http_response_code($e->getCode() ?: 500);
+	echo json_encode([
+		'success' => false,
+		'error' => $e->getMessage(),
+		'code' => $e->getCode() ?: 500
+	]);
 }
