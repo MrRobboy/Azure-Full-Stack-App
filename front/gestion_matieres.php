@@ -46,7 +46,7 @@ ob_start();
 	// Fonction pour charger les matières
 	async function loadMatieres() {
 		try {
-			const response = await fetch('api/matieres');
+			const response = await fetch('../api/matieres');
 			const matieres = await response.json();
 
 			const tbody = document.querySelector('#matieresTable tbody');
@@ -65,6 +65,7 @@ ob_start();
 			});
 		} catch (error) {
 			console.error('Erreur lors du chargement des matières:', error);
+			handleApiError(error);
 		}
 	}
 
@@ -74,7 +75,7 @@ ob_start();
 		const nom = document.getElementById('nom').value;
 
 		try {
-			const response = await fetch('api/matieres', {
+			const response = await fetch('../api/matieres', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -86,14 +87,15 @@ ob_start();
 
 			if (response.ok) {
 				document.getElementById('nom').value = '';
+				showSuccess('Matière ajoutée avec succès');
 				loadMatieres();
 			} else {
 				const error = await response.json();
-				alert(error.message || 'Erreur lors de l\'ajout de la matière');
+				showError(error.message || 'Erreur lors de l\'ajout de la matière');
 			}
 		} catch (error) {
 			console.error('Erreur:', error);
-			alert('Erreur lors de l\'ajout de la matière');
+			handleApiError(error);
 		}
 	});
 
@@ -102,7 +104,7 @@ ob_start();
 		const newNom = prompt('Nouveau nom de la matière:', currentNom);
 		if (newNom && newNom !== currentNom) {
 			try {
-				const response = await fetch(`api/matieres/${id}`, {
+				const response = await fetch(`../api/matieres/${id}`, {
 					method: 'PUT',
 					headers: {
 						'Content-Type': 'application/json'
@@ -113,14 +115,15 @@ ob_start();
 				});
 
 				if (response.ok) {
+					showSuccess('Matière modifiée avec succès');
 					loadMatieres();
 				} else {
 					const error = await response.json();
-					alert(error.message || 'Erreur lors de la modification de la matière');
+					showError(error.message || 'Erreur lors de la modification de la matière');
 				}
 			} catch (error) {
 				console.error('Erreur:', error);
-				alert('Erreur lors de la modification de la matière');
+				handleApiError(error);
 			}
 		}
 	}
@@ -129,19 +132,20 @@ ob_start();
 	async function deleteMatiere(id) {
 		if (confirm('Êtes-vous sûr de vouloir supprimer cette matière ?')) {
 			try {
-				const response = await fetch(`api/matieres/${id}`, {
+				const response = await fetch(`../api/matieres/${id}`, {
 					method: 'DELETE'
 				});
 
 				if (response.ok) {
+					showSuccess('Matière supprimée avec succès');
 					loadMatieres();
 				} else {
 					const error = await response.json();
-					alert(error.message || 'Erreur lors de la suppression de la matière');
+					showError(error.message || 'Erreur lors de la suppression de la matière');
 				}
 			} catch (error) {
 				console.error('Erreur:', error);
-				alert('Erreur lors de la suppression de la matière');
+				handleApiError(error);
 			}
 		}
 	}
