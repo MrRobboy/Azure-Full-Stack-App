@@ -1,4 +1,9 @@
 <?php
+// Activation de l'affichage des erreurs
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../controllers/AuthController.php';
 require_once __DIR__ . '/../controllers/NoteController.php';
 require_once __DIR__ . '/../controllers/MatiereController.php';
@@ -231,6 +236,13 @@ try {
 	echo json_encode([
 		'success' => false,
 		'error' => $e->getMessage(),
-		'code' => $e->getCode() ?: 500
+		'code' => $e->getCode() ?: 500,
+		'debug' => [
+			'message' => $e->getMessage(),
+			'code' => $e->getCode(),
+			'file' => $e->getFile(),
+			'line' => $e->getLine(),
+			'trace' => $e->getTraceAsString()
+		]
 	]);
 }
