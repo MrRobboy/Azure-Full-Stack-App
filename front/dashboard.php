@@ -15,28 +15,28 @@ ob_start();
         <i class="fas fa-graduation-cap fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
         <h3>Notes</h3>
         <p id="notesCount">Chargement...</p>
-        <a href="/gestion_notes.php" class="btn btn-primary">Gérer les notes</a>
+        <a href="gestion_notes.php" class="btn btn-primary">Gérer les notes</a>
     </div>
 
     <div class="dashboard-card">
         <i class="fas fa-book fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
         <h3>Matières</h3>
         <p id="matieresCount">Chargement...</p>
-        <a href="/gestion_matieres.php" class="btn btn-primary">Gérer les matières</a>
+        <a href="gestion_matieres.php" class="btn btn-primary">Gérer les matières</a>
     </div>
 
     <div class="dashboard-card">
         <i class="fas fa-users fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
         <h3>Classes</h3>
         <p id="classesCount">Chargement...</p>
-        <a href="/gestion_classes.php" class="btn btn-primary">Gérer les classes</a>
+        <a href="gestion_classes.php" class="btn btn-primary">Gérer les classes</a>
     </div>
 
     <div class="dashboard-card">
         <i class="fas fa-calendar-alt fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
         <h3>Examens</h3>
         <p id="examensCount">Chargement...</p>
-        <a href="/gestion_exams.php" class="btn btn-primary">Gérer les examens</a>
+        <a href="gestion_exams.php" class="btn btn-primary">Gérer les examens</a>
     </div>
 </div>
 
@@ -94,10 +94,10 @@ ob_start();
     async function loadCounters() {
         try {
             const [notesRes, matieresRes, classesRes, examensRes] = await Promise.all([
-                fetch('/api/notes'),
-                fetch('/api/matieres'),
-                fetch('/api/classes'),
-                fetch('/api/examens')
+                fetch('api/notes'),
+                fetch('api/matieres'),
+                fetch('api/classes'),
+                fetch('api/examens')
             ]);
 
             const [notes, matieres, classes, examens] = await Promise.all([
