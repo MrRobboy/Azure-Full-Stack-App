@@ -1,129 +1,180 @@
 <?php
-require_once 'config.php';
+session_start();
 
-// Vérification de la connexion
 if (!isset($_SESSION['prof_id'])) {
-	header('Location: index.php');
+	header('Location: login.php');
 	exit();
 }
 
-// Traitement des actions sur les classes
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-	if (isset($_POST['action'])) {
-		switch ($_POST['action']) {
-			case 'add':
-				$stmt = $pdo->prepare("INSERT INTO CLASSE (nom_classe, niveau, numero) VALUES (?, ?, ?)");
-				$stmt->execute([$_POST['nom_classe'], $_POST['niveau'], $_POST['numero']]);
-				break;
-			case 'update':
-				$stmt = $pdo->prepare("UPDATE CLASSE SET nom_classe = ?, niveau = ?, numero = ? WHERE id_classe = ?");
-				$stmt->execute([$_POST['nom_classe'], $_POST['niveau'], $_POST['numero'], $_POST['classe_id']]);
-				break;
-			case 'delete':
-				$stmt = $pdo->prepare("DELETE FROM CLASSE WHERE id_classe = ?");
-				$stmt->execute([$_POST['classe_id']]);
-				break;
-		}
-		header('Location: gestion_classes.php');
-		exit();
-	}
-}
-
-// Récupération des classes
-$stmt = $pdo->prepare("SELECT * FROM CLASSE");
-$stmt->execute();
-$classes = $stmt->fetchAll();
+$pageTitle = "Gestion des Classes";
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="fr">
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Gestion des Classes - Système de Gestion des Notes</title>
-	<link rel="stylesheet" href="style.css">
-</head>
+<div class="container">
+	<div class="main-content">
+		<h1>Gestion des Classes</h1>
 
-<body>
-	<div class="container">
-		<div class="dashboard">
-			<div class="sidebar">
-				<h2>Menu</h2>
-				<ul class="nav-menu">
-					<li><a href="dashboard.php">Tableau de bord</a></li>
-					<li><a href="gestion_notes.php">Gestion des notes</a></li>
-					<li><a href="gestion_matieres.php">Gestion des matières</a></li>
-					<li><a href="gestion_classes.php">Gestion des classes</a></li>
-					<li><a href="gestion_exams.php">Gestion des examens</a></li>
-					<li><a href="logout.php">Déconnexion</a></li>
-				</ul>
-			</div>
-
-			<div class="main-content">
-				<h1>Gestion des Classes</h1>
-
-				<div class="form-container">
-					<h3>Ajouter une classe</h3>
-					<form action="gestion_classes.php" method="POST">
-						<input type="hidden" name="action" value="add">
-
-						<div class="form-row">
-							<label for="nom_classe">Nom de la classe :</label>
-							<input type="text" name="nom_classe" id="nom_classe" required>
-						</div>
-
-						<div class="form-row">
-							<label for="niveau">Niveau :</label>
-							<input type="text" name="niveau" id="niveau" required>
-						</div>
-
-						<div class="form-row">
-							<label for="numero">Numéro :</label>
-							<input type="text" name="numero" id="numero" required>
-						</div>
-
-						<button type="submit" class="btn">Ajouter la classe</button>
-					</form>
+		<div class="form-container">
+			<h3>Ajouter une classe</h3>
+			<form id="addClasseForm">
+				<div class="form-row">
+					<label for="nom">Nom de la classe :</label>
+					<input type="text" name="nom" id="nom" required>
 				</div>
+				<div class="form-row">
+					<label for="niveau">Niveau :</label>
+					<input type="text" name="niveau" id="niveau" required>
+				</div>
+				<div class="form-row">
+					<label for="numero">Numéro :</label>
+					<input type="text" name="numero" id="numero" required>
+				</div>
+				<button type="submit" class="btn">Ajouter la classe</button>
+			</form>
+		</div>
 
-				<h3>Liste des classes</h3>
-				<table>
-					<thead>
-						<tr>
-							<th>Nom</th>
-							<th>Niveau</th>
-							<th>Numéro</th>
-							<th>Actions</th>
-						</tr>
-					</thead>
-					<tbody>
-						<?php foreach ($classes as $classe): ?>
-							<tr>
-								<td><?php echo htmlspecialchars($classe['nom_classe']); ?></td>
-								<td><?php echo htmlspecialchars($classe['niveau']); ?></td>
-								<td><?php echo htmlspecialchars($classe['numero']); ?></td>
-								<td>
-									<form action="gestion_classes.php" method="POST" style="display: inline;">
-										<input type="hidden" name="action" value="update">
-										<input type="hidden" name="classe_id" value="<?php echo $classe['id_classe']; ?>">
-										<input type="text" name="nom_classe" value="<?php echo htmlspecialchars($classe['nom_classe']); ?>" required>
-										<input type="text" name="niveau" value="<?php echo htmlspecialchars($classe['niveau']); ?>" required>
-										<input type="text" name="numero" value="<?php echo htmlspecialchars($classe['numero']); ?>" required>
-										<button type="submit" class="btn">Modifier</button>
-									</form>
-									<form action="gestion_classes.php" method="POST" style="display: inline;">
-										<input type="hidden" name="action" value="delete">
-										<input type="hidden" name="classe_id" value="<?php echo $classe['id_classe']; ?>">
-										<button type="submit" class="btn btn-danger">Supprimer</button>
-									</form>
-								</td>
-							</tr>
-						<?php endforeach; ?>
-					</tbody>
-				</table>
-			</div>
+		<h3>Liste des classes</h3>
+		<div class="table-responsive">
+			<table class="table" id="classesTable">
+				<thead>
+					<tr>
+						<th>Nom</th>
+						<th>Niveau</th>
+						<th>Numéro</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					<!-- Les classes seront chargées dynamiquement -->
+				</tbody>
+			</table>
 		</div>
 	</div>
-</body>
+</div>
 
-</html>
+<script>
+	// Fonction pour charger les classes
+	async function loadClasses() {
+		try {
+			const response = await fetch('api/classes');
+			const classes = await response.json();
+
+			const tbody = document.querySelector('#classesTable tbody');
+			tbody.innerHTML = '';
+
+			classes.forEach(classe => {
+				const tr = document.createElement('tr');
+				tr.innerHTML = `
+					<td>${classe.nom_classe}</td>
+					<td>${classe.niveau}</td>
+					<td>${classe.numero}</td>
+					<td>
+						<button class="btn btn-edit" onclick="editClasse(${classe.id_classe}, '${classe.nom_classe}', '${classe.niveau}', '${classe.numero}')">Modifier</button>
+						<button class="btn btn-danger" onclick="deleteClasse(${classe.id_classe})">Supprimer</button>
+					</td>
+				`;
+				tbody.appendChild(tr);
+			});
+		} catch (error) {
+			console.error('Erreur lors du chargement des classes:', error);
+		}
+	}
+
+	// Fonction pour ajouter une classe
+	document.getElementById('addClasseForm').addEventListener('submit', async function(e) {
+		e.preventDefault();
+		const nom = document.getElementById('nom').value;
+		const niveau = document.getElementById('niveau').value;
+		const numero = document.getElementById('numero').value;
+
+		try {
+			const response = await fetch('api/classes', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					nom_classe: nom,
+					niveau,
+					numero
+				})
+			});
+
+			if (response.ok) {
+				document.getElementById('nom').value = '';
+				document.getElementById('niveau').value = '';
+				document.getElementById('numero').value = '';
+				loadClasses();
+			} else {
+				const error = await response.json();
+				alert(error.message || 'Erreur lors de l\'ajout de la classe');
+			}
+		} catch (error) {
+			console.error('Erreur:', error);
+			alert('Erreur lors de l\'ajout de la classe');
+		}
+	});
+
+	// Fonction pour modifier une classe
+	async function editClasse(id, currentNom, currentNiveau, currentNumero) {
+		const newNom = prompt('Nouveau nom de la classe:', currentNom);
+		const newNiveau = prompt('Nouveau niveau:', currentNiveau);
+		const newNumero = prompt('Nouveau numéro:', currentNumero);
+
+		if (newNom && newNiveau && newNumero &&
+			(newNom !== currentNom || newNiveau !== currentNiveau || newNumero !== currentNumero)) {
+			try {
+				const response = await fetch(`api/classes/${id}`, {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						nom_classe: newNom,
+						niveau: newNiveau,
+						numero: newNumero
+					})
+				});
+
+				if (response.ok) {
+					loadClasses();
+				} else {
+					const error = await response.json();
+					alert(error.message || 'Erreur lors de la modification de la classe');
+				}
+			} catch (error) {
+				console.error('Erreur:', error);
+				alert('Erreur lors de la modification de la classe');
+			}
+		}
+	}
+
+	// Fonction pour supprimer une classe
+	async function deleteClasse(id) {
+		if (confirm('Êtes-vous sûr de vouloir supprimer cette classe ?')) {
+			try {
+				const response = await fetch(`api/classes/${id}`, {
+					method: 'DELETE'
+				});
+
+				if (response.ok) {
+					loadClasses();
+				} else {
+					const error = await response.json();
+					alert(error.message || 'Erreur lors de la suppression de la classe');
+				}
+			} catch (error) {
+				console.error('Erreur:', error);
+				alert('Erreur lors de la suppression de la classe');
+			}
+		}
+	}
+
+	// Charger les classes au chargement de la page
+	document.addEventListener('DOMContentLoaded', loadClasses);
+</script>
+
+<?php
+$content = ob_get_clean();
+require_once 'templates/base.php';
+?>

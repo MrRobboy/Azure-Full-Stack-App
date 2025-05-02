@@ -1,115 +1,156 @@
 <?php
-require_once 'config.php';
+session_start();
 
-// Vérification de la connexion
 if (!isset($_SESSION['prof_id'])) {
-	header('Location: index.php');
+	header('Location: login.php');
 	exit();
 }
 
-$prof_id = $_SESSION['prof_id'];
-
-// Traitement des actions sur les matières
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-	if (isset($_POST['action'])) {
-		switch ($_POST['action']) {
-			case 'add':
-				$stmt = $pdo->prepare("INSERT INTO MATIERE (nom) VALUES (?)");
-				$stmt->execute([$_POST['nom']]);
-				break;
-			case 'update':
-				$stmt = $pdo->prepare("UPDATE MATIERE SET nom = ? WHERE id_matiere = ?");
-				$stmt->execute([$_POST['nom'], $_POST['matiere_id']]);
-				break;
-			case 'delete':
-				$stmt = $pdo->prepare("DELETE FROM MATIERE WHERE id_matiere = ?");
-				$stmt->execute([$_POST['matiere_id']]);
-				break;
-		}
-		header('Location: gestion_matieres.php');
-		exit();
-	}
-}
-
-// Récupération des matières
-$stmt = $pdo->prepare("SELECT * FROM MATIERE");
-$stmt->execute();
-$matieres = $stmt->fetchAll();
+$pageTitle = "Gestion des Matières";
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="fr">
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Gestion des Matières - Système de Gestion des Notes</title>
-	<link rel="stylesheet" href="style.css">
-</head>
+<div class="container">
+	<div class="main-content">
+		<h1>Gestion des Matières</h1>
 
-<body>
-	<div class="container">
-		<div class="dashboard">
-			<div class="sidebar">
-				<h2>Menu</h2>
-				<ul class="nav-menu">
-					<li><a href="dashboard.php">Tableau de bord</a></li>
-					<li><a href="gestion_notes.php">Gestion des notes</a></li>
-					<li><a href="gestion_matieres.php">Gestion des matières</a></li>
-					<li><a href="gestion_classes.php">Gestion des classes</a></li>
-					<li><a href="gestion_exams.php">Gestion des examens</a></li>
-					<li><a href="logout.php">Déconnexion</a></li>
-				</ul>
-			</div>
-
-			<div class="main-content">
-				<h1>Gestion des Matières</h1>
-
-				<div class="form-container">
-					<h3>Ajouter une matière</h3>
-					<form action="gestion_matieres.php" method="POST">
-						<input type="hidden" name="action" value="add">
-
-						<div class="form-row">
-							<label for="nom">Nom de la matière :</label>
-							<input type="text" name="nom" id="nom" required>
-						</div>
-
-						<button type="submit" class="btn">Ajouter la matière</button>
-					</form>
+		<div class="form-container">
+			<h3>Ajouter une matière</h3>
+			<form id="addMatiereForm">
+				<div class="form-row">
+					<label for="nom">Nom de la matière :</label>
+					<input type="text" name="nom" id="nom" required>
 				</div>
+				<button type="submit" class="btn">Ajouter la matière</button>
+			</form>
+		</div>
 
-				<h3>Liste des matières</h3>
-				<table>
-					<thead>
-						<tr>
-							<th>Nom</th>
-							<th>Actions</th>
-						</tr>
-					</thead>
-					<tbody>
-						<?php foreach ($matieres as $matiere): ?>
-							<tr>
-								<td><?php echo htmlspecialchars($matiere['nom']); ?></td>
-								<td>
-									<form action="gestion_matieres.php" method="POST" style="display: inline;">
-										<input type="hidden" name="action" value="update">
-										<input type="hidden" name="matiere_id" value="<?php echo $matiere['id_matiere']; ?>">
-										<input type="text" name="nom" value="<?php echo htmlspecialchars($matiere['nom']); ?>" required>
-										<button type="submit" class="btn">Modifier</button>
-									</form>
-									<form action="gestion_matieres.php" method="POST" style="display: inline;">
-										<input type="hidden" name="action" value="delete">
-										<input type="hidden" name="matiere_id" value="<?php echo $matiere['id_matiere']; ?>">
-										<button type="submit" class="btn btn-danger">Supprimer</button>
-									</form>
-								</td>
-							</tr>
-						<?php endforeach; ?>
-					</tbody>
-				</table>
-			</div>
+		<h3>Liste des matières</h3>
+		<div class="table-responsive">
+			<table class="table" id="matieresTable">
+				<thead>
+					<tr>
+						<th>Nom</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					<!-- Les matières seront chargées dynamiquement -->
+				</tbody>
+			</table>
 		</div>
 	</div>
-</body>
+</div>
 
-</html>
+<script>
+	// Fonction pour charger les matières
+	async function loadMatieres() {
+		try {
+			const response = await fetch('api/matieres');
+			const matieres = await response.json();
+
+			const tbody = document.querySelector('#matieresTable tbody');
+			tbody.innerHTML = '';
+
+			matieres.forEach(matiere => {
+				const tr = document.createElement('tr');
+				tr.innerHTML = `
+					<td>${matiere.nom}</td>
+					<td>
+						<button class="btn btn-edit" onclick="editMatiere(${matiere.id_matiere}, '${matiere.nom}')">Modifier</button>
+						<button class="btn btn-danger" onclick="deleteMatiere(${matiere.id_matiere})">Supprimer</button>
+					</td>
+				`;
+				tbody.appendChild(tr);
+			});
+		} catch (error) {
+			console.error('Erreur lors du chargement des matières:', error);
+		}
+	}
+
+	// Fonction pour ajouter une matière
+	document.getElementById('addMatiereForm').addEventListener('submit', async function(e) {
+		e.preventDefault();
+		const nom = document.getElementById('nom').value;
+
+		try {
+			const response = await fetch('api/matieres', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					nom
+				})
+			});
+
+			if (response.ok) {
+				document.getElementById('nom').value = '';
+				loadMatieres();
+			} else {
+				const error = await response.json();
+				alert(error.message || 'Erreur lors de l\'ajout de la matière');
+			}
+		} catch (error) {
+			console.error('Erreur:', error);
+			alert('Erreur lors de l\'ajout de la matière');
+		}
+	});
+
+	// Fonction pour modifier une matière
+	async function editMatiere(id, currentNom) {
+		const newNom = prompt('Nouveau nom de la matière:', currentNom);
+		if (newNom && newNom !== currentNom) {
+			try {
+				const response = await fetch(`api/matieres/${id}`, {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						nom: newNom
+					})
+				});
+
+				if (response.ok) {
+					loadMatieres();
+				} else {
+					const error = await response.json();
+					alert(error.message || 'Erreur lors de la modification de la matière');
+				}
+			} catch (error) {
+				console.error('Erreur:', error);
+				alert('Erreur lors de la modification de la matière');
+			}
+		}
+	}
+
+	// Fonction pour supprimer une matière
+	async function deleteMatiere(id) {
+		if (confirm('Êtes-vous sûr de vouloir supprimer cette matière ?')) {
+			try {
+				const response = await fetch(`api/matieres/${id}`, {
+					method: 'DELETE'
+				});
+
+				if (response.ok) {
+					loadMatieres();
+				} else {
+					const error = await response.json();
+					alert(error.message || 'Erreur lors de la suppression de la matière');
+				}
+			} catch (error) {
+				console.error('Erreur:', error);
+				alert('Erreur lors de la suppression de la matière');
+			}
+		}
+	}
+
+	// Charger les matières au chargement de la page
+	document.addEventListener('DOMContentLoaded', loadMatieres);
+</script>
+
+<?php
+$content = ob_get_clean();
+require_once 'templates/base.php';
+?>
