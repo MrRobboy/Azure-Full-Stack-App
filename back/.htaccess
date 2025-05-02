@@ -1,6 +1,6 @@
 # Activation des logs
 php_flag log_errors on
-php_value error_log "logs/php_errors.log"
+php_value error_log "/var/log/azure-app/php_errors.log"
 
 # Activation de l'affichage des erreurs
 php_flag display_errors on
@@ -13,7 +13,7 @@ RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 # Log des requêtes pour le débogage
-RewriteLog "/var/log/apache2/rewrite.log"
+RewriteLog "/var/log/azure-app/rewrite.log"
 RewriteLogLevel 3
 
 # Redirection de toutes les requêtes API vers routes/api.php
