@@ -53,6 +53,10 @@ function checkAuth()
 
 try {
 	error_log("Début de la requête API");
+	error_log("Méthode HTTP: " . $_SERVER['REQUEST_METHOD']);
+	error_log("URI: " . $_SERVER['REQUEST_URI']);
+	error_log("Script: " . $_SERVER['SCRIPT_NAME']);
+	error_log("Document Root: " . $_SERVER['DOCUMENT_ROOT']);
 
 	// Routes d'authentification
 	if ($segments[0] === 'auth') {
@@ -60,6 +64,7 @@ try {
 			error_log("Traitement de la requête de login");
 
 			$data = json_decode(file_get_contents('php://input'), true);
+			error_log("Données reçues: " . print_r($data, true));
 
 			if (!$data) {
 				error_log("Données JSON invalides");
@@ -67,6 +72,7 @@ try {
 			}
 
 			$result = $authController->login($data['email'], $data['password']);
+			error_log("Réponse du contrôleur: " . print_r($result, true));
 
 			if ($result['success']) {
 				sendResponse(['message' => $result['message']]);
@@ -220,6 +226,7 @@ try {
 	sendResponse(['error' => 'Route non trouvée'], 404);
 } catch (Exception $e) {
 	error_log("Erreur dans l'API: " . $e->getMessage());
+	error_log("Trace: " . $e->getTraceAsString());
 	http_response_code($e->getCode() ?: 500);
 	echo json_encode([
 		'success' => false,
