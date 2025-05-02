@@ -12,21 +12,33 @@ class ErrorService
 
 	private function __construct()
 	{
-		$this->logDir = __DIR__ . '/../logs';
+		// Essayer d'abord le répertoire temporaire système
+		$this->logDir = sys_get_temp_dir() . '/azure-app-logs/';
+
+		// Si le répertoire temporaire n'est pas accessible, essayer le répertoire de l'application
+		if (!is_writable($this->logDir)) {
+			$this->logDir = __DIR__ . '/../../logs/';
+		}
+
 		$this->ensureLogDirectories();
 	}
 
 	private function ensureLogDirectories()
 	{
-		if (!file_exists($this->logDir)) {
-			mkdir($this->logDir, 0777, true);
-		}
-
-		foreach ($this->logFiles as $type => $file) {
-			$dir = dirname($this->logDir . '/' . $file);
-			if (!file_exists($dir)) {
-				mkdir($dir, 0777, true);
+		try {
+			if (!file_exists($this->logDir)) {
+				@mkdir($this->logDir, 0755, true);
 			}
+
+			foreach ($this->logFiles as $type => $file) {
+				$dir = dirname($this->logDir . $file);
+				if (!file_exists($dir)) {
+					@mkdir($dir, 0755, true);
+				}
+			}
+		} catch (Exception $e) {
+			// En cas d'échec, utiliser error_log() comme fallback
+			error_log("Impossible de créer les répertoires de logs: " . $e->getMessage());
 		}
 	}
 
@@ -40,17 +52,25 @@ class ErrorService
 
 	public function logError($type, $message, $details = [])
 	{
-		$timestamp = date('Y-m-d H:i:s');
-		$logMessage = "[$timestamp] $message\n";
+		try {
+			$timestamp = date('Y-m-d H:i:s');
+			$logMessage = "[$timestamp] $message\n";
 
-		if (!empty($details)) {
-			$logMessage .= "Details: " . json_encode($details, JSON_PRETTY_PRINT) . "\n";
+			if (!empty($details)) {
+				$logMessage .= "Details: " . json_encode($details, JSON_PRETTY_PRINT) . "\n";
+			}
+
+			$logMessage .= "----------------------------------------\n";
+
+			$logFile = $this->logDir . $this->logFiles[$type];
+			if (is_writable(dirname($logFile))) {
+				@file_put_contents($logFile, $logMessage, FILE_APPEND);
+			} else {
+				error_log($logMessage);
+			}
+		} catch (Exception $e) {
+			error_log("Erreur lors de l'écriture des logs: " . $e->getMessage());
 		}
-
-		$logMessage .= "----------------------------------------\n";
-
-		$logFile = $this->logDir . '/' . $this->logFiles[$type];
-		file_put_contents($logFile, $logMessage, FILE_APPEND);
 
 		return $this->formatErrorResponse($type, $message, $details);
 	}
