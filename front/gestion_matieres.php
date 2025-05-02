@@ -46,7 +46,7 @@ ob_start();
 	// Fonction pour charger les matières
 	async function loadMatieres() {
 		try {
-			const response = await fetch('../api/matieres');
+			const response = await fetch('/api/matieres');
 			const matieres = await response.json();
 
 			const tbody = document.querySelector('#matieresTable tbody');
@@ -75,7 +75,7 @@ ob_start();
 		const nom = document.getElementById('nom').value;
 
 		try {
-			const response = await fetch('../api/matieres', {
+			const response = await fetch('/api/matieres', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -104,7 +104,7 @@ ob_start();
 		const newNom = prompt('Nouveau nom de la matière:', currentNom);
 		if (newNom && newNom !== currentNom) {
 			try {
-				const response = await fetch(`../api/matieres/${id}`, {
+				const response = await fetch(`/api/matieres/${id}`, {
 					method: 'PUT',
 					headers: {
 						'Content-Type': 'application/json'
@@ -132,7 +132,7 @@ ob_start();
 	async function deleteMatiere(id) {
 		if (confirm('Êtes-vous sûr de vouloir supprimer cette matière ?')) {
 			try {
-				const response = await fetch(`../api/matieres/${id}`, {
+				const response = await fetch(`/api/matieres/${id}`, {
 					method: 'DELETE'
 				});
 

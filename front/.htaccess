@@ -1,0 +1,21 @@
+# Activation du module de réécriture
+RewriteEngine On
+
+# Base pour les routes front-end
+RewriteBase /
+
+# Redirection des requêtes vers les fichiers PHP
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ $1.php [QSA,L]
+
+# Protection des fichiers sensibles
+<FilesMatch "^(config\.php|\.htaccess)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Configuration CORS
+Header set Access-Control-Allow-Origin "*"
+Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+Header set Access-Control-Allow-Headers "Content-Type, Authorization" 
