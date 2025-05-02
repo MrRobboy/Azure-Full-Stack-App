@@ -7,39 +7,86 @@ class Prof
 
 	public function __construct()
 	{
-		$this->db = DatabaseService::getInstance()->getConnection();
+		try {
+			$this->db = DatabaseService::getInstance()->getConnection();
+		} catch (Exception $e) {
+			throw new Exception('Erreur de connexion à la base de données', 500);
+		}
 	}
 
 	public function authenticate($email, $password)
 	{
-		$stmt = $this->db->prepare("SELECT * FROM PROF WHERE email = ?");
-		$stmt->execute([$email]);
-		$prof = $stmt->fetch();
+		try {
+			$stmt = $this->db->prepare("SELECT * FROM PROF WHERE email = ?");
+			if (!$stmt) {
+				throw new Exception('Erreur de préparation de la requête', 500);
+			}
 
-		if ($prof && password_verify($password, $prof['password'])) {
+			$stmt->execute([$email]);
+			$prof = $stmt->fetch();
+
+			if (!$prof) {
+				throw new Exception('Email non trouvé', 401);
+			}
+
+			if (!password_verify($password, $prof['password'])) {
+				throw new Exception('Mot de passe incorrect', 401);
+			}
+
 			return $prof;
+		} catch (PDOException $e) {
+			throw new Exception('Erreur lors de l\'authentification', 500);
 		}
-		return false;
 	}
 
 	public function getById($id)
 	{
-		$stmt = $this->db->prepare("SELECT * FROM PROF WHERE id_prof = ?");
-		$stmt->execute([$id]);
-		return $stmt->fetch();
+		try {
+			$stmt = $this->db->prepare("SELECT * FROM PROF WHERE id_prof = ?");
+			if (!$stmt) {
+				throw new Exception('Erreur de préparation de la requête', 500);
+			}
+
+			$stmt->execute([$id]);
+			$prof = $stmt->fetch();
+
+			if (!$prof) {
+				throw new Exception('Professeur non trouvé', 404);
+			}
+
+			return $prof;
+		} catch (PDOException $e) {
+			throw new Exception('Erreur lors de la récupération du professeur', 500);
+		}
 	}
 
 	public function getMatieres($profId)
 	{
-		$stmt = $this->db->prepare("SELECT * FROM MATIERE WHERE id_matiere IN (SELECT matiere FROM PROF WHERE id_prof = ?)");
-		$stmt->execute([$profId]);
-		return $stmt->fetchAll();
+		try {
+			$stmt = $this->db->prepare("SELECT * FROM MATIERE WHERE id_matiere IN (SELECT matiere FROM PROF WHERE id_prof = ?)");
+			if (!$stmt) {
+				throw new Exception('Erreur de préparation de la requête', 500);
+			}
+
+			$stmt->execute([$profId]);
+			return $stmt->fetchAll();
+		} catch (PDOException $e) {
+			throw new Exception('Erreur lors de la récupération des matières', 500);
+		}
 	}
 
 	public function getExams($profId)
 	{
-		$stmt = $this->db->prepare("SELECT * FROM EXAM WHERE matiere IN (SELECT matiere FROM PROF WHERE id_prof = ?)");
-		$stmt->execute([$profId]);
-		return $stmt->fetchAll();
+		try {
+			$stmt = $this->db->prepare("SELECT * FROM EXAM WHERE matiere IN (SELECT matiere FROM PROF WHERE id_prof = ?)");
+			if (!$stmt) {
+				throw new Exception('Erreur de préparation de la requête', 500);
+			}
+
+			$stmt->execute([$profId]);
+			return $stmt->fetchAll();
+		} catch (PDOException $e) {
+			throw new Exception('Erreur lors de la récupération des examens', 500);
+		}
 	}
 }
