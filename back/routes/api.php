@@ -46,7 +46,8 @@ $examenController = new ExamenController();
 function sendResponse($data, $status = 200)
 {
 	http_response_code($status);
-	echo json_encode($data);
+	header('Content-Type: application/json');
+	echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 	exit();
 }
 
@@ -56,6 +57,22 @@ function checkAuth()
 	global $authController;
 	if (!$authController->isLoggedIn()) {
 		sendResponse(['error' => 'Non authentifié'], 401);
+	}
+}
+
+// Fonction pour gérer les erreurs
+function handleError($e)
+{
+	error_log("Erreur dans l'API: " . $e->getMessage());
+	error_log("Trace: " . $e->getTraceAsString());
+
+	$status = $e->getCode() ?: 500;
+	$message = $e->getMessage();
+
+	if ($status === 404) {
+		sendResponse(['error' => $message], 404);
+	} else {
+		sendResponse(['error' => 'Une erreur est survenue', 'message' => $message], $status);
 	}
 }
 
@@ -156,15 +173,23 @@ try {
 			}
 		} elseif ($method === 'POST') {
 			$data = json_decode(file_get_contents('php://input'), true);
+			if (!$data || !isset($data['nom'])) {
+				throw new Exception("Données invalides", 400);
+			}
 			$result = $matiereController->createMatiere($data['nom']);
 			sendResponse(['id' => $result], 201);
 		} elseif ($method === 'PUT' && isset($segments[1])) {
 			$data = json_decode(file_get_contents('php://input'), true);
+			if (!$data || !isset($data['nom'])) {
+				throw new Exception("Données invalides", 400);
+			}
 			$matiereController->updateMatiere($segments[1], $data['nom']);
 			sendResponse(['message' => 'Matière mise à jour']);
 		} elseif ($method === 'DELETE' && isset($segments[1])) {
 			$matiereController->deleteMatiere($segments[1]);
 			sendResponse(['message' => 'Matière supprimée']);
+		} else {
+			throw new Exception("Méthode non autorisée", 405);
 		}
 	}
 
@@ -235,22 +260,7 @@ try {
 	}
 
 	// Route non trouvée
-	sendResponse(['error' => 'Route non trouvée'], 404);
+	throw new Exception("Route non trouvée", 404);
 } catch (Exception $e) {
-	error_log("Erreur dans l'API: " . $e->getMessage());
-	error_log("Trace: " . $e->getTraceAsString());
-	$error_data = json_decode($e->getMessage(), true);
-	if (json_last_error() === JSON_ERROR_NONE) {
-		http_response_code($e->getCode());
-		echo json_encode($error_data);
-	} else {
-		http_response_code(500);
-		echo json_encode($errorService->logError('general', 'Erreur inattendue', [
-			'message' => $e->getMessage(),
-			'code' => $e->getCode(),
-			'file' => $e->getFile(),
-			'line' => $e->getLine(),
-			'trace' => $e->getTraceAsString()
-		]));
-	}
+	handleError($e);
 }
