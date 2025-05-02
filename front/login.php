@@ -51,7 +51,7 @@ ob_start();
 		errorMessage.style.display = 'none';
 
 		try {
-			const response = await fetch('/api/auth/login', {
+			const response = await fetch('../api/auth/login', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -65,7 +65,7 @@ ob_start();
 			const data = await response.json();
 
 			if (response.ok) {
-				window.location.href = '/dashboard.php';
+				window.location.href = 'dashboard.php';
 			} else {
 				// Afficher l'erreur
 				errorMessage.textContent = data.error || 'Une erreur est survenue lors de la connexion';
