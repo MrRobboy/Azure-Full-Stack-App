@@ -36,7 +36,7 @@
 					<a href="logout.php" class="nav-link">
 						<i class="fas fa-sign-out-alt"></i> Déconnexion
 					</a>
-				<?php else: ?>
+				<?php elseif (basename($_SERVER['PHP_SELF']) !== 'login.php'): ?>
 					<a href="login.php" class="nav-link">
 						<i class="fas fa-sign-in-alt"></i> Connexion
 					</a>
