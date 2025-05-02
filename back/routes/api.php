@@ -198,12 +198,28 @@ try {
 			if (isset($segments[1])) {
 				error_log("Récupération de la matière avec l'ID: " . $segments[1]);
 				$result = $matiereController->getMatiereById($segments[1]);
-				error_log("Résultat: " . print_r($result, true));
+				error_log("Résultat brut: " . print_r($result, true));
+
+				// Vérification du format des données
+				if (!is_array($result)) {
+					error_log("Le résultat n'est pas un tableau");
+					$result = ['error' => 'Format de données invalide'];
+				}
+
+				error_log("Résultat formaté: " . print_r($result, true));
 				sendResponse($result);
 			} else {
 				error_log("Récupération de toutes les matières");
 				$result = $matiereController->getAllMatieres();
-				error_log("Résultat: " . print_r($result, true));
+				error_log("Résultat brut: " . print_r($result, true));
+
+				// Vérification du format des données
+				if (!is_array($result)) {
+					error_log("Le résultat n'est pas un tableau");
+					$result = ['error' => 'Format de données invalide'];
+				}
+
+				error_log("Résultat formaté: " . print_r($result, true));
 				sendResponse($result);
 			}
 		} elseif ($method === 'POST') {

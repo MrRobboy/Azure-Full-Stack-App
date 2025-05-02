@@ -1,124 +1,130 @@
 <?php
 require_once __DIR__ . '/../models/Matiere.php';
+require_once __DIR__ . '/../services/ErrorService.php';
 
 class MatiereController
 {
-	private $matiereModel;
+	private $matiere;
+	private $errorService;
 
 	public function __construct()
 	{
-		error_log("Initialisation du contrôleur des matières");
-		$this->matiereModel = new Matiere();
+		$this->matiere = new Matiere();
+		$this->errorService = ErrorService::getInstance();
 	}
 
 	public function getAllMatieres()
 	{
-		error_log("Début de getAllMatieres");
 		try {
-			$result = $this->matiereModel->getAll();
-			error_log("Résultat de getAllMatieres: " . print_r($result, true));
-
-			// Formatage des données
-			$formattedResult = array_map(function ($row) {
-				return [
-					'id_matiere' => (int)$row['id_matiere'],
-					'nom' => $row['nom']
-				];
-			}, $result);
-
-			return $formattedResult;
+			$result = $this->matiere->getAll();
+			if ($result === false) {
+				throw new Exception("Erreur lors de la récupération des matières");
+			}
+			return [
+				'success' => true,
+				'data' => $result
+			];
 		} catch (Exception $e) {
-			error_log("Erreur dans getAllMatieres: " . $e->getMessage());
-			throw $e;
+			$this->errorService->logError($e->getMessage(), 'matiere');
+			return [
+				'success' => false,
+				'error' => $e->getMessage()
+			];
 		}
 	}
 
 	public function getMatiereById($id)
 	{
-		error_log("Début de getMatiereById pour l'ID: " . $id);
 		try {
-			$result = $this->matiereModel->getById($id);
-			error_log("Résultat de getMatiereById: " . print_r($result, true));
-
-			if (!$result) {
-				throw new Exception("Matière non trouvée", 404);
+			if (!is_numeric($id)) {
+				throw new Exception("ID invalide");
 			}
-
-			// Formatage des données
+			$result = $this->matiere->getById($id);
+			if ($result === false) {
+				throw new Exception("Matière non trouvée");
+			}
 			return [
-				'id_matiere' => (int)$result['id_matiere'],
-				'nom' => $result['nom']
+				'success' => true,
+				'data' => $result
 			];
 		} catch (Exception $e) {
-			error_log("Erreur dans getMatiereById: " . $e->getMessage());
-			throw $e;
+			$this->errorService->logError($e->getMessage(), 'matiere');
+			return [
+				'success' => false,
+				'error' => $e->getMessage()
+			];
 		}
 	}
 
-	public function createMatiere($nom)
+	public function createMatiere($data)
 	{
-		error_log("Début de createMatiere avec le nom: " . $nom);
 		try {
-			// Vérification de la validité du nom
-			if (empty($nom)) {
-				throw new Exception("Le nom de la matière ne peut pas être vide");
+			if (empty($data['nom'])) {
+				throw new Exception("Le nom de la matière est requis");
 			}
-
-			// Vérification de la longueur du nom
-			if (strlen($nom) > 255) {
-				throw new Exception("Le nom de la matière est trop long");
+			$result = $this->matiere->create($data);
+			if ($result === false) {
+				throw new Exception("Erreur lors de la création de la matière");
 			}
-
-			$id = $this->matiereModel->create($nom);
-			error_log("Nouvelle matière créée avec l'ID: " . $id);
-			return $id;
+			return [
+				'success' => true,
+				'data' => $result
+			];
 		} catch (Exception $e) {
-			error_log("Erreur dans createMatiere: " . $e->getMessage());
-			throw $e;
+			$this->errorService->logError($e->getMessage(), 'matiere');
+			return [
+				'success' => false,
+				'error' => $e->getMessage()
+			];
 		}
 	}
 
-	public function updateMatiere($id, $nom)
+	public function updateMatiere($id, $data)
 	{
-		error_log("Début de updateMatiere pour l'ID: " . $id . " avec le nom: " . $nom);
 		try {
-			// Vérification de l'existence de la matière
-			if (!$this->matiereModel->getById($id)) {
-				throw new Exception("La matière n'existe pas", 404);
+			if (!is_numeric($id)) {
+				throw new Exception("ID invalide");
 			}
-
-			// Vérification de la validité du nom
-			if (empty($nom)) {
-				throw new Exception("Le nom de la matière ne peut pas être vide");
+			if (empty($data['nom'])) {
+				throw new Exception("Le nom de la matière est requis");
 			}
-
-			// Vérification de la longueur du nom
-			if (strlen($nom) > 255) {
-				throw new Exception("Le nom de la matière est trop long");
+			$result = $this->matiere->update($id, $data);
+			if ($result === false) {
+				throw new Exception("Erreur lors de la mise à jour de la matière");
 			}
-
-			$result = $this->matiereModel->update($id, $nom);
-			error_log("Résultat de updateMatiere: " . ($result ? "succès" : "échec"));
-			return $result;
+			return [
+				'success' => true,
+				'data' => $result
+			];
 		} catch (Exception $e) {
-			error_log("Erreur dans updateMatiere: " . $e->getMessage());
-			throw $e;
+			$this->errorService->logError($e->getMessage(), 'matiere');
+			return [
+				'success' => false,
+				'error' => $e->getMessage()
+			];
 		}
 	}
 
 	public function deleteMatiere($id)
 	{
-		error_log("Début de deleteMatiere pour l'ID: " . $id);
 		try {
-			if (!$this->matiereModel->getById($id)) {
-				throw new Exception("La matière n'existe pas", 404);
+			if (!is_numeric($id)) {
+				throw new Exception("ID invalide");
 			}
-			$result = $this->matiereModel->delete($id);
-			error_log("Résultat de deleteMatiere: " . ($result ? "succès" : "échec"));
-			return $result;
+			$result = $this->matiere->delete($id);
+			if ($result === false) {
+				throw new Exception("Erreur lors de la suppression de la matière");
+			}
+			return [
+				'success' => true,
+				'message' => "Matière supprimée avec succès"
+			];
 		} catch (Exception $e) {
-			error_log("Erreur dans deleteMatiere: " . $e->getMessage());
-			throw $e;
+			$this->errorService->logError($e->getMessage(), 'matiere');
+			return [
+				'success' => false,
+				'error' => $e->getMessage()
+			];
 		}
 	}
 }
