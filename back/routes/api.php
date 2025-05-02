@@ -8,12 +8,13 @@ error_reporting(E_ALL);
 ini_set('log_errors', 1);
 ini_set('error_log', '/var/log/apache2/php_errors.log');
 
-require_once __DIR__ . '/../controllers/AuthController.php';
-require_once __DIR__ . '/../controllers/NoteController.php';
-require_once __DIR__ . '/../controllers/MatiereController.php';
-require_once __DIR__ . '/../controllers/ClasseController.php';
-require_once __DIR__ . '/../controllers/ExamenController.php';
-require_once __DIR__ . '/../services/ErrorService.php';
+// Inclusion des fichiers nécessaires
+require_once __DIR__ . '/../../back/controllers/AuthController.php';
+require_once __DIR__ . '/../../back/controllers/NoteController.php';
+require_once __DIR__ . '/../../back/controllers/MatiereController.php';
+require_once __DIR__ . '/../../back/controllers/ClasseController.php';
+require_once __DIR__ . '/../../back/controllers/ExamenController.php';
+require_once __DIR__ . '/../../back/services/ErrorService.php';
 
 // Configuration des headers pour les requêtes API
 header('Content-Type: application/json; charset=utf-8');
@@ -96,8 +97,7 @@ function handleError($e)
 	// Vérification si le message est déjà un JSON
 	$error_data = json_decode($message, true);
 	if (json_last_error() === JSON_ERROR_NONE) {
-	if ($status === 404) {
-		sendResponse(['error' => $message], 404);
+		sendResponse($error_data, $status);
 	} else {
 		sendResponse(['error' => 'Une erreur est survenue', 'message' => $message], $status);
 	}
@@ -105,10 +105,10 @@ function handleError($e)
 
 try {
 	error_log("Début de la requête API");
-	error_log("Méthode HTTP: " . $_SERVER['REQUEST_METHOD']);
-	error_log("URI: " . $_SERVER['REQUEST_URI']);
-	error_log("Script: " . $_SERVER['SCRIPT_NAME']);
-	error_log("Document Root: " . $_SERVER['DOCUMENT_ROOT']);
+	error_log("Méthode HTTP: " . $method);
+	error_log("URI: " . $request_uri);
+	error_log("Chemin: " . $path);
+	error_log("Segments: " . print_r($segments, true));
 
 	// Routes d'authentification
 	if ($segments[0] === 'auth') {
@@ -192,28 +192,48 @@ try {
 
 	// Routes des matières
 	if ($segments[0] === 'matieres') {
+		error_log("Traitement de la route matieres");
+
 		if ($method === 'GET') {
 			if (isset($segments[1])) {
-				sendResponse($matiereController->getMatiereById($segments[1]));
+				error_log("Récupération de la matière avec l'ID: " . $segments[1]);
+				$result = $matiereController->getMatiereById($segments[1]);
+				error_log("Résultat: " . print_r($result, true));
+				sendResponse($result);
 			} else {
-				sendResponse($matiereController->getAllMatieres());
+				error_log("Récupération de toutes les matières");
+				$result = $matiereController->getAllMatieres();
+				error_log("Résultat: " . print_r($result, true));
+				sendResponse($result);
 			}
 		} elseif ($method === 'POST') {
+			error_log("Création d'une nouvelle matière");
 			$data = json_decode(file_get_contents('php://input'), true);
+			error_log("Données reçues: " . print_r($data, true));
+
 			if (!$data || !isset($data['nom'])) {
 				throw new Exception("Données invalides", 400);
 			}
+
 			$result = $matiereController->createMatiere($data['nom']);
+			error_log("Résultat: " . print_r($result, true));
 			sendResponse(['id' => $result], 201);
 		} elseif ($method === 'PUT' && isset($segments[1])) {
+			error_log("Mise à jour de la matière avec l'ID: " . $segments[1]);
 			$data = json_decode(file_get_contents('php://input'), true);
+			error_log("Données reçues: " . print_r($data, true));
+
 			if (!$data || !isset($data['nom'])) {
 				throw new Exception("Données invalides", 400);
 			}
-			$matiereController->updateMatiere($segments[1], $data['nom']);
+
+			$result = $matiereController->updateMatiere($segments[1], $data['nom']);
+			error_log("Résultat: " . print_r($result, true));
 			sendResponse(['message' => 'Matière mise à jour']);
 		} elseif ($method === 'DELETE' && isset($segments[1])) {
-			$matiereController->deleteMatiere($segments[1]);
+			error_log("Suppression de la matière avec l'ID: " . $segments[1]);
+			$result = $matiereController->deleteMatiere($segments[1]);
+			error_log("Résultat: " . print_r($result, true));
 			sendResponse(['message' => 'Matière supprimée']);
 		} else {
 			throw new Exception("Méthode non autorisée", 405);
