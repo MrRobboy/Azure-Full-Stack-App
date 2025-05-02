@@ -12,7 +12,7 @@ require_once __DIR__ . '/../controllers/ExamenController.php';
 require_once __DIR__ . '/../services/ErrorService.php';
 
 // Configuration des headers pour les requêtes API
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
@@ -46,8 +46,22 @@ $examenController = new ExamenController();
 function sendResponse($data, $status = 200)
 {
 	http_response_code($status);
-	header('Content-Type: application/json');
-	echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+	header('Content-Type: application/json; charset=utf-8');
+
+	// Vérification que les données sont valides
+	if ($data === null) {
+		$data = ['error' => 'Données invalides'];
+	}
+
+	$json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+	if ($json === false) {
+		error_log("Erreur d'encodage JSON: " . json_last_error_msg());
+		$json = json_encode(['error' => 'Erreur d\'encodage JSON'], JSON_UNESCAPED_UNICODE);
+	}
+
+	error_log("Réponse envoyée: " . $json);
+	echo $json;
 	exit();
 }
 
