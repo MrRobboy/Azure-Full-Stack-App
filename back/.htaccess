@@ -1,3 +1,7 @@
+# Activation des logs
+php_flag log_errors on
+php_value error_log "logs/php_errors.log"
+
 # Activation de l'affichage des erreurs
 php_flag display_errors on
 php_value error_reporting E_ALL
@@ -21,7 +25,7 @@ RewriteRule ^(.*)$ routes/api.php [QSA,L]
 Options -Indexes
 
 # Protection des fichiers sensibles
-<FilesMatch "^\.">
+<FilesMatch "^(config\.php|\.htaccess)$">
     Order allow,deny
     Deny from all
 </FilesMatch>

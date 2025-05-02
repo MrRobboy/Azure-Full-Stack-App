@@ -92,7 +92,8 @@ ob_start();
 		errorMessage.style.display = 'none';
 
 		try {
-			const response = await fetch('../api/auth/login', {
+			console.log('Tentative de connexion...');
+			const response = await fetch('/api/auth/login', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -103,7 +104,17 @@ ob_start();
 				})
 			});
 
-			const data = await response.json();
+			console.log('Réponse reçue:', response);
+			const responseText = await response.text();
+			console.log('Contenu de la réponse:', responseText);
+
+			let data;
+			try {
+				data = JSON.parse(responseText);
+			} catch (e) {
+				console.error('Erreur de parsing JSON:', e);
+				throw new Error('Réponse invalide du serveur: ' + responseText);
+			}
 
 			if (response.ok) {
 				window.location.href = 'dashboard.php';
