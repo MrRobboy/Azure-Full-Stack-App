@@ -56,14 +56,20 @@ try {
 	if ($segments[0] === 'auth') {
 		if ($method === 'POST' && $segments[1] === 'login') {
 			$data = json_decode(file_get_contents('php://input'), true);
-			if ($authController->login($data['email'], $data['password'])) {
-				sendResponse(['message' => 'Connexion réussie']);
+			$result = $authController->login($data['email'], $data['password']);
+
+			if ($result['success']) {
+				sendResponse(['message' => $result['message']]);
 			} else {
-				sendResponse(['error' => 'Identifiants invalides'], 401);
+				sendResponse(['error' => $result['error']], $result['code']);
 			}
 		} elseif ($method === 'POST' && $segments[1] === 'logout') {
-			$authController->logout();
-			sendResponse(['message' => 'Déconnexion réussie']);
+			$result = $authController->logout();
+			if ($result['success']) {
+				sendResponse(['message' => $result['message']]);
+			} else {
+				sendResponse(['error' => $result['error']], $result['code']);
+			}
 		}
 	}
 
