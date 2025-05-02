@@ -4,6 +4,10 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+// Configuration des logs
+ini_set('log_errors', 1);
+ini_set('error_log', '/var/log/apache2/php_errors.log');
+
 require_once __DIR__ . '/../controllers/AuthController.php';
 require_once __DIR__ . '/../controllers/NoteController.php';
 require_once __DIR__ . '/../controllers/MatiereController.php';
@@ -53,10 +57,16 @@ function sendResponse($data, $status = 200)
 		$data = ['error' => 'Données invalides'];
 	}
 
+	// Conversion des données en tableau si nécessaire
+	if (!is_array($data)) {
+		$data = ['data' => $data];
+	}
+
 	$json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 
 	if ($json === false) {
 		error_log("Erreur d'encodage JSON: " . json_last_error_msg());
+		error_log("Données à encoder: " . print_r($data, true));
 		$json = json_encode(['error' => 'Erreur d\'encodage JSON'], JSON_UNESCAPED_UNICODE);
 	}
 
@@ -83,6 +93,9 @@ function handleError($e)
 	$status = $e->getCode() ?: 500;
 	$message = $e->getMessage();
 
+	// Vérification si le message est déjà un JSON
+	$error_data = json_decode($message, true);
+	if (json_last_error() === JSON_ERROR_NONE) {
 	if ($status === 404) {
 		sendResponse(['error' => $message], 404);
 	} else {
