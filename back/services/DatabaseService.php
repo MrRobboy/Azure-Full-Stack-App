@@ -5,14 +5,18 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/ErrorService.php';
 
 class DatabaseService
 {
 	private static $instance = null;
 	private $pdo;
+	private $errorService;
 
 	private function __construct()
 	{
+		$this->errorService = ErrorService::getInstance();
+
 		try {
 			$dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME;
 
@@ -35,10 +39,9 @@ class DatabaseService
 				'database' => DB_NAME
 			];
 
-			throw new Exception(json_encode([
-				'message' => "Erreur de connexion à la base de données",
-				'details' => $error_details
-			]), 500);
+			throw new Exception(json_encode(
+				$this->errorService->logError('database', 'Erreur de connexion à la base de données', $error_details)
+			), 500);
 		}
 	}
 
@@ -53,7 +56,9 @@ class DatabaseService
 	public function getConnection()
 	{
 		if (!$this->pdo) {
-			throw new Exception("La connexion à la base de données n'est pas initialisée", 500);
+			throw new Exception(json_encode(
+				$this->errorService->logError('database', 'La connexion à la base de données n\'est pas initialisée')
+			), 500);
 		}
 		return $this->pdo;
 	}

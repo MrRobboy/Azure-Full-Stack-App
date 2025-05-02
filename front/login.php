@@ -8,7 +8,21 @@ ob_start();
 <div class="login-container">
 	<div class="login-card">
 		<h2>Connexion</h2>
-		<div id="error-message" class="alert alert-danger" style="display: none;"></div>
+		<div id="error-message" class="alert alert-danger" style="display: none;">
+			<div class="error-header">
+				<i class="fas fa-exclamation-circle"></i>
+				<span class="error-title">Erreur</span>
+			</div>
+			<div class="error-content"></div>
+			<div class="error-details" style="display: none;">
+				<div class="error-type"></div>
+				<div class="error-timestamp"></div>
+				<div class="error-trace"></div>
+			</div>
+			<button class="btn btn-link btn-sm toggle-details" onclick="toggleErrorDetails()">
+				Afficher les détails
+			</button>
+		</div>
 		<form id="login-form">
 			<div class="form-group">
 				<label for="email">Email</label>
@@ -35,6 +49,33 @@ ob_start();
 </div>
 
 <script>
+	function toggleErrorDetails() {
+		const details = document.querySelector('.error-details');
+		const button = document.querySelector('.toggle-details');
+		if (details.style.display === 'none') {
+			details.style.display = 'block';
+			button.textContent = 'Masquer les détails';
+		} else {
+			details.style.display = 'none';
+			button.textContent = 'Afficher les détails';
+		}
+	}
+
+	function displayError(error) {
+		const errorMessage = document.getElementById('error-message');
+		const errorContent = errorMessage.querySelector('.error-content');
+		const errorType = errorMessage.querySelector('.error-type');
+		const errorTimestamp = errorMessage.querySelector('.error-timestamp');
+		const errorTrace = errorMessage.querySelector('.error-trace');
+
+		errorContent.textContent = error.message || 'Une erreur est survenue';
+		errorType.textContent = 'Type: ' + (error.type || 'Inconnu');
+		errorTimestamp.textContent = 'Date: ' + (error.timestamp || new Date().toISOString());
+		errorTrace.textContent = 'Détails: ' + JSON.stringify(error.details || {}, null, 2);
+
+		errorMessage.style.display = 'block';
+	}
+
 	document.getElementById('login-form').addEventListener('submit', async function(e) {
 		e.preventDefault();
 
@@ -67,21 +108,15 @@ ob_start();
 			if (response.ok) {
 				window.location.href = 'dashboard.php';
 			} else {
-				// Afficher l'erreur
-				errorMessage.textContent = data.error || 'Une erreur est survenue lors de la connexion';
-				errorMessage.style.display = 'block';
-
-				// Log détaillé dans la console
-				console.error('Erreur de connexion:', {
-					status: response.status,
-					statusText: response.statusText,
-					data: data
-				});
+				displayError(data.error);
+				console.error('Erreur de connexion:', data);
 			}
 		} catch (error) {
-			// Erreur réseau ou autre
-			errorMessage.textContent = 'Erreur de connexion au serveur. Veuillez réessayer.';
-			errorMessage.style.display = 'block';
+			displayError({
+				type: 'Erreur réseau',
+				message: 'Erreur de connexion au serveur',
+				details: error.message
+			});
 			console.error('Erreur:', error);
 		} finally {
 			// Réinitialiser le bouton

@@ -9,12 +9,15 @@ require_once __DIR__ . '/../controllers/NoteController.php';
 require_once __DIR__ . '/../controllers/MatiereController.php';
 require_once __DIR__ . '/../controllers/ClasseController.php';
 require_once __DIR__ . '/../controllers/ExamenController.php';
+require_once __DIR__ . '/../services/ErrorService.php';
 
 // Configuration des headers pour les requêtes API
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
+
+$errorService = ErrorService::getInstance();
 
 // Gestion des requêtes OPTIONS (CORS)
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -73,7 +76,9 @@ try {
 
 			if (!$data) {
 				error_log("Données JSON invalides");
-				throw new Exception("Données invalides", 400);
+				throw new Exception(json_encode(
+					$errorService->logError('api', 'Données JSON invalides', ['input' => file_get_contents('php://input')])
+				), 400);
 			}
 
 			$result = $authController->login($data['email'], $data['password']);
@@ -95,7 +100,9 @@ try {
 			}
 		} else {
 			error_log("Route d'authentification non trouvée");
-			throw new Exception("Route non trouvée", 404);
+			throw new Exception(json_encode(
+				$errorService->logError('api', 'Route d\'authentification non trouvée', ['uri' => $segments])
+			), 404);
 		}
 	}
 
@@ -232,17 +239,18 @@ try {
 } catch (Exception $e) {
 	error_log("Erreur dans l'API: " . $e->getMessage());
 	error_log("Trace: " . $e->getTraceAsString());
-	http_response_code($e->getCode() ?: 500);
-	echo json_encode([
-		'success' => false,
-		'error' => $e->getMessage(),
-		'code' => $e->getCode() ?: 500,
-		'debug' => [
+	$error_data = json_decode($e->getMessage(), true);
+	if (json_last_error() === JSON_ERROR_NONE) {
+		http_response_code($e->getCode());
+		echo json_encode($error_data);
+	} else {
+		http_response_code(500);
+		echo json_encode($errorService->logError('general', 'Erreur inattendue', [
 			'message' => $e->getMessage(),
 			'code' => $e->getCode(),
 			'file' => $e->getFile(),
 			'line' => $e->getLine(),
 			'trace' => $e->getTraceAsString()
-		]
-	]);
+		]));
+	}
 }

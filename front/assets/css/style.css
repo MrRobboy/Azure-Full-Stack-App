@@ -182,8 +182,9 @@ body {
 /* Alerts */
 .alert {
 	padding: 1rem;
-	border-radius: var(--border-radius);
 	margin-bottom: 1rem;
+	border-radius: 5px;
+	font-size: 0.9rem;
 }
 
 .alert-success {
@@ -193,15 +194,72 @@ body {
 }
 
 .alert-danger {
-	background-color: #f8d7da;
-	color: #721c24;
-	border: 1px solid #f5c6cb;
+	background-color: #fff3f3;
+	border: 1px solid #ffcdd2;
+	color: #d32f2f;
 }
 
 .alert-warning {
 	background-color: #fff3cd;
 	color: #856404;
 	border: 1px solid #ffeeba;
+}
+
+.error-header {
+	display: flex;
+	align-items: center;
+	margin-bottom: 0.5rem;
+	font-weight: bold;
+}
+
+.error-header i {
+	margin-right: 0.5rem;
+}
+
+.error-content {
+	margin-bottom: 0.5rem;
+}
+
+.error-details {
+	margin-top: 1rem;
+	padding: 0.5rem;
+	background-color: #fff;
+	border: 1px solid #ddd;
+	border-radius: 3px;
+	font-family: monospace;
+	font-size: 0.8rem;
+	white-space: pre-wrap;
+}
+
+.error-type {
+	color: #666;
+	margin-bottom: 0.25rem;
+}
+
+.error-timestamp {
+	color: #666;
+	margin-bottom: 0.25rem;
+}
+
+.error-trace {
+	max-height: 200px;
+	overflow-y: auto;
+	margin-top: 0.5rem;
+}
+
+.toggle-details {
+	margin-top: 0.5rem;
+	padding: 0;
+	font-size: 0.8rem;
+	color: #666;
+	text-decoration: underline;
+	background: none;
+	border: none;
+	cursor: pointer;
+}
+
+.toggle-details:hover {
+	color: #333;
 }
 
 /* Dashboard */
