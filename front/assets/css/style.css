@@ -338,3 +338,111 @@ body {
 	background-color: var(--light-color);
 	font-weight: bold;
 }
+
+/* Styles pour la page de connexion */
+.login-container {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	min-height: calc(100vh - 200px);
+	padding: 2rem;
+	background: linear-gradient(
+		135deg,
+		var(--primary-color) 0%,
+		var(--secondary-color) 100%
+	);
+}
+
+.login-card {
+	background: white;
+	padding: 2rem;
+	border-radius: 10px;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	width: 100%;
+	max-width: 400px;
+}
+
+.login-card h2 {
+	text-align: center;
+	color: var(--primary-color);
+	margin-bottom: 2rem;
+	font-size: 1.8rem;
+}
+
+.input-group {
+	position: relative;
+	margin-bottom: 1.5rem;
+}
+
+.input-group-icon {
+	position: absolute;
+	left: 1rem;
+	top: 50%;
+	transform: translateY(-50%);
+	color: var(--primary-color);
+}
+
+.input-group input {
+	width: 100%;
+	padding: 0.8rem 1rem 0.8rem 2.5rem;
+	border: 1px solid #ddd;
+	border-radius: 5px;
+	font-size: 1rem;
+	transition: border-color 0.3s;
+}
+
+.input-group input:focus {
+	border-color: var(--primary-color);
+	outline: none;
+}
+
+/* Styles pour les messages d'erreur */
+.alert {
+	padding: 1rem;
+	margin-bottom: 1rem;
+	border-radius: 5px;
+	font-size: 0.9rem;
+}
+
+.alert-danger {
+	background-color: #fff3f3;
+	border: 1px solid #ffcdd2;
+	color: #d32f2f;
+}
+
+/* Styles pour le bouton de connexion */
+.btn-primary {
+	width: 100%;
+	padding: 0.8rem;
+	background-color: var(--primary-color);
+	color: white;
+	border: none;
+	border-radius: 5px;
+	font-size: 1rem;
+	cursor: pointer;
+	transition: background-color 0.3s;
+	position: relative;
+	overflow: hidden;
+}
+
+.btn-primary:hover {
+	background-color: var(--secondary-color);
+}
+
+.btn-text,
+.btn-loading {
+	display: inline-block;
+	transition: opacity 0.3s;
+}
+
+.btn-loading {
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	white-space: nowrap;
+}
+
+/* Animation du spinner */
+.fa-spinner {
+	margin-right: 0.5rem;
+}

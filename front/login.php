@@ -5,92 +5,88 @@ $pageTitle = "Connexion";
 ob_start();
 ?>
 
-<div class="card" style="max-width: 400px; margin: 0 auto;">
-	<div class="card-header">
-		<h2 class="card-title">
-			<i class="fas fa-user-graduate"></i> Connexion
-		</h2>
-	</div>
-	<div class="card-body">
-		<form id="loginForm">
+<div class="login-container">
+	<div class="login-card">
+		<h2>Connexion</h2>
+		<div id="error-message" class="alert alert-danger" style="display: none;"></div>
+		<form id="login-form">
 			<div class="form-group">
-				<label for="email" class="form-label">
-					<i class="fas fa-envelope"></i> Email
-				</label>
-				<input type="email" id="email" name="email" class="form-control" required>
+				<label for="email">Email</label>
+				<div class="input-group">
+					<span class="input-group-icon"><i class="fas fa-envelope"></i></span>
+					<input type="email" id="email" name="email" required>
+				</div>
 			</div>
 			<div class="form-group">
-				<label for="password" class="form-label">
-					<i class="fas fa-lock"></i> Mot de passe
-				</label>
-				<input type="password" id="password" name="password" class="form-control" required>
+				<label for="password">Mot de passe</label>
+				<div class="input-group">
+					<span class="input-group-icon"><i class="fas fa-lock"></i></span>
+					<input type="password" id="password" name="password" required>
+				</div>
 			</div>
-			<div class="form-group">
-				<button type="submit" class="btn btn-primary" style="width: 100%;" id="submitButton">
-					<i class="fas fa-sign-in-alt"></i> Se connecter
-				</button>
-			</div>
+			<button type="submit" class="btn btn-primary">
+				<span class="btn-text">Se connecter</span>
+				<span class="btn-loading" style="display: none;">
+					<i class="fas fa-spinner fa-spin"></i> Connexion en cours...
+				</span>
+			</button>
 		</form>
-		<div id="errorMessage" class="alert alert-danger" style="display: none;"></div>
 	</div>
 </div>
 
 <script>
-	document.getElementById('loginForm').addEventListener('submit', async function(e) {
+	document.getElementById('login-form').addEventListener('submit', async function(e) {
 		e.preventDefault();
 
-		// Désactiver le bouton et afficher l'indicateur de chargement
-		const submitButton = document.getElementById('submitButton');
-		const originalButtonText = submitButton.innerHTML;
-		submitButton.disabled = true;
-		submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion en cours...';
+		const email = document.getElementById('email').value;
+		const password = document.getElementById('password').value;
+		const errorMessage = document.getElementById('error-message');
+		const submitButton = this.querySelector('button[type="submit"]');
+		const btnText = submitButton.querySelector('.btn-text');
+		const btnLoading = submitButton.querySelector('.btn-loading');
 
-		// Cacher les messages d'erreur précédents
-		const errorMessage = document.getElementById('errorMessage');
+		// Afficher le loader
+		btnText.style.display = 'none';
+		btnLoading.style.display = 'inline-block';
 		errorMessage.style.display = 'none';
 
-		const formData = {
-			email: document.getElementById('email').value,
-			password: document.getElementById('password').value
-		};
-
 		try {
-			const response = await fetch('api/auth/login', {
+			const response = await fetch('/api/auth/login', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify(formData)
+				body: JSON.stringify({
+					email,
+					password
+				})
 			});
 
 			const data = await response.json();
 
 			if (response.ok) {
-				window.location.href = 'dashboard.php';
+				window.location.href = '/dashboard.php';
 			} else {
-				// Afficher le message d'erreur spécifique
-				errorMessage.textContent = data.error || 'Erreur de connexion';
+				// Afficher l'erreur
+				errorMessage.textContent = data.error || 'Une erreur est survenue lors de la connexion';
 				errorMessage.style.display = 'block';
 
-				// Si c'est une erreur d'authentification, vider le champ mot de passe
-				if (response.status === 401) {
-					document.getElementById('password').value = '';
-				}
+				// Log détaillé dans la console
+				console.error('Erreur de connexion:', {
+					status: response.status,
+					statusText: response.statusText,
+					data: data
+				});
 			}
 		} catch (error) {
-			console.error('Erreur détaillée:', error);
-
-			// Afficher un message d'erreur plus spécifique
-			if (error.name === 'TypeError' && error.message.includes('fetch')) {
-				errorMessage.textContent = 'Erreur de connexion au serveur. Veuillez vérifier votre connexion internet.';
-			} else {
-				errorMessage.textContent = 'Une erreur inattendue est survenue. Veuillez réessayer.';
-			}
+			// Erreur réseau ou autre
+			errorMessage.textContent = 'Erreur de connexion au serveur. Veuillez réessayer.';
 			errorMessage.style.display = 'block';
+			console.error('Erreur:', error);
 		} finally {
-			// Réactiver le bouton et restaurer le texte original
-			submitButton.disabled = false;
-			submitButton.innerHTML = originalButtonText;
+			// Réinitialiser le bouton
+			btnText.style.display = 'inline-block';
+			btnLoading.style.display = 'none';
 		}
 	});
 </script>
