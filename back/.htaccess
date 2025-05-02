@@ -1,6 +1,6 @@
 # Activation des logs
 php_flag log_errors on
-php_value error_log "/var/log/azure-app/php_errors.log"
+php_value error_log "/var/log/apache2/php_errors.log"
 
 # Activation de l'affichage des erreurs
 php_flag display_errors on
@@ -8,18 +8,13 @@ php_value error_reporting E_ALL
 
 RewriteEngine On
 
-# Redirection HTTP vers HTTPS
-RewriteCond %{HTTPS} off
-RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# Base pour les routes API
+RewriteBase /api/
 
-# Log des requêtes pour le débogage
-RewriteLog "/var/log/azure-app/rewrite.log"
-RewriteLogLevel 3
-
-# Redirection de toutes les requêtes API vers routes/api.php
+# Redirection de toutes les requêtes vers routes/api.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^api/(.*)$ back/routes/api.php [QSA,L]
+RewriteRule ^(.*)$ routes/api.php [QSA,L]
 
 # Désactivation de l'affichage du contenu des répertoires
 Options -Indexes
