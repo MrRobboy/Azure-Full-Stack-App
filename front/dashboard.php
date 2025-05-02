@@ -1,99 +1,242 @@
 <?php
-require_once 'config.php';
+session_start();
 
-// Vérification de la connexion
 if (!isset($_SESSION['prof_id'])) {
-    header('Location: index.php');
+    header('Location: login.php');
     exit();
 }
 
-// Récupération des données
-$prof_id = $_SESSION['prof_id'];
-
-// Récupération des matières du professeur
-$stmt = $pdo->prepare("SELECT * FROM MATIERE WHERE id_matiere IN (SELECT matiere FROM PROF WHERE id_prof = ?)");
-$stmt->execute([$prof_id]);
-$matieres = $stmt->fetchAll();
-
-// Récupération des classes
-$stmt = $pdo->prepare("SELECT * FROM CLASSE");
-$stmt->execute();
-$classes = $stmt->fetchAll();
-
-// Récupération des examens
-$stmt = $pdo->prepare("SELECT * FROM EXAM WHERE matiere IN (SELECT matiere FROM PROF WHERE id_prof = ?)");
-$stmt->execute([$prof_id]);
-$exams = $stmt->fetchAll();
+$pageTitle = "Tableau de bord";
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="fr">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tableau de bord - Système de Gestion des Notes</title>
-    <link rel="stylesheet" href="style.css">
-</head>
+<div class="dashboard-grid">
+    <div class="dashboard-card">
+        <i class="fas fa-graduation-cap fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
+        <h3>Notes</h3>
+        <p id="notesCount">Chargement...</p>
+        <a href="/gestion_notes.php" class="btn btn-primary">Gérer les notes</a>
+    </div>
 
-<body>
-    <div class="container">
-        <div class="dashboard">
-            <div class="sidebar">
-                <h2>Menu</h2>
-                <ul class="nav-menu">
-                    <li><a href="dashboard.php">Tableau de bord</a></li>
-                    <li><a href="gestion_notes.php">Gestion des notes</a></li>
-                    <li><a href="gestion_matieres.php">Gestion des matières</a></li>
-                    <li><a href="gestion_classes.php">Gestion des classes</a></li>
-                    <li><a href="gestion_exams.php">Gestion des examens</a></li>
-                    <li><a href="logout.php">Déconnexion</a></li>
-                </ul>
+    <div class="dashboard-card">
+        <i class="fas fa-book fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
+        <h3>Matières</h3>
+        <p id="matieresCount">Chargement...</p>
+        <a href="/gestion_matieres.php" class="btn btn-primary">Gérer les matières</a>
+    </div>
+
+    <div class="dashboard-card">
+        <i class="fas fa-users fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
+        <h3>Classes</h3>
+        <p id="classesCount">Chargement...</p>
+        <a href="/gestion_classes.php" class="btn btn-primary">Gérer les classes</a>
+    </div>
+
+    <div class="dashboard-card">
+        <i class="fas fa-calendar-alt fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
+        <h3>Examens</h3>
+        <p id="examensCount">Chargement...</p>
+        <a href="/gestion_exams.php" class="btn btn-primary">Gérer les examens</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-calendar"></i> Prochains examens
+        </h2>
+    </div>
+    <div class="card-body">
+        <div class="calendar">
+            <div class="calendar-header">
+                <button id="prevMonth" class="btn btn-primary">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <h3 id="currentMonth">Chargement...</h3>
+                <button id="nextMonth" class="btn btn-primary">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
             </div>
-
-            <div class="main-content">
-                <h1>Bienvenue, <?php echo htmlspecialchars($_SESSION['prof_prenom'] . ' ' . $_SESSION['prof_nom']); ?></h1>
-
-                <div class="stats-container">
-                    <div class="stat-card">
-                        <h3>Matières</h3>
-                        <p><?php echo count($matieres); ?></p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Classes</h3>
-                        <p><?php echo count($classes); ?></p>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Examens</h3>
-                        <p><?php echo count($exams); ?></p>
-                    </div>
-                </div>
-
-                <h2>Derniers examens</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Titre</th>
-                            <th>Matière</th>
-                            <th>Classe</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($exams as $exam): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($exam['titre']); ?></td>
-                                <td><?php echo htmlspecialchars($exam['matiere']); ?></td>
-                                <td><?php echo htmlspecialchars($exam['classe']); ?></td>
-                                <td>
-                                    <a href="gestion_notes.php?exam=<?php echo $exam['id_exam']; ?>" class="btn">Gérer les notes</a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <div class="calendar-grid" id="calendarGrid">
+                <!-- Le calendrier sera généré dynamiquement -->
             </div>
         </div>
     </div>
-</body>
+</div>
 
-</html>
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i class="fas fa-chart-line"></i> Statistiques récentes
+        </h2>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Matière</th>
+                        <th>Moyenne</th>
+                        <th>Meilleure note</th>
+                        <th>Plus basse note</th>
+                    </tr>
+                </thead>
+                <tbody id="statsTable">
+                    <!-- Les statistiques seront chargées dynamiquement -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Fonction pour charger les compteurs
+    async function loadCounters() {
+        try {
+            const [notesRes, matieresRes, classesRes, examensRes] = await Promise.all([
+                fetch('/api/notes'),
+                fetch('/api/matieres'),
+                fetch('/api/classes'),
+                fetch('/api/examens')
+            ]);
+
+            const [notes, matieres, classes, examens] = await Promise.all([
+                notesRes.json(),
+                matieresRes.json(),
+                classesRes.json(),
+                examensRes.json()
+            ]);
+
+            document.getElementById('notesCount').textContent = notes.length;
+            document.getElementById('matieresCount').textContent = matieres.length;
+            document.getElementById('classesCount').textContent = classes.length;
+            document.getElementById('examensCount').textContent = examens.length;
+        } catch (error) {
+            console.error('Erreur lors du chargement des compteurs:', error);
+        }
+    }
+
+    // Fonction pour charger les statistiques
+    async function loadStats() {
+        try {
+            const response = await fetch('/api/notes');
+            const notes = await response.json();
+
+            // Regrouper les notes par matière
+            const stats = notes.reduce((acc, note) => {
+                if (!acc[note.nom_matiere]) {
+                    acc[note.nom_matiere] = {
+                        notes: [],
+                        moyenne: 0
+                    };
+                }
+                acc[note.nom_matiere].notes.push(note.valeur);
+                return acc;
+            }, {});
+
+            // Calculer les statistiques
+            const statsTable = document.getElementById('statsTable');
+            statsTable.innerHTML = '';
+
+            for (const [matiere, data] of Object.entries(stats)) {
+                const moyenne = data.notes.reduce((a, b) => a + b, 0) / data.notes.length;
+                const meilleure = Math.max(...data.notes);
+                const plusBasse = Math.min(...data.notes);
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                <td>${matiere}</td>
+                <td>${moyenne.toFixed(2)}</td>
+                <td>${meilleure}</td>
+                <td>${plusBasse}</td>
+            `;
+                statsTable.appendChild(row);
+            }
+        } catch (error) {
+            console.error('Erreur lors du chargement des statistiques:', error);
+        }
+    }
+
+    // Fonction pour générer le calendrier
+    function generateCalendar(year, month) {
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startingDay = firstDay.getDay();
+
+        const calendarGrid = document.getElementById('calendarGrid');
+        calendarGrid.innerHTML = '';
+
+        // Ajouter les en-têtes des jours
+        const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+        days.forEach(day => {
+            const dayHeader = document.createElement('div');
+            dayHeader.className = 'calendar-day';
+            dayHeader.textContent = day;
+            calendarGrid.appendChild(dayHeader);
+        });
+
+        // Ajouter les jours vides au début
+        for (let i = 0; i < startingDay; i++) {
+            const emptyDay = document.createElement('div');
+            emptyDay.className = 'calendar-day';
+            calendarGrid.appendChild(emptyDay);
+        }
+
+        // Ajouter les jours du mois
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayElement = document.createElement('div');
+            dayElement.className = 'calendar-day';
+            dayElement.textContent = day;
+
+            // Vérifier si c'est aujourd'hui
+            const today = new Date();
+            if (year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
+                dayElement.classList.add('today');
+            }
+
+            calendarGrid.appendChild(dayElement);
+        }
+    }
+
+    // Charger les données au chargement de la page
+    document.addEventListener('DOMContentLoaded', () => {
+        loadCounters();
+        loadStats();
+
+        // Initialiser le calendrier
+        const today = new Date();
+        document.getElementById('currentMonth').textContent =
+            today.toLocaleString('fr-FR', {
+                month: 'long',
+                year: 'numeric'
+            });
+        generateCalendar(today.getFullYear(), today.getMonth());
+
+        // Gérer les boutons de navigation du calendrier
+        document.getElementById('prevMonth').addEventListener('click', () => {
+            today.setMonth(today.getMonth() - 1);
+            document.getElementById('currentMonth').textContent =
+                today.toLocaleString('fr-FR', {
+                    month: 'long',
+                    year: 'numeric'
+                });
+            generateCalendar(today.getFullYear(), today.getMonth());
+        });
+
+        document.getElementById('nextMonth').addEventListener('click', () => {
+            today.setMonth(today.getMonth() + 1);
+            document.getElementById('currentMonth').textContent =
+                today.toLocaleString('fr-FR', {
+                    month: 'long',
+                    year: 'numeric'
+                });
+            generateCalendar(today.getFullYear(), today.getMonth());
+        });
+    });
+</script>
+
+<?php
+$content = ob_get_clean();
+require_once 'templates/base.php';
+?>
