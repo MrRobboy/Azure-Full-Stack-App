@@ -131,24 +131,6 @@ ob_start();
 		background: #28a745;
 	}
 
-	.notification.debug {
-		background: #6c757d;
-		position: fixed;
-		top: 20px;
-		left: 20px;
-		z-index: 1000;
-	}
-
-	.notification-container {
-		position: fixed;
-		top: 20px;
-		right: 20px;
-		z-index: 1000;
-		display: flex;
-		flex-direction: column;
-		align-items: flex-end;
-	}
-
 	.notification .close {
 		float: right;
 		cursor: pointer;
@@ -238,116 +220,11 @@ ob_start();
 		console.error('Le script error-messages.js n\'est pas chargé correctement');
 	}
 
-	// Fonction pour afficher une notification
-	function showNotification(message, type) {
-		console.log(`Affichage d'une notification de type ${type}: ${message}`);
-
-		// Créer le conteneur s'il n'existe pas
-		let container = document.querySelector('.notification-container');
-		if (!container) {
-			container = document.createElement('div');
-			container.className = 'notification-container';
-			document.body.appendChild(container);
-		}
-
-		// Supprimer les anciennes notifications du même type
-		const oldNotifications = container.querySelectorAll(`.notification.${type}`);
-		oldNotifications.forEach(notification => {
-			notification.classList.add('slideOut');
-			setTimeout(() => notification.remove(), 500);
-		});
-
-		const notification = document.createElement('div');
-		notification.className = `notification ${type}`;
-		notification.innerHTML = `
-			<span class="close">&times;</span>
-			<p>${message}</p>
-		`;
-
-		// Ajouter la notification au conteneur
-		container.appendChild(notification);
-
-		// Fermer la notification après 5 secondes
-		setTimeout(() => {
-			notification.classList.add('slideOut');
-			setTimeout(() => notification.remove(), 500);
-		}, 5000);
-
-		// Fermer la notification au clic sur le bouton
-		notification.querySelector('.close').addEventListener('click', () => {
-			notification.classList.add('slideOut');
-			setTimeout(() => notification.remove(), 500);
-		});
-	}
-
-	// Fonction pour afficher une erreur
-	function showError(message) {
-		console.error('Erreur:', message);
-		showNotification(message, 'error');
-	}
-
-	// Fonction pour afficher un succès
-	function showSuccess(message) {
-		console.log('Succès:', message);
-		showNotification(message, 'success');
-	}
-
-	// Fonction pour charger les matières
-	async function loadMatieres() {
-		try {
-			const response = await fetch('api/matieres');
-			const result = await response.json();
-
-			if (!result.success) {
-				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
-			}
-
-			const select = document.getElementById('matiere');
-			select.innerHTML = '<option value="">Sélectionnez une matière</option>';
-
-			result.data.forEach(matiere => {
-				const option = document.createElement('option');
-				option.value = matiere.id_matiere;
-				option.textContent = matiere.nom;
-				select.appendChild(option);
-			});
-		} catch (error) {
-			showError(error.message);
-		}
-	}
-
-	// Fonction pour charger les classes
-	async function loadClasses() {
-		try {
-			const response = await fetch('api/classes');
-			const result = await response.json();
-
-			if (!result.success) {
-				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
-			}
-
-			const select = document.getElementById('classe');
-			select.innerHTML = '<option value="">Sélectionnez une classe</option>';
-
-			result.data.forEach(classe => {
-				const option = document.createElement('option');
-				option.value = classe.id_classe;
-				option.textContent = `${classe.nom_classe} (${classe.niveau}${classe.numero})`;
-				select.appendChild(option);
-			});
-		} catch (error) {
-			showError(error.message);
-		}
-	}
-
 	// Fonction pour charger les examens
 	async function loadExams() {
 		try {
-			console.log('Chargement des examens...');
 			const response = await fetch('api/examens');
-			console.log('Réponse:', response.status);
 			const result = await response.json();
-			console.log('Données reçues:', result);
 
 			if (!result.success) {
 				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
@@ -375,7 +252,6 @@ ob_start();
 				tbody.appendChild(tr);
 			});
 		} catch (error) {
-			console.error('Erreur lors du chargement des examens:', error);
 			showError(error.message);
 		}
 	}
@@ -383,17 +259,10 @@ ob_start();
 	// Fonction pour ajouter un examen
 	document.getElementById('addExamForm').addEventListener('submit', async function(e) {
 		e.preventDefault();
-		console.log('Tentative d\'ajout d\'un examen...');
 
 		const titre = document.getElementById('titre').value;
 		const matiere = document.getElementById('matiere').value;
 		const classe = document.getElementById('classe').value;
-
-		console.log('Données du formulaire:', {
-			titre,
-			matiere,
-			classe
-		});
 
 		if (!titre || !matiere || !classe) {
 			showError(ErrorMessages.GENERAL.REQUIRED_FIELDS);
@@ -401,7 +270,6 @@ ob_start();
 		}
 
 		try {
-			console.log('Envoi de la requête...');
 			const response = await fetch('api/examens', {
 				method: 'POST',
 				headers: {
@@ -414,9 +282,7 @@ ob_start();
 				})
 			});
 
-			console.log('Réponse:', response.status);
 			const result = await response.json();
-			console.log('Résultat:', result);
 
 			if (!response.ok) {
 				throw new Error(result.error || ErrorMessages.EXAMS.CREATE.ERROR);
@@ -432,84 +298,12 @@ ob_start();
 			showSuccess(ErrorMessages.EXAMS.CREATE.SUCCESS);
 			loadExams();
 		} catch (error) {
-			console.error('Erreur lors de l\'ajout de l\'examen:', error);
 			showError(error.message);
 		}
 	});
 
-	// Fonction pour modifier un examen
-	async function editExam(id, currentTitre, currentMatiere, currentClasse) {
-		const newTitre = prompt('Nouveau titre de l\'examen:', currentTitre);
-
-		if (newTitre && newTitre !== currentTitre) {
-			try {
-				console.log('Tentative de modification de l\'examen...');
-				const response = await fetch(`api/examens/${id}`, {
-					method: 'PUT',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						titre: newTitre,
-						matiere: currentMatiere,
-						classe: currentClasse
-					})
-				});
-
-				console.log('Réponse reçue:', response);
-				const result = await response.json();
-				console.log('Résultat:', result);
-
-				if (!response.ok) {
-					throw new Error(result.error || ErrorMessages.EXAMS.UPDATE.ERROR);
-				}
-
-				if (!result.success) {
-					throw new Error(result.error || ErrorMessages.EXAMS.UPDATE.ERROR);
-				}
-
-				showSuccess(ErrorMessages.EXAMS.UPDATE.SUCCESS);
-				loadExams();
-			} catch (error) {
-				console.error('Erreur lors de la modification de l\'examen:', error);
-				showError(error.message);
-			}
-		}
-	}
-
-	// Fonction pour supprimer un examen
-	async function deleteExam(id) {
-		if (confirm('Êtes-vous sûr de vouloir supprimer cet examen ?')) {
-			try {
-				console.log('Tentative de suppression de l\'examen...');
-				const response = await fetch(`api/examens/${id}`, {
-					method: 'DELETE'
-				});
-
-				console.log('Réponse reçue:', response);
-				const result = await response.json();
-				console.log('Résultat:', result);
-
-				if (!response.ok) {
-					throw new Error(result.error || ErrorMessages.EXAMS.DELETE.ERROR);
-				}
-
-				if (!result.success) {
-					throw new Error(result.error || ErrorMessages.EXAMS.DELETE.ERROR);
-				}
-
-				showSuccess(ErrorMessages.EXAMS.DELETE.SUCCESS);
-				loadExams();
-			} catch (error) {
-				console.error('Erreur lors de la suppression de l\'examen:', error);
-				showError(error.message);
-			}
-		}
-	}
-
 	// Charger les données au chargement de la page
 	document.addEventListener('DOMContentLoaded', () => {
-		console.log('Chargement de la page...');
 		loadMatieres();
 		loadClasses();
 		loadExams();
