@@ -16,21 +16,24 @@ class ClasseController
 	public function getAllClasses()
 	{
 		try {
-			$result = $this->classeModel->getAll();
-			if ($result === false) {
-				throw new Exception("Erreur lors de la récupération des classes");
-			}
-			if (!is_array($result)) {
-				$result = [];
+			$classes = $this->classeModel->getAll();
+			if ($classes === false) {
+				return [
+					'success' => false,
+					'message' => 'Erreur lors de la récupération des classes',
+					'data' => []
+				];
 			}
 			return [
 				'success' => true,
-				'data' => $result
+				'message' => 'Classes récupérées avec succès',
+				'data' => $classes
 			];
 		} catch (Exception $e) {
 			return [
 				'success' => false,
-				'error' => $e->getMessage()
+				'message' => 'Erreur serveur: ' . $e->getMessage(),
+				'data' => []
 			];
 		}
 	}
@@ -42,75 +45,112 @@ class ClasseController
 
 	public function createClasse($nom_classe, $niveau, $numero, $rythme)
 	{
-		// Vérification de la validité des données
-		if (empty($nom_classe) || empty($niveau) || empty($numero) || empty($rythme)) {
-			throw new Exception("Tous les champs sont obligatoires");
-		}
+		try {
+			if (empty($nom_classe) || empty($niveau) || empty($numero) || empty($rythme)) {
+				return [
+					'success' => false,
+					'message' => 'Tous les champs sont obligatoires',
+					'data' => null
+				];
+			}
 
-		// Vérification de la longueur des champs
-		if (strlen($nom_classe) > 255) {
-			throw new Exception("Le nom de la classe est trop long");
-		}
-		if (strlen($niveau) > 50) {
-			throw new Exception("Le niveau est trop long");
-		}
-		if (strlen($numero) > 50) {
-			throw new Exception("Le numéro est trop long");
-		}
+			if (!in_array($rythme, ['Alternance', 'Initial'])) {
+				return [
+					'success' => false,
+					'message' => 'Le rythme doit être soit "Alternance" soit "Initial"',
+					'data' => null
+				];
+			}
 
-		// Vérification de la validité du rythme
-		if (!in_array($rythme, ['Alternance', 'Initial'])) {
-			throw new Exception("Le rythme doit être soit 'Alternance' soit 'Initial'");
-		}
+			$result = $this->classeModel->create($nom_classe, $niveau, $numero, $rythme);
+			if ($result === false) {
+				return [
+					'success' => false,
+					'message' => 'Erreur lors de la création de la classe',
+					'data' => null
+				];
+			}
 
-		return $this->classeModel->create($nom_classe, $niveau, $numero, $rythme);
+			return [
+				'success' => true,
+				'message' => 'Classe créée avec succès',
+				'data' => $result
+			];
+		} catch (Exception $e) {
+			return [
+				'success' => false,
+				'message' => 'Erreur serveur: ' . $e->getMessage(),
+				'data' => null
+			];
+		}
 	}
 
 	public function updateClasse($id, $nom_classe, $niveau, $numero, $rythme)
 	{
-		// Vérification de l'existence de la classe
-		if (!$this->classeModel->getById($id)) {
-			throw new Exception("La classe n'existe pas");
-		}
+		try {
+			if (empty($nom_classe) || empty($niveau) || empty($numero) || empty($rythme)) {
+				return [
+					'success' => false,
+					'message' => 'Tous les champs sont obligatoires',
+					'data' => null
+				];
+			}
 
-		// Vérification de la validité des données
-		if (empty($nom_classe) || empty($niveau) || empty($numero) || empty($rythme)) {
-			throw new Exception("Tous les champs sont obligatoires");
-		}
+			if (!in_array($rythme, ['Alternance', 'Initial'])) {
+				return [
+					'success' => false,
+					'message' => 'Le rythme doit être soit "Alternance" soit "Initial"',
+					'data' => null
+				];
+			}
 
-		// Vérification de la longueur des champs
-		if (strlen($nom_classe) > 255) {
-			throw new Exception("Le nom de la classe est trop long");
-		}
-		if (strlen($niveau) > 50) {
-			throw new Exception("Le niveau est trop long");
-		}
-		if (strlen($numero) > 50) {
-			throw new Exception("Le numéro est trop long");
-		}
+			$result = $this->classeModel->update($id, $nom_classe, $niveau, $numero, $rythme);
+			if ($result === false) {
+				return [
+					'success' => false,
+					'message' => 'Erreur lors de la modification de la classe',
+					'data' => null
+				];
+			}
 
-		// Vérification de la validité du rythme
-		if (!in_array($rythme, ['Alternance', 'Initial'])) {
-			throw new Exception("Le rythme doit être soit 'Alternance' soit 'Initial'");
+			return [
+				'success' => true,
+				'message' => 'Classe modifiée avec succès',
+				'data' => $result
+			];
+		} catch (Exception $e) {
+			return [
+				'success' => false,
+				'message' => 'Erreur serveur: ' . $e->getMessage(),
+				'data' => null
+			];
 		}
-
-		return $this->classeModel->update($id, $nom_classe, $niveau, $numero, $rythme);
 	}
 
 	public function deleteClasse($id)
 	{
-		// Vérification de l'existence de la classe
-		if (!$this->classeModel->getById($id)) {
-			throw new Exception("La classe n'existe pas");
-		}
+		try {
+			$result = $this->classeModel->delete($id);
+			if ($result === false) {
+				return [
+					'success' => false,
+					'message' => 'Erreur lors de la suppression de la classe',
+					'data' => null
+				];
+			}
 
-		// Vérification qu'il n'y a pas d'élèves dans la classe
-		$eleves = $this->eleveModel->getByClasse($id);
-		if (!empty($eleves)) {
-			throw new Exception("Impossible de supprimer la classe car elle contient des élèves");
+			return [
+				'success' => true,
+				'message' => 'Classe supprimée avec succès',
+				'data' => null
+			];
+		} catch (Exception $e) {
+			return [
+				'success' => false,
+				'message' => 'Erreur serveur: ' . $e->getMessage(),
+				'data' => null
+			];
 		}
-
-		return $this->classeModel->delete($id);
 	}
 
 	public function getElevesByClasse($id_classe)

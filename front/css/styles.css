@@ -1,0 +1,57 @@
+/* Styles pour les messages d'erreur */
+.message-container {
+	padding: 15px;
+	margin-bottom: 20px;
+	border-radius: 4px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	animation: slideIn 0.3s ease-out;
+}
+
+.message-container.error {
+	background-color: #ffebee;
+	border-left: 4px solid #f44336;
+	color: #c62828;
+}
+
+.message-container.success {
+	background-color: #e8f5e9;
+	border-left: 4px solid #4caf50;
+	color: #2e7d32;
+}
+
+.message-container.warning {
+	background-color: #fff3e0;
+	border-left: 4px solid #ff9800;
+	color: #e65100;
+}
+
+.message {
+	flex-grow: 1;
+	margin-right: 10px;
+}
+
+.close-button {
+	background: none;
+	border: none;
+	font-size: 20px;
+	cursor: pointer;
+	padding: 0 5px;
+	color: inherit;
+}
+
+.close-button:hover {
+	opacity: 0.8;
+}
+
+@keyframes slideIn {
+	from {
+		transform: translateY(-100%);
+		opacity: 0;
+	}
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
+}

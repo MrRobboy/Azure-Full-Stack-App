@@ -61,111 +61,114 @@ ob_start();
 	</div>
 </div>
 
+<script src="js/errorHandler.js"></script>
 <script>
 	// Fonction pour charger les classes
 	async function loadClasses() {
 		try {
-			const response = await fetch('api/classes');
+			const response = await fetch('api.php/classes');
 			if (!response.ok) {
 				throw new Error(`Erreur HTTP: ${response.status}`);
 			}
-			const classes = await response.json();
+			const data = await response.json();
 
-			console.log('Classes reçues:', classes); // Pour le débogage
+			if (!data.success) {
+				throw new Error(data.message || 'Erreur lors du chargement des classes');
+			}
 
+			const classes = data.data;
 			const tbody = document.querySelector('#classesTable tbody');
 			tbody.innerHTML = '';
 
-			if (!Array.isArray(classes)) {
-				console.error('Les données reçues ne sont pas un tableau:', classes);
-				tbody.innerHTML = '<tr><td colspan="5">Erreur: Format de données invalide</td></tr>';
-				return;
-			}
-
-			if (classes.length === 0) {
-				tbody.innerHTML = '<tr><td colspan="5">Aucune classe trouvée</td></tr>';
+			if (!Array.isArray(classes) || classes.length === 0) {
+				tbody.innerHTML = '<tr><td colspan="5" class="text-center">Aucune classe trouvée</td></tr>';
 				return;
 			}
 
 			classes.forEach(classe => {
 				const tr = document.createElement('tr');
 				tr.innerHTML = `
-					<td>${classe.nom_classe || ''}</td>
-					<td>${classe.niveau || ''}</td>
-					<td>${classe.numero || ''}</td>
-					<td>${classe.rythme || ''}</td>
+					<td>${classe.nom_classe || '-'}</td>
+					<td>${classe.niveau || '-'}</td>
+					<td>${classe.numero || '-'}</td>
+					<td>${classe.rythme || '-'}</td>
 					<td>
-						<button class="btn btn-edit" onclick="editClasse(${classe.id_classe}, '${classe.nom_classe || ''}', '${classe.niveau || ''}', '${classe.numero || ''}', '${classe.rythme || ''}')">Modifier</button>
-						<button class="btn btn-danger" onclick="deleteClasse(${classe.id_classe})">Supprimer</button>
+						<button onclick="editClasse(${classe.id_classe})" class="btn btn-warning btn-sm">Modifier</button>
+						<button onclick="deleteClasse(${classe.id_classe})" class="btn btn-danger btn-sm">Supprimer</button>
 					</td>
 				`;
 				tbody.appendChild(tr);
 			});
 		} catch (error) {
 			console.error('Erreur lors du chargement des classes:', error);
+			ErrorHandler.handleApiError(error);
 			const tbody = document.querySelector('#classesTable tbody');
-			tbody.innerHTML = `<tr><td colspan="5">Erreur lors du chargement des classes: ${error.message}</td></tr>`;
+			tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur lors du chargement des classes</td></tr>';
 		}
 	}
 
 	// Fonction pour ajouter une classe
-	document.getElementById('addClasseForm').addEventListener('submit', async function(e) {
-		e.preventDefault();
-		const nom = document.getElementById('nom').value;
+	async function addClasse() {
+		const nom_classe = document.getElementById('nom').value;
 		const niveau = document.getElementById('niveau').value;
 		const numero = document.getElementById('numero').value;
 		const rythme = document.getElementById('rythme').value;
 
 		try {
-			const response = await fetch('api/classes', {
+			const response = await fetch('api.php/classes', {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json'
+					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({
-					nom_classe: nom,
+					nom_classe,
 					niveau,
 					numero,
 					rythme
 				})
 			});
 
-			if (response.ok) {
-				document.getElementById('nom').value = '';
-				document.getElementById('niveau').value = '';
-				document.getElementById('numero').value = '';
-				document.getElementById('rythme').value = '';
-				loadClasses();
-			} else {
-				const error = await response.json();
-				alert(error.message || 'Erreur lors de l\'ajout de la classe');
+			if (!response.ok) {
+				throw new Error(`Erreur HTTP: ${response.status}`);
 			}
+
+			const data = await response.json();
+			if (!data.success) {
+				throw new Error(data.message || 'Erreur lors de l\'ajout de la classe');
+			}
+
+			ErrorHandler.showSuccess('Classe ajoutée avec succès');
+			document.getElementById('addClasseForm').reset();
+			loadClasses();
 		} catch (error) {
-			console.error('Erreur:', error);
-			alert('Erreur lors de l\'ajout de la classe');
+			console.error('Erreur lors de l\'ajout de la classe:', error);
+			ErrorHandler.handleApiError(error);
 		}
-	});
+	}
 
 	// Fonction pour modifier une classe
-	async function editClasse(id, currentNom, currentNiveau, currentNumero, currentRythme) {
-		const newNom = prompt('Nouveau nom de la classe:', currentNom);
-		const newNiveau = prompt('Nouveau niveau:', currentNiveau);
-		const newNumero = prompt('Nouveau numéro:', currentNumero);
-		const newRythme = prompt('Nouveau rythme (Alternance ou Initial):', currentRythme);
+	async function editClasse(id) {
+		const nom_classe = prompt('Nouveau nom de la classe:', document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(1)`).textContent);
+		const niveau = prompt('Nouveau niveau:', document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(2)`).textContent);
+		const numero = prompt('Nouveau numéro:', document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(3)`).textContent);
+		const rythme = prompt('Nouveau rythme (Alternance ou Initial):', document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(4)`).textContent);
 
-		if (newNom && newNiveau && newNumero && newRythme &&
-			(newNom !== currentNom || newNiveau !== currentNiveau || newNumero !== currentNumero || newRythme !== currentRythme)) {
+		if (nom_classe && niveau && numero && rythme &&
+			(nom_classe !== document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(1)`).textContent ||
+				niveau !== document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(2)`).textContent ||
+				numero !== document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(3)`).textContent ||
+				rythme !== document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(4)`).textContent)) {
 			try {
-				const response = await fetch(`api/classes/${id}`, {
+				const response = await fetch(`api.php/classes/${id}`, {
 					method: 'PUT',
 					headers: {
-						'Content-Type': 'application/json'
+						'Content-Type': 'application/json',
 					},
 					body: JSON.stringify({
-						nom_classe: newNom,
-						niveau: newNiveau,
-						numero: newNumero,
-						rythme: newRythme
+						nom_classe,
+						niveau,
+						numero,
+						rythme
 					})
 				});
 
@@ -184,22 +187,29 @@ ob_start();
 
 	// Fonction pour supprimer une classe
 	async function deleteClasse(id) {
-		if (confirm('Êtes-vous sûr de vouloir supprimer cette classe ?')) {
-			try {
-				const response = await fetch(`api/classes/${id}`, {
-					method: 'DELETE'
-				});
+		if (!confirm('Êtes-vous sûr de vouloir supprimer cette classe ?')) {
+			return;
+		}
 
-				if (response.ok) {
-					loadClasses();
-				} else {
-					const error = await response.json();
-					alert(error.message || 'Erreur lors de la suppression de la classe');
-				}
-			} catch (error) {
-				console.error('Erreur:', error);
-				alert('Erreur lors de la suppression de la classe');
+		try {
+			const response = await fetch(`api.php/classes/${id}`, {
+				method: 'DELETE'
+			});
+
+			if (!response.ok) {
+				throw new Error(`Erreur HTTP: ${response.status}`);
 			}
+
+			const data = await response.json();
+			if (!data.success) {
+				throw new Error(data.message || 'Erreur lors de la suppression de la classe');
+			}
+
+			ErrorHandler.showSuccess('Classe supprimée avec succès');
+			loadClasses();
+		} catch (error) {
+			console.error('Erreur lors de la suppression de la classe:', error);
+			ErrorHandler.handleApiError(error);
 		}
 	}
 
