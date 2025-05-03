@@ -29,19 +29,40 @@ class Classe
 	{
 		try {
 			error_log("Tentative de récupération de la classe avec l'ID: " . $id);
-			$stmt = $this->db->prepare("SELECT * FROM CLASSE WHERE id_classe = ?");
-			$stmt->execute([$id]);
-			$result = $stmt->fetch(PDO::FETCH_ASSOC);
 
+			// Vérification de la connexion
+			if (!$this->db) {
+				error_log("Erreur: Connexion à la base de données non initialisée");
+				return false;
+			}
+
+			$stmt = $this->db->prepare("SELECT * FROM CLASSE WHERE id_classe = ?");
+			if (!$stmt) {
+				error_log("Erreur lors de la préparation de la requête: " . print_r($this->db->errorInfo(), true));
+				return false;
+			}
+
+			$result = $stmt->execute([$id]);
 			if (!$result) {
+				error_log("Erreur lors de l'exécution de la requête: " . print_r($stmt->errorInfo(), true));
+				return false;
+			}
+
+			$classe = $stmt->fetch(PDO::FETCH_ASSOC);
+			if (!$classe) {
 				error_log("Aucune classe trouvée avec l'ID: " . $id);
 				return false;
 			}
 
-			error_log("Classe trouvée: " . print_r($result, true));
-			return $result;
+			error_log("Classe trouvée: " . print_r($classe, true));
+			return $classe;
 		} catch (PDOException $e) {
 			error_log("Erreur PDO dans getById: " . $e->getMessage());
+			error_log("Trace: " . $e->getTraceAsString());
+			return false;
+		} catch (Exception $e) {
+			error_log("Erreur générale dans getById: " . $e->getMessage());
+			error_log("Trace: " . $e->getTraceAsString());
 			return false;
 		}
 	}
