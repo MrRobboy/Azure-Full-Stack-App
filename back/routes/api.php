@@ -280,28 +280,19 @@ try {
 
 	// Routes des classes
 	if ($segments[0] === 'classes') {
-		if ($method === 'GET') {
-			try {
+		try {
+			if ($method === 'GET') {
 				if (isset($segments[1])) {
 					if ($segments[1] === 'eleves' && isset($segments[2])) {
-						sendResponse($classeController->getElevesByClasse($segments[2]));
+						$result = $classeController->getElevesByClasse($segments[2]);
 					} else {
-						sendResponse($classeController->getClasseById($segments[1]));
+						$result = $classeController->getClasseById($segments[1]);
 					}
 				} else {
 					$result = $classeController->getAllClasses();
-					if ($result['success']) {
-						sendResponse($result['data']);
-					} else {
-						sendResponse(['message' => $result['error']], 400);
-					}
 				}
-			} catch (Exception $e) {
-				error_log("Erreur lors de la récupération des classes: " . $e->getMessage());
-				sendResponse(['message' => $e->getMessage()], 400);
-			}
-		} elseif ($method === 'POST') {
-			try {
+				sendResponse($result);
+			} elseif ($method === 'POST') {
 				$data = json_decode(file_get_contents('php://input'), true);
 				if (!$data) {
 					throw new Exception("Données JSON invalides");
@@ -315,13 +306,8 @@ try {
 					$data['numero'],
 					$data['rythme']
 				);
-				sendResponse(['id' => $result, 'message' => 'Classe créée avec succès'], 201);
-			} catch (Exception $e) {
-				error_log("Erreur lors de la création de la classe: " . $e->getMessage());
-				sendResponse(['message' => $e->getMessage()], 400);
-			}
-		} elseif ($method === 'PUT' && isset($segments[1])) {
-			try {
+				sendResponse($result);
+			} elseif ($method === 'PUT' && isset($segments[1])) {
 				$data = json_decode(file_get_contents('php://input'), true);
 				if (!$data) {
 					throw new Exception("Données JSON invalides");
@@ -329,26 +315,26 @@ try {
 				if (!isset($data['nom_classe']) || !isset($data['niveau']) || !isset($data['numero']) || !isset($data['rythme'])) {
 					throw new Exception("Tous les champs sont obligatoires");
 				}
-				$classeController->updateClasse(
+				$result = $classeController->updateClasse(
 					$segments[1],
 					$data['nom_classe'],
 					$data['niveau'],
 					$data['numero'],
 					$data['rythme']
 				);
-				sendResponse(['message' => 'Classe mise à jour avec succès']);
-			} catch (Exception $e) {
-				error_log("Erreur lors de la mise à jour de la classe: " . $e->getMessage());
-				sendResponse(['message' => $e->getMessage()], 400);
+				sendResponse($result);
+			} elseif ($method === 'DELETE' && isset($segments[1])) {
+				$result = $classeController->deleteClasse($segments[1]);
+				sendResponse($result);
+			} else {
+				throw new Exception("Méthode non autorisée", 405);
 			}
-		} elseif ($method === 'DELETE' && isset($segments[1])) {
-			try {
-				$classeController->deleteClasse($segments[1]);
-				sendResponse(['message' => 'Classe supprimée avec succès']);
-			} catch (Exception $e) {
-				error_log("Erreur lors de la suppression de la classe: " . $e->getMessage());
-				sendResponse(['message' => $e->getMessage()], 400);
-			}
+		} catch (Exception $e) {
+			error_log("Erreur dans la route classes: " . $e->getMessage());
+			sendResponse([
+				'success' => false,
+				'message' => $e->getMessage()
+			], $e->getCode() ?: 500);
 		}
 	}
 

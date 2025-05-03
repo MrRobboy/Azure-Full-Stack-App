@@ -18,8 +18,8 @@ ob_start();
 			<h3>Ajouter une classe</h3>
 			<form id="addClasseForm">
 				<div class="form-row">
-					<label for="nom">Nom de la classe :</label>
-					<input type="text" name="nom" id="nom" required>
+					<label for="nom_classe">Nom de la classe :</label>
+					<input type="text" name="nom_classe" id="nom_classe" required>
 				</div>
 				<div class="form-row">
 					<label for="niveau">Niveau :</label>
@@ -66,7 +66,7 @@ ob_start();
 	// Fonction pour charger les classes
 	async function loadClasses() {
 		try {
-			const response = await fetch('api.php/classes');
+			const response = await fetch('../back/routes/api.php/classes');
 			if (!response.ok) {
 				throw new Error(`Erreur HTTP: ${response.status}`);
 			}
@@ -87,6 +87,7 @@ ob_start();
 
 			classes.forEach(classe => {
 				const tr = document.createElement('tr');
+				tr.setAttribute('data-id', classe.id_classe);
 				tr.innerHTML = `
 					<td>${classe.nom_classe || '-'}</td>
 					<td>${classe.niveau || '-'}</td>
@@ -109,13 +110,13 @@ ob_start();
 
 	// Fonction pour ajouter une classe
 	async function addClasse() {
-		const nom_classe = document.getElementById('nom').value;
+		const nom_classe = document.getElementById('nom_classe').value;
 		const niveau = document.getElementById('niveau').value;
 		const numero = document.getElementById('numero').value;
 		const rythme = document.getElementById('rythme').value;
 
 		try {
-			const response = await fetch('api.php/classes', {
+			const response = await fetch('../back/routes/api.php/classes', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -159,7 +160,7 @@ ob_start();
 				numero !== document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(3)`).textContent ||
 				rythme !== document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(4)`).textContent)) {
 			try {
-				const response = await fetch(`api.php/classes/${id}`, {
+				const response = await fetch(`../back/routes/api.php/classes/${id}`, {
 					method: 'PUT',
 					headers: {
 						'Content-Type': 'application/json',
@@ -172,15 +173,20 @@ ob_start();
 					})
 				});
 
-				if (response.ok) {
-					loadClasses();
-				} else {
-					const error = await response.json();
-					alert(error.message || 'Erreur lors de la modification de la classe');
+				if (!response.ok) {
+					throw new Error(`Erreur HTTP: ${response.status}`);
 				}
+
+				const data = await response.json();
+				if (!data.success) {
+					throw new Error(data.message || 'Erreur lors de la modification de la classe');
+				}
+
+				ErrorHandler.showSuccess('Classe modifiée avec succès');
+				loadClasses();
 			} catch (error) {
-				console.error('Erreur:', error);
-				alert('Erreur lors de la modification de la classe');
+				console.error('Erreur lors de la modification de la classe:', error);
+				ErrorHandler.handleApiError(error);
 			}
 		}
 	}
@@ -192,7 +198,7 @@ ob_start();
 		}
 
 		try {
-			const response = await fetch(`api.php/classes/${id}`, {
+			const response = await fetch(`../back/routes/api.php/classes/${id}`, {
 				method: 'DELETE'
 			});
 
