@@ -109,18 +109,25 @@ ob_start();
 		background: #c82333;
 	}
 
-	.notification {
+	.notification-container {
 		position: fixed;
 		top: 20px;
 		right: 20px;
+		z-index: 1000;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+	}
+
+	.notification {
+		position: relative;
 		padding: 15px;
 		border-radius: 4px;
 		color: white;
-		z-index: 1000;
-		animation: slideIn 0.3s ease-out;
 		margin-bottom: 10px;
 		width: 300px;
 		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+		animation: slideIn 0.3s ease-out;
 	}
 
 	.notification.error {
@@ -132,10 +139,12 @@ ob_start();
 	}
 
 	.notification .close {
-		float: right;
+		position: absolute;
+		top: 5px;
+		right: 10px;
 		cursor: pointer;
-		margin-left: 10px;
 		font-weight: bold;
+		font-size: 20px;
 	}
 
 	@keyframes slideIn {

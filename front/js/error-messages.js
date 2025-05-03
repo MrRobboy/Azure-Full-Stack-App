@@ -71,23 +71,34 @@ const ErrorMessages = {
 
 // Fonction pour afficher une notification
 function showNotification(message, type = "error") {
+	console.log(`Affichage d'une notification de type ${type}: ${message}`);
+
+	// Créer le conteneur s'il n'existe pas
+	let container = document.querySelector(".notification-container");
+	if (!container) {
+		container = document.createElement("div");
+		container.className = "notification-container";
+		document.body.appendChild(container);
+	}
+
+	// Supprimer les anciennes notifications du même type
+	const oldNotifications = container.querySelectorAll(
+		`.notification.${type}`
+	);
+	oldNotifications.forEach((notification) => {
+		notification.classList.add("slideOut");
+		setTimeout(() => notification.remove(), 500);
+	});
+
 	const notification = document.createElement("div");
 	notification.className = `notification ${type}`;
 	notification.innerHTML = `
-        <span class="close">&times;</span>
-        <p>${message}</p>
-    `;
-	document.body.appendChild(notification);
+		<span class="close">&times;</span>
+		<p>${message}</p>
+	`;
 
-	// Supprimer les anciennes notifications du même type
-	const oldNotifications = document.querySelectorAll(
-		`.notification.${type}`
-	);
-	oldNotifications.forEach((old, index) => {
-		if (index < oldNotifications.length - 1) {
-			old.remove();
-		}
-	});
+	// Ajouter la notification au conteneur
+	container.appendChild(notification);
 
 	// Fermer la notification après 5 secondes
 	setTimeout(() => {
@@ -104,10 +115,12 @@ function showNotification(message, type = "error") {
 
 // Fonction pour afficher une erreur
 function showError(message) {
+	console.error("Erreur:", message);
 	showNotification(message, "error");
 }
 
 // Fonction pour afficher un succès
 function showSuccess(message) {
+	console.log("Succès:", message);
 	showNotification(message, "success");
 }
