@@ -19,18 +19,26 @@ class ExamenController
 	public function getAllExamens()
 	{
 		try {
+			error_log("Tentative de récupération de tous les examens");
 			$result = $this->examenModel->getAll();
+			error_log("Résultat de getAll: " . print_r($result, true));
+
 			if ($result === false) {
 				throw new Exception("Erreur lors de la récupération des examens");
 			}
+
 			if (!is_array($result)) {
 				$result = [];
 			}
+
+			error_log("Examen retournés: " . count($result));
 			return [
 				'success' => true,
-				'data' => $result
+				'data' => $result,
+				'message' => "Examens récupérés avec succès"
 			];
 		} catch (Exception $e) {
+			error_log("Erreur dans getAllExamens: " . $e->getMessage());
 			return [
 				'success' => false,
 				'error' => $e->getMessage()
@@ -96,6 +104,8 @@ class ExamenController
 			}
 
 			$result = $this->examenModel->create($titre, $matiere, $classe);
+			error_log("Résultat de la création: " . print_r($result, true));
+
 			if ($result === false) {
 				error_log("Erreur lors de la création de l'examen");
 				throw new Exception("Erreur lors de la création de l'examen");

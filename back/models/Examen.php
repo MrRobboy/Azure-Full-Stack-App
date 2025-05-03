@@ -16,27 +16,32 @@ class Examen
 	public function getAll()
 	{
 		try {
-			$stmt = $this->db->prepare("
-				SELECT e.*, m.nom_matiere, c.nom_classe 
-				FROM EXAMEN e
-				LEFT JOIN MATIERE m ON e.id_matiere = m.id_matiere
-				LEFT JOIN CLASSE c ON e.id_classe = c.id_classe
-				ORDER BY e.date_examen DESC
-			");
+			error_log("Tentative de récupération de tous les examens");
+			$sql = "SELECT e.*, m.nom as nom_matiere, c.nom_classe 
+					FROM examens e 
+					JOIN matieres m ON e.matiere = m.id_matiere 
+					JOIN classes c ON e.classe = c.id_classe 
+					ORDER BY e.id_exam DESC";
+
+			error_log("Requête SQL: " . $sql);
+			$stmt = $this->db->prepare($sql);
+
+			if ($stmt === false) {
+				error_log("Erreur de préparation de la requête: " . print_r($this->db->errorInfo(), true));
+				throw new Exception("Erreur lors de la préparation de la requête");
+			}
 
 			if (!$stmt->execute()) {
+				error_log("Erreur d'exécution de la requête: " . print_r($stmt->errorInfo(), true));
 				throw new Exception("Erreur lors de l'exécution de la requête");
 			}
 
 			$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-			if ($result === false) {
-				return [];
-			}
-
+			error_log("Résultat de la requête: " . print_r($result, true));
 			return $result;
 		} catch (Exception $e) {
-			$this->errorService->logError('Examen::getAll', $e->getMessage());
-			return [];
+			error_log("Erreur dans getAll: " . $e->getMessage());
+			return false;
 		}
 	}
 
@@ -70,34 +75,36 @@ class Examen
 	public function create($titre, $matiere, $classe)
 	{
 		try {
-			error_log("Tentative de création d'un examen avec les données suivantes:");
-			error_log("Titre: " . $titre);
-			error_log("Matière: " . $matiere);
-			error_log("Classe: " . $classe);
+			error_log("Tentative de création d'un examen");
+			error_log("Données: titre=$titre, matiere=$matiere, classe=$classe");
 
-			$stmt = $this->db->prepare("
-				INSERT INTO EXAMEN (titre, id_matiere, id_classe) 
-				VALUES (?, ?, ?)
-			");
+			$sql = "INSERT INTO examens (titre, matiere, classe) VALUES (?, ?, ?)";
+			error_log("Requête SQL: " . $sql);
 
-			if (!$stmt) {
-				$error = $this->db->errorInfo();
-				error_log("Erreur de préparation de la requête: " . implode(", ", $error));
-				throw new Exception("Erreur de préparation de la requête: " . $error[2]);
+			$stmt = $this->db->prepare($sql);
+
+			if ($stmt === false) {
+				error_log("Erreur de préparation de la requête: " . print_r($this->db->errorInfo(), true));
+				throw new Exception("Erreur lors de la préparation de la requête");
 			}
 
 			if (!$stmt->execute([$titre, $matiere, $classe])) {
-				$error = $stmt->errorInfo();
-				error_log("Erreur lors de l'insertion de l'examen: " . implode(", ", $error));
-				throw new Exception("Erreur lors de l'insertion de l'examen: " . $error[2]);
+				error_log("Erreur d'exécution de la requête: " . print_r($stmt->errorInfo(), true));
+				throw new Exception("Erreur lors de l'exécution de la requête");
 			}
 
 			$id = $this->db->lastInsertId();
-			error_log("Examen créé avec succès, ID: " . $id);
-			return $this->getById($id);
+			error_log("ID de l'examen créé: " . $id);
+
+			return [
+				'id_exam' => $id,
+				'titre' => $titre,
+				'matiere' => $matiere,
+				'classe' => $classe
+			];
 		} catch (Exception $e) {
-			$this->errorService->logError('Examen::create', $e->getMessage());
-			throw $e;
+			error_log("Erreur dans create: " . $e->getMessage());
+			return false;
 		}
 	}
 

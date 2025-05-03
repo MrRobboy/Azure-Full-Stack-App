@@ -312,7 +312,7 @@ ob_start();
 			const tbody = document.querySelector('#examsTable tbody');
 			tbody.innerHTML = '';
 
-			if (result.data.length === 0) {
+			if (!result.data || result.data.length === 0) {
 				tbody.innerHTML = '<tr><td colspan="4">Aucun examen trouvé</td></tr>';
 				return;
 			}
@@ -320,11 +320,11 @@ ob_start();
 			result.data.forEach(exam => {
 				const tr = document.createElement('tr');
 				tr.innerHTML = `
-					<td>${exam.titre}</td>
-					<td>${exam.nom_matiere}</td>
-					<td>${exam.nom_classe}</td>
+					<td>${exam.titre || ''}</td>
+					<td>${exam.nom_matiere || ''}</td>
+					<td>${exam.nom_classe || ''}</td>
 					<td>
-						<button class="btn btn-edit" onclick="editExam(${exam.id_exam}, '${exam.titre}', ${exam.matiere}, ${exam.classe})">Modifier</button>
+						<button class="btn btn-edit" onclick="editExam(${exam.id_exam}, '${exam.titre || ''}', ${exam.matiere || ''}, ${exam.classe || ''})">Modifier</button>
 						<button class="btn btn-danger" onclick="deleteExam(${exam.id_exam})">Supprimer</button>
 					</td>
 				`;
@@ -382,11 +382,16 @@ ob_start();
 				throw new Error(result.error || ErrorMessages.EXAMS.CREATE.ERROR);
 			}
 
-			document.getElementById('titre').value = '';
-			document.getElementById('matiere').value = '';
-			document.getElementById('classe').value = '';
-			showSuccess(ErrorMessages.EXAMS.CREATE.SUCCESS);
-			loadExams();
+			// Vérifier si l'examen a été créé avec succès
+			if (result.data && result.data.id_exam) {
+				document.getElementById('titre').value = '';
+				document.getElementById('matiere').value = '';
+				document.getElementById('classe').value = '';
+				showSuccess(ErrorMessages.EXAMS.CREATE.SUCCESS);
+				loadExams();
+			} else {
+				throw new Error(ErrorMessages.EXAMS.CREATE.ERROR);
+			}
 		} catch (error) {
 			showError(error.message);
 		}
