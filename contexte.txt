@@ -1,0 +1,2 @@
+Je suis en train de coder sur un windows.
+Ce code ira dans un github depuis lequel un debian récupérera l'utilisateur user-00 et qui l'affichera en localhost sur le port 727.

@@ -5,10 +5,18 @@ ini_set('display_startup_errors', 0);
 error_reporting(0);
 
 // Configuration de la base de données
-define('DB_HOST', 'localhost');
+define('DB_HOST', 'localhost:3306');
+define('DB_NAME', 'gestion_notes');
 define('DB_USER', 'root');
 define('DB_PASS', 'Respons11');
-define('DB_NAME', 'gestion_notes');
+
+// Configuration des chemins
+define('BASE_PATH', dirname(__DIR__));
+define('FRONT_PATH', dirname(BASE_PATH) . '/front');
+define('BACK_PATH', BASE_PATH);
+
+// Configuration de l'API
+define('API_BASE_URL', 'http://localhost:727/api');
 
 // Log des paramètres de configuration
 error_log("Configuration de la base de données :");
