@@ -61,10 +61,16 @@ ob_start();
 	async function loadMatieres() {
 		try {
 			const response = await fetch('api/matieres');
-			const matieres = await response.json();
-			const select = document.getElementById('matiere');
+			const result = await response.json();
 
-			matieres.forEach(matiere => {
+			if (!result.success) {
+				throw new Error(result.error || 'Erreur lors du chargement des matières');
+			}
+
+			const select = document.getElementById('matiere');
+			select.innerHTML = '<option value="">Sélectionnez une matière</option>';
+
+			result.data.forEach(matiere => {
 				const option = document.createElement('option');
 				option.value = matiere.id_matiere;
 				option.textContent = matiere.nom;
@@ -72,6 +78,7 @@ ob_start();
 			});
 		} catch (error) {
 			console.error('Erreur lors du chargement des matières:', error);
+			handleApiError(error);
 		}
 	}
 
@@ -79,10 +86,16 @@ ob_start();
 	async function loadClasses() {
 		try {
 			const response = await fetch('api/classes');
-			const classes = await response.json();
-			const select = document.getElementById('classe');
+			const result = await response.json();
 
-			classes.forEach(classe => {
+			if (!result.success) {
+				throw new Error(result.error || 'Erreur lors du chargement des classes');
+			}
+
+			const select = document.getElementById('classe');
+			select.innerHTML = '<option value="">Sélectionnez une classe</option>';
+
+			result.data.forEach(classe => {
 				const option = document.createElement('option');
 				option.value = classe.id_classe;
 				option.textContent = `${classe.nom_classe} (${classe.niveau}${classe.numero})`;
@@ -90,6 +103,7 @@ ob_start();
 			});
 		} catch (error) {
 			console.error('Erreur lors du chargement des classes:', error);
+			handleApiError(error);
 		}
 	}
 
@@ -97,12 +111,21 @@ ob_start();
 	async function loadExams() {
 		try {
 			const response = await fetch('api/examens');
-			const exams = await response.json();
+			const result = await response.json();
+
+			if (!result.success) {
+				throw new Error(result.error || 'Erreur lors du chargement des examens');
+			}
 
 			const tbody = document.querySelector('#examsTable tbody');
 			tbody.innerHTML = '';
 
-			exams.forEach(exam => {
+			if (result.data.length === 0) {
+				tbody.innerHTML = '<tr><td colspan="4">Aucun examen trouvé</td></tr>';
+				return;
+			}
+
+			result.data.forEach(exam => {
 				const tr = document.createElement('tr');
 				tr.innerHTML = `
 					<td>${exam.titre}</td>
@@ -117,6 +140,7 @@ ob_start();
 			});
 		} catch (error) {
 			console.error('Erreur lors du chargement des examens:', error);
+			handleApiError(error);
 		}
 	}
 
@@ -140,18 +164,20 @@ ob_start();
 				})
 			});
 
-			if (response.ok) {
-				document.getElementById('titre').value = '';
-				document.getElementById('matiere').value = '';
-				document.getElementById('classe').value = '';
-				loadExams();
-			} else {
-				const error = await response.json();
-				alert(error.message || 'Erreur lors de l\'ajout de l\'examen');
+			const result = await response.json();
+
+			if (!result.success) {
+				throw new Error(result.error || 'Erreur lors de l\'ajout de l\'examen');
 			}
+
+			document.getElementById('titre').value = '';
+			document.getElementById('matiere').value = '';
+			document.getElementById('classe').value = '';
+			showSuccess(result.message || 'Examen ajouté avec succès');
+			loadExams();
 		} catch (error) {
 			console.error('Erreur:', error);
-			alert('Erreur lors de l\'ajout de l\'examen');
+			handleApiError(error);
 		}
 	});
 
@@ -173,15 +199,17 @@ ob_start();
 					})
 				});
 
-				if (response.ok) {
-					loadExams();
-				} else {
-					const error = await response.json();
-					alert(error.message || 'Erreur lors de la modification de l\'examen');
+				const result = await response.json();
+
+				if (!result.success) {
+					throw new Error(result.error || 'Erreur lors de la modification de l\'examen');
 				}
+
+				showSuccess(result.message || 'Examen modifié avec succès');
+				loadExams();
 			} catch (error) {
 				console.error('Erreur:', error);
-				alert('Erreur lors de la modification de l\'examen');
+				handleApiError(error);
 			}
 		}
 	}
@@ -194,15 +222,17 @@ ob_start();
 					method: 'DELETE'
 				});
 
-				if (response.ok) {
-					loadExams();
-				} else {
-					const error = await response.json();
-					alert(error.message || 'Erreur lors de la suppression de l\'examen');
+				const result = await response.json();
+
+				if (!result.success) {
+					throw new Error(result.error || 'Erreur lors de la suppression de l\'examen');
 				}
+
+				showSuccess(result.message || 'Examen supprimé avec succès');
+				loadExams();
 			} catch (error) {
 				console.error('Erreur:', error);
-				alert('Erreur lors de la suppression de l\'examen');
+				handleApiError(error);
 			}
 		}
 	}
