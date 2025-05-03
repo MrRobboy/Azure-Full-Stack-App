@@ -295,7 +295,8 @@ try {
 			$result = $classeController->createClasse(
 				$data['nom_classe'],
 				$data['niveau'],
-				$data['numero']
+				$data['numero'],
+				$data['rythme']
 			);
 			sendResponse(['id' => $result], 201);
 		} elseif ($method === 'PUT' && isset($segments[1])) {
@@ -304,7 +305,8 @@ try {
 				$segments[1],
 				$data['nom_classe'],
 				$data['niveau'],
-				$data['numero']
+				$data['numero'],
+				$data['rythme']
 			);
 			sendResponse(['message' => 'Classe mise à jour']);
 		} elseif ($method === 'DELETE' && isset($segments[1])) {

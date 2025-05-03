@@ -1,57 +1,106 @@
-// Fonction pour afficher les messages d'erreur
+// Fonction pour afficher un message d'erreur
 function showError(message) {
-	const errorDiv = document.createElement("div");
-	errorDiv.className = "error-message";
-	errorDiv.innerHTML = `
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <strong>Erreur :</strong> ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    `;
-
-	// Insérer le message d'erreur en haut de la page
-	const mainContent = document.querySelector(".main-content");
-	if (mainContent) {
-		mainContent.insertBefore(errorDiv, mainContent.firstChild);
+	const errorContainer = document.getElementById("error-container");
+	if (!errorContainer) {
+		const container = document.createElement("div");
+		container.id = "error-container";
+		container.className = "alert alert-error";
+		document.querySelector(".main-content").insertBefore(
+			container,
+			document.querySelector(".main-content").firstChild
+		);
 	}
+
+	const errorDiv = document.getElementById("error-container");
+	errorDiv.textContent = message;
+	errorDiv.style.display = "block";
+
+	// Faire défiler jusqu'au message d'erreur
+	errorDiv.scrollIntoView({ behavior: "smooth", block: "start" });
+
+	// Masquer le message après 5 secondes
+	setTimeout(() => {
+		errorDiv.style.display = "none";
+	}, 5000);
 }
 
-// Fonction pour afficher les messages de succès
+// Fonction pour afficher un message de succès
 function showSuccess(message) {
-	const successDiv = document.createElement("div");
-	successDiv.className = "success-message";
-	successDiv.innerHTML = `
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <strong>Succès :</strong> ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    `;
-
-	// Insérer le message de succès en haut de la page
-	const mainContent = document.querySelector(".main-content");
-	if (mainContent) {
-		mainContent.insertBefore(successDiv, mainContent.firstChild);
+	const successContainer = document.getElementById("success-container");
+	if (!successContainer) {
+		const container = document.createElement("div");
+		container.id = "success-container";
+		container.className = "alert alert-success";
+		document.querySelector(".main-content").insertBefore(
+			container,
+			document.querySelector(".main-content").firstChild
+		);
 	}
+
+	const successDiv = document.getElementById("success-container");
+	successDiv.textContent = message;
+	successDiv.style.display = "block";
+
+	// Faire défiler jusqu'au message de succès
+	successDiv.scrollIntoView({ behavior: "smooth", block: "start" });
+
+	// Masquer le message après 5 secondes
+	setTimeout(() => {
+		successDiv.style.display = "none";
+	}, 5000);
 }
 
 // Fonction pour gérer les erreurs d'API
 function handleApiError(error) {
 	console.error("Erreur API:", error);
 
-	let errorMessage = "Une erreur est survenue";
-
-	if (
-		error instanceof TypeError &&
-		error.message.includes("Failed to fetch")
-	) {
-		errorMessage =
-			"Impossible de se connecter au serveur. Veuillez vérifier votre connexion internet.";
-	} else if (error.message === "Réponse invalide du serveur") {
-		errorMessage =
-			"Le serveur a renvoyé une réponse invalide. Veuillez réessayer plus tard.";
-	} else if (error.message) {
-		errorMessage = error.message;
+	// Si l'erreur est une réponse du serveur
+	if (error.response) {
+		showError(
+			`Erreur serveur: ${error.response.status} - ${error.response.statusText}`
+		);
 	}
+	// Si l'erreur est un message personnalisé
+	else if (error.message) {
+		showError(error.message);
+	}
+	// Si c'est une autre type d'erreur
+	else {
+		showError(
+			"Une erreur inattendue est survenue. Veuillez réessayer."
+		);
+	}
+}
 
-	showError(errorMessage);
+// Fonction pour gérer les erreurs de validation
+function handleValidationError(errors) {
+	if (Array.isArray(errors)) {
+		showError(errors.join("\n"));
+	} else if (typeof errors === "object") {
+		const errorMessages = Object.values(errors).flat();
+		showError(errorMessages.join("\n"));
+	} else {
+		showError(errors.toString());
+	}
+}
+
+// Fonction pour logger les erreurs côté client
+function logClientError(context, error) {
+	console.error(`[${context}] Erreur:`, error);
+
+	// On pourrait envoyer les erreurs à un service de logging côté serveur
+	/*
+	fetch('/api/log-error', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			context,
+			error: error.message,
+			stack: error.stack,
+			timestamp: new Date().toISOString()
+		})
+	}).catch(console.error);
+	*/
 }

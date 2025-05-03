@@ -1,162 +1,278 @@
 <?php
-require_once 'config.php';
+session_start();
 
-// Vérification de la connexion
 if (!isset($_SESSION['prof_id'])) {
-	header('Location: index.php');
+	header('Location: login.php');
 	exit();
 }
 
-$prof_id = $_SESSION['prof_id'];
-$exam_id = isset($_GET['exam']) ? $_GET['exam'] : null;
-
-// Traitement de l'ajout/modification de note
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-	if (isset($_POST['action'])) {
-		switch ($_POST['action']) {
-			case 'add':
-				$stmt = $pdo->prepare("INSERT INTO NOTES (user, exam, note) VALUES (?, ?, ?)");
-				$stmt->execute([$_POST['user_id'], $_POST['exam_id'], $_POST['note']]);
-				break;
-			case 'update':
-				$stmt = $pdo->prepare("UPDATE NOTES SET note = ? WHERE id_note = ?");
-				$stmt->execute([$_POST['note'], $_POST['note_id']]);
-				break;
-			case 'delete':
-				$stmt = $pdo->prepare("DELETE FROM NOTES WHERE id_note = ?");
-				$stmt->execute([$_POST['note_id']]);
-				break;
-		}
-		header('Location: gestion_notes.php?exam=' . $_POST['exam_id']);
-		exit();
-	}
-}
-
-// Récupération des données
-if ($exam_id) {
-	// Récupération des informations de l'examen
-	$stmt = $pdo->prepare("SELECT * FROM EXAM WHERE id_exam = ? AND matiere IN (SELECT matiere FROM PROF WHERE id_prof = ?)");
-	$stmt->execute([$exam_id, $prof_id]);
-	$exam = $stmt->fetch();
-
-	if ($exam) {
-		// Récupération des étudiants de la classe
-		$stmt = $pdo->prepare("SELECT * FROM USER WHERE classe = ?");
-		$stmt->execute([$exam['classe']]);
-		$etudiants = $stmt->fetchAll();
-
-		// Récupération des notes existantes
-		$stmt = $pdo->prepare("SELECT * FROM NOTES WHERE exam = ?");
-		$stmt->execute([$exam_id]);
-		$notes = $stmt->fetchAll();
-	}
-}
+$pageTitle = "Gestion des Notes";
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="fr">
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Gestion des Notes - Système de Gestion des Notes</title>
-	<link rel="stylesheet" href="style.css">
-</head>
+<div class="container">
+	<div class="main-content">
+		<h1>Gestion des Notes</h1>
 
-<body>
-	<div class="container">
-		<div class="dashboard">
-			<div class="sidebar">
-				<h2>Menu</h2>
-				<ul class="nav-menu">
-					<li><a href="dashboard.php">Tableau de bord</a></li>
-					<li><a href="gestion_notes.php">Gestion des notes</a></li>
-					<li><a href="gestion_matieres.php">Gestion des matières</a></li>
-					<li><a href="gestion_classes.php">Gestion des classes</a></li>
-					<li><a href="gestion_exams.php">Gestion des examens</a></li>
-					<li><a href="logout.php">Déconnexion</a></li>
-				</ul>
-			</div>
+		<div id="examsList">
+			<!-- La liste des examens sera chargée ici -->
+		</div>
 
-			<div class="main-content">
-				<h1>Gestion des Notes</h1>
+		<div id="notesList">
+			<!-- Les notes seront chargées ici -->
+		</div>
 
-				<?php if ($exam_id && $exam): ?>
-					<h2>Examen : <?php echo htmlspecialchars($exam['titre']); ?></h2>
-					<p>Matière : <?php echo htmlspecialchars($exam['matiere']); ?></p>
-					<p>Classe : <?php echo htmlspecialchars($exam['classe']); ?></p>
+		<div id="addNoteForm" style="display: none;">
+			<h3>Ajouter une note</h3>
+			<form id="noteForm">
+				<div class="form-row">
+					<label for="etudiant">Étudiant :</label>
+					<select name="etudiant" id="etudiant" required>
+						<option value="">Sélectionnez un étudiant</option>
+					</select>
+				</div>
 
-					<div class="form-container">
-						<h3>Ajouter une note</h3>
-						<form action="gestion_notes.php" method="POST">
-							<input type="hidden" name="action" value="add">
-							<input type="hidden" name="exam_id" value="<?php echo $exam_id; ?>">
+				<div class="form-row">
+					<label for="note">Note :</label>
+					<input type="number" name="note" id="note" min="0" max="20" step="0.5" required>
+				</div>
 
-							<div class="form-row">
-								<label for="user_id">Étudiant :</label>
-								<select name="user_id" id="user_id" required>
-									<?php foreach ($etudiants as $etudiant): ?>
-										<option value="<?php echo $etudiant['id_user']; ?>">
-											<?php echo htmlspecialchars($etudiant['prenom'] . ' ' . $etudiant['nom']); ?>
-										</option>
-									<?php endforeach; ?>
-								</select>
-							</div>
-
-							<div class="form-row">
-								<label for="note">Note :</label>
-								<input type="number" name="note" id="note" min="0" max="20" step="0.5" required>
-							</div>
-
-							<button type="submit" class="btn">Ajouter la note</button>
-						</form>
-					</div>
-
-					<h3>Notes existantes</h3>
-					<table>
-						<thead>
-							<tr>
-								<th>Étudiant</th>
-								<th>Note</th>
-								<th>Actions</th>
-							</tr>
-						</thead>
-						<tbody>
-							<?php foreach ($notes as $note): ?>
-								<tr>
-									<td>
-										<?php
-										$stmt = $pdo->prepare("SELECT * FROM USER WHERE id_user = ?");
-										$stmt->execute([$note['user']]);
-										$etudiant = $stmt->fetch();
-										echo htmlspecialchars($etudiant['prenom'] . ' ' . $etudiant['nom']);
-										?>
-									</td>
-									<td><?php echo htmlspecialchars($note['note']); ?></td>
-									<td>
-										<form action="gestion_notes.php" method="POST" style="display: inline;">
-											<input type="hidden" name="action" value="update">
-											<input type="hidden" name="note_id" value="<?php echo $note['id_note']; ?>">
-											<input type="hidden" name="exam_id" value="<?php echo $exam_id; ?>">
-											<input type="number" name="note" value="<?php echo $note['note']; ?>" min="0" max="20" step="0.5" required>
-											<button type="submit" class="btn">Modifier</button>
-										</form>
-										<form action="gestion_notes.php" method="POST" style="display: inline;">
-											<input type="hidden" name="action" value="delete">
-											<input type="hidden" name="note_id" value="<?php echo $note['id_note']; ?>">
-											<input type="hidden" name="exam_id" value="<?php echo $exam_id; ?>">
-											<button type="submit" class="btn btn-danger">Supprimer</button>
-										</form>
-									</td>
-								</tr>
-							<?php endforeach; ?>
-						</tbody>
-					</table>
-				<?php else: ?>
-					<p>Veuillez sélectionner un examen pour gérer les notes.</p>
-				<?php endif; ?>
-			</div>
+				<button type="submit" class="btn">Ajouter la note</button>
+			</form>
 		</div>
 	</div>
-</body>
+</div>
 
-</html>
+<script>
+	let currentExamId = null;
+
+	// Fonction pour charger la liste des examens
+	async function loadExams() {
+		try {
+			const response = await fetch('api/examens');
+			const result = await response.json();
+
+			if (!result.success) {
+				throw new Error(result.error || 'Erreur lors du chargement des examens');
+			}
+
+			const examsList = document.getElementById('examsList');
+			examsList.innerHTML = '<h3>Sélectionnez un examen</h3>';
+
+			if (result.data.length === 0) {
+				examsList.innerHTML += '<p>Aucun examen disponible</p>';
+				return;
+			}
+
+			const table = document.createElement('table');
+			table.innerHTML = `
+			<thead>
+				<tr>
+					<th>Titre</th>
+					<th>Matière</th>
+					<th>Classe</th>
+					<th>Action</th>
+				</tr>
+			</thead>
+			<tbody></tbody>
+		`;
+
+			result.data.forEach(exam => {
+				const tr = document.createElement('tr');
+				tr.innerHTML = `
+				<td>${exam.titre}</td>
+				<td>${exam.nom_matiere}</td>
+				<td>${exam.nom_classe}</td>
+				<td>
+					<button class="btn" onclick="selectExam(${exam.id_examen})">Gérer les notes</button>
+				</td>
+			`;
+				table.querySelector('tbody').appendChild(tr);
+			});
+
+			examsList.appendChild(table);
+		} catch (error) {
+			console.error('Erreur:', error);
+			handleApiError(error);
+		}
+	}
+
+	// Fonction pour sélectionner un examen
+	async function selectExam(examId) {
+		currentExamId = examId;
+		document.getElementById('addNoteForm').style.display = 'block';
+		await Promise.all([loadEtudiants(), loadNotes()]);
+	}
+
+	// Fonction pour charger les étudiants
+	async function loadEtudiants() {
+		try {
+			const response = await fetch(`api/examens/${currentExamId}/etudiants`);
+			const result = await response.json();
+
+			if (!result.success) {
+				throw new Error(result.error || 'Erreur lors du chargement des étudiants');
+			}
+
+			const select = document.getElementById('etudiant');
+			select.innerHTML = '<option value="">Sélectionnez un étudiant</option>';
+
+			result.data.forEach(etudiant => {
+				const option = document.createElement('option');
+				option.value = etudiant.id_user;
+				option.textContent = `${etudiant.prenom} ${etudiant.nom}`;
+				select.appendChild(option);
+			});
+		} catch (error) {
+			console.error('Erreur:', error);
+			handleApiError(error);
+		}
+	}
+
+	// Fonction pour charger les notes
+	async function loadNotes() {
+		try {
+			const response = await fetch(`api/examens/${currentExamId}/notes`);
+			const result = await response.json();
+
+			if (!result.success) {
+				throw new Error(result.error || 'Erreur lors du chargement des notes');
+			}
+
+			const notesList = document.getElementById('notesList');
+			notesList.innerHTML = '<h3>Notes</h3>';
+
+			if (result.data.length === 0) {
+				notesList.innerHTML += '<p>Aucune note enregistrée</p>';
+				return;
+			}
+
+			const table = document.createElement('table');
+			table.innerHTML = `
+			<thead>
+				<tr>
+					<th>Étudiant</th>
+					<th>Note</th>
+					<th>Actions</th>
+				</tr>
+			</thead>
+			<tbody></tbody>
+		`;
+
+			result.data.forEach(note => {
+				const tr = document.createElement('tr');
+				tr.innerHTML = `
+				<td>${note.prenom} ${note.nom}</td>
+				<td>${note.note}</td>
+				<td>
+					<button class="btn btn-edit" onclick="editNote(${note.id_note}, ${note.note})">Modifier</button>
+					<button class="btn btn-danger" onclick="deleteNote(${note.id_note})">Supprimer</button>
+				</td>
+			`;
+				table.querySelector('tbody').appendChild(tr);
+			});
+
+			notesList.appendChild(table);
+		} catch (error) {
+			console.error('Erreur:', error);
+			handleApiError(error);
+		}
+	}
+
+	// Fonction pour ajouter une note
+	document.getElementById('noteForm').addEventListener('submit', async function(e) {
+		e.preventDefault();
+
+		const etudiant = document.getElementById('etudiant').value;
+		const note = document.getElementById('note').value;
+
+		try {
+			const response = await fetch(`api/examens/${currentExamId}/notes`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					etudiant,
+					note
+				})
+			});
+
+			const result = await response.json();
+
+			if (!result.success) {
+				throw new Error(result.error || 'Erreur lors de l\'ajout de la note');
+			}
+
+			showSuccess(result.message || 'Note ajoutée avec succès');
+			document.getElementById('etudiant').value = '';
+			document.getElementById('note').value = '';
+			await loadNotes();
+		} catch (error) {
+			console.error('Erreur:', error);
+			handleApiError(error);
+		}
+	});
+
+	// Fonction pour modifier une note
+	async function editNote(noteId, currentNote) {
+		const newNote = prompt('Nouvelle note:', currentNote);
+
+		if (newNote !== null && newNote !== currentNote) {
+			try {
+				const response = await fetch(`api/notes/${noteId}`, {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						note: newNote
+					})
+				});
+
+				const result = await response.json();
+
+				if (!result.success) {
+					throw new Error(result.error || 'Erreur lors de la modification de la note');
+				}
+
+				showSuccess(result.message || 'Note modifiée avec succès');
+				await loadNotes();
+			} catch (error) {
+				console.error('Erreur:', error);
+				handleApiError(error);
+			}
+		}
+	}
+
+	// Fonction pour supprimer une note
+	async function deleteNote(noteId) {
+		if (confirm('Êtes-vous sûr de vouloir supprimer cette note ?')) {
+			try {
+				const response = await fetch(`api/notes/${noteId}`, {
+					method: 'DELETE'
+				});
+
+				const result = await response.json();
+
+				if (!result.success) {
+					throw new Error(result.error || 'Erreur lors de la suppression de la note');
+				}
+
+				showSuccess(result.message || 'Note supprimée avec succès');
+				await loadNotes();
+			} catch (error) {
+				console.error('Erreur:', error);
+				handleApiError(error);
+			}
+		}
+	}
+
+	// Charger les examens au chargement de la page
+	document.addEventListener('DOMContentLoaded', loadExams);
+</script>
+
+<?php
+$content = ob_get_clean();
+require_once 'templates/base.php';
+?>

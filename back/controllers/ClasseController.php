@@ -23,10 +23,10 @@ class ClasseController
 		return $this->classeModel->getById($id);
 	}
 
-	public function createClasse($nom_classe, $niveau, $numero)
+	public function createClasse($nom_classe, $niveau, $numero, $rythme)
 	{
 		// Vérification de la validité des données
-		if (empty($nom_classe) || empty($niveau) || empty($numero)) {
+		if (empty($nom_classe) || empty($niveau) || empty($numero) || empty($rythme)) {
 			throw new Exception("Tous les champs sont obligatoires");
 		}
 
@@ -41,10 +41,15 @@ class ClasseController
 			throw new Exception("Le numéro est trop long");
 		}
 
-		return $this->classeModel->create($nom_classe, $niveau, $numero);
+		// Vérification de la validité du rythme
+		if (!in_array($rythme, ['Alternance', 'Initial'])) {
+			throw new Exception("Le rythme doit être soit 'Alternance' soit 'Initial'");
+		}
+
+		return $this->classeModel->create($nom_classe, $niveau, $numero, $rythme);
 	}
 
-	public function updateClasse($id, $nom_classe, $niveau, $numero)
+	public function updateClasse($id, $nom_classe, $niveau, $numero, $rythme)
 	{
 		// Vérification de l'existence de la classe
 		if (!$this->classeModel->getById($id)) {
@@ -52,7 +57,7 @@ class ClasseController
 		}
 
 		// Vérification de la validité des données
-		if (empty($nom_classe) || empty($niveau) || empty($numero)) {
+		if (empty($nom_classe) || empty($niveau) || empty($numero) || empty($rythme)) {
 			throw new Exception("Tous les champs sont obligatoires");
 		}
 
@@ -67,7 +72,12 @@ class ClasseController
 			throw new Exception("Le numéro est trop long");
 		}
 
-		return $this->classeModel->update($id, $nom_classe, $niveau, $numero);
+		// Vérification de la validité du rythme
+		if (!in_array($rythme, ['Alternance', 'Initial'])) {
+			throw new Exception("Le rythme doit être soit 'Alternance' soit 'Initial'");
+		}
+
+		return $this->classeModel->update($id, $nom_classe, $niveau, $numero, $rythme);
 	}
 
 	public function deleteClasse($id)

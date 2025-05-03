@@ -24,17 +24,17 @@ class Classe
 		return $stmt->fetch();
 	}
 
-	public function create($nom_classe, $niveau, $numero)
+	public function create($nom_classe, $niveau, $numero, $rythme)
 	{
-		$stmt = $this->db->prepare("INSERT INTO CLASSE (nom_classe, niveau, numero) VALUES (?, ?, ?)");
-		$stmt->execute([$nom_classe, $niveau, $numero]);
+		$stmt = $this->db->prepare("INSERT INTO CLASSE (nom_classe, niveau, numero, rythme) VALUES (?, ?, ?, ?)");
+		$stmt->execute([$nom_classe, $niveau, $numero, $rythme]);
 		return $this->db->lastInsertId();
 	}
 
-	public function update($id, $nom_classe, $niveau, $numero)
+	public function update($id, $nom_classe, $niveau, $numero, $rythme)
 	{
-		$stmt = $this->db->prepare("UPDATE CLASSE SET nom_classe = ?, niveau = ?, numero = ? WHERE id_classe = ?");
-		return $stmt->execute([$nom_classe, $niveau, $numero, $id]);
+		$stmt = $this->db->prepare("UPDATE CLASSE SET nom_classe = ?, niveau = ?, numero = ?, rythme = ? WHERE id_classe = ?");
+		return $stmt->execute([$nom_classe, $niveau, $numero, $rythme, $id]);
 	}
 
 	public function delete($id)

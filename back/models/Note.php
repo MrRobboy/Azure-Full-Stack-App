@@ -1,78 +1,157 @@
 <?php
 require_once __DIR__ . '/../services/DatabaseService.php';
+require_once __DIR__ . '/../services/ErrorService.php';
 
 class Note
 {
 	private $db;
+	private $errorService;
 
 	public function __construct()
 	{
 		$this->db = DatabaseService::getInstance()->getConnection();
+		$this->errorService = new ErrorService();
 	}
 
 	public function getAll()
 	{
-		$stmt = $this->db->prepare("
-            SELECT n.*, e.nom_eleve, m.nom_matiere, ex.nom_examen 
-            FROM NOTE n
-            JOIN ELEVE e ON n.id_eleve = e.id_eleve
-            JOIN MATIERE m ON n.id_matiere = m.id_matiere
-            JOIN EXAMEN ex ON n.id_examen = ex.id_examen
-        ");
-		$stmt->execute();
-		return $stmt->fetchAll();
+		try {
+			$stmt = $this->db->prepare("
+				SELECT n.*, e.nom as nom_eleve, e.prenom as prenom_eleve,
+					m.nom as nom_matiere, ex.titre as nom_examen 
+				FROM NOTE n
+				JOIN USER e ON n.id_eleve = e.id_user
+				JOIN MATIERE m ON n.id_matiere = m.id_matiere
+				JOIN EXAMEN ex ON n.id_examen = ex.id_examen
+				ORDER BY ex.date_examen DESC, e.nom ASC
+			");
+
+			if (!$stmt->execute()) {
+				throw new Exception("Erreur lors de l'exécution de la requête");
+			}
+
+			$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+			if ($result === false) {
+				return [];
+			}
+
+			return $result;
+		} catch (Exception $e) {
+			$this->errorService->logError('Note::getAll', $e->getMessage());
+			return [];
+		}
 	}
 
 	public function getById($id)
 	{
-		$stmt = $this->db->prepare("
-            SELECT n.*, e.nom_eleve, m.nom_matiere, ex.nom_examen 
-            FROM NOTE n
-            JOIN ELEVE e ON n.id_eleve = e.id_eleve
-            JOIN MATIERE m ON n.id_matiere = m.id_matiere
-            JOIN EXAMEN ex ON n.id_examen = ex.id_examen
-            WHERE n.id_note = ?
-        ");
-		$stmt->execute([$id]);
-		return $stmt->fetch();
+		try {
+			$stmt = $this->db->prepare("
+				SELECT n.*, e.nom as nom_eleve, e.prenom as prenom_eleve,
+					m.nom as nom_matiere, ex.titre as nom_examen 
+				FROM NOTE n
+				JOIN USER e ON n.id_eleve = e.id_user
+				JOIN MATIERE m ON n.id_matiere = m.id_matiere
+				JOIN EXAMEN ex ON n.id_examen = ex.id_examen
+				WHERE n.id_note = ?
+			");
+
+			if (!$stmt->execute([$id])) {
+				throw new Exception("Erreur lors de l'exécution de la requête");
+			}
+
+			$result = $stmt->fetch(PDO::FETCH_ASSOC);
+			if ($result === false) {
+				return null;
+			}
+
+			return $result;
+		} catch (Exception $e) {
+			$this->errorService->logError('Note::getById', $e->getMessage());
+			return null;
+		}
 	}
 
 	public function getByEleve($id_eleve)
 	{
-		$stmt = $this->db->prepare("
-            SELECT n.*, m.nom_matiere, ex.nom_examen 
-            FROM NOTE n
-            JOIN MATIERE m ON n.id_matiere = m.id_matiere
-            JOIN EXAMEN ex ON n.id_examen = ex.id_examen
-            WHERE n.id_eleve = ?
-        ");
-		$stmt->execute([$id_eleve]);
-		return $stmt->fetchAll();
+		try {
+			$stmt = $this->db->prepare("
+				SELECT n.*, m.nom as nom_matiere, ex.titre as nom_examen 
+				FROM NOTE n
+				JOIN MATIERE m ON n.id_matiere = m.id_matiere
+				JOIN EXAMEN ex ON n.id_examen = ex.id_examen
+				WHERE n.id_eleve = ?
+				ORDER BY ex.date_examen DESC
+			");
+
+			if (!$stmt->execute([$id_eleve])) {
+				throw new Exception("Erreur lors de l'exécution de la requête");
+			}
+
+			$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+			if ($result === false) {
+				return [];
+			}
+
+			return $result;
+		} catch (Exception $e) {
+			$this->errorService->logError('Note::getByEleve', $e->getMessage());
+			return [];
+		}
 	}
 
 	public function create($id_eleve, $id_matiere, $id_examen, $valeur)
 	{
-		$stmt = $this->db->prepare("
-            INSERT INTO NOTE (id_eleve, id_matiere, id_examen, valeur) 
-            VALUES (?, ?, ?, ?)
-        ");
-		$stmt->execute([$id_eleve, $id_matiere, $id_examen, $valeur]);
-		return $this->db->lastInsertId();
+		try {
+			$stmt = $this->db->prepare("
+				INSERT INTO NOTE (id_eleve, id_matiere, id_examen, valeur) 
+				VALUES (?, ?, ?, ?)
+			");
+
+			if (!$stmt->execute([$id_eleve, $id_matiere, $id_examen, $valeur])) {
+				throw new Exception("Erreur lors de l'insertion de la note");
+			}
+
+			$id = $this->db->lastInsertId();
+			return $this->getById($id);
+		} catch (Exception $e) {
+			$this->errorService->logError('Note::create', $e->getMessage());
+			return false;
+		}
 	}
 
 	public function update($id, $id_eleve, $id_matiere, $id_examen, $valeur)
 	{
-		$stmt = $this->db->prepare("
-            UPDATE NOTE 
-            SET id_eleve = ?, id_matiere = ?, id_examen = ?, valeur = ? 
-            WHERE id_note = ?
-        ");
-		return $stmt->execute([$id_eleve, $id_matiere, $id_examen, $valeur, $id]);
+		try {
+			$stmt = $this->db->prepare("
+				UPDATE NOTE 
+				SET id_eleve = ?, id_matiere = ?, id_examen = ?, valeur = ? 
+				WHERE id_note = ?
+			");
+
+			if (!$stmt->execute([$id_eleve, $id_matiere, $id_examen, $valeur, $id])) {
+				throw new Exception("Erreur lors de la mise à jour de la note");
+			}
+
+			return $this->getById($id);
+		} catch (Exception $e) {
+			$this->errorService->logError('Note::update', $e->getMessage());
+			return false;
+		}
 	}
 
 	public function delete($id)
 	{
-		$stmt = $this->db->prepare("DELETE FROM NOTE WHERE id_note = ?");
-		return $stmt->execute([$id]);
+		try {
+			$stmt = $this->db->prepare("DELETE FROM NOTE WHERE id_note = ?");
+
+			if (!$stmt->execute([$id])) {
+				throw new Exception("Erreur lors de la suppression de la note");
+			}
+
+			return true;
+		} catch (Exception $e) {
+			$this->errorService->logError('Note::delete', $e->getMessage());
+			return false;
+		}
 	}
 }

@@ -29,6 +29,14 @@ ob_start();
 					<label for="numero">Numéro :</label>
 					<input type="text" name="numero" id="numero" required>
 				</div>
+				<div class="form-row">
+					<label for="rythme">Rythme :</label>
+					<select name="rythme" id="rythme" required>
+						<option value="">Sélectionnez un rythme</option>
+						<option value="Alternance">Alternance</option>
+						<option value="Initial">Initial</option>
+					</select>
+				</div>
 				<button type="submit" class="btn">Ajouter la classe</button>
 			</form>
 		</div>
@@ -41,6 +49,7 @@ ob_start();
 						<th>Nom</th>
 						<th>Niveau</th>
 						<th>Numéro</th>
+						<th>Rythme</th>
 						<th>Actions</th>
 					</tr>
 				</thead>
@@ -68,8 +77,9 @@ ob_start();
 					<td>${classe.nom_classe}</td>
 					<td>${classe.niveau}</td>
 					<td>${classe.numero}</td>
+					<td>${classe.rythme}</td>
 					<td>
-						<button class="btn btn-edit" onclick="editClasse(${classe.id_classe}, '${classe.nom_classe}', '${classe.niveau}', '${classe.numero}')">Modifier</button>
+						<button class="btn btn-edit" onclick="editClasse(${classe.id_classe}, '${classe.nom_classe}', '${classe.niveau}', '${classe.numero}', '${classe.rythme}')">Modifier</button>
 						<button class="btn btn-danger" onclick="deleteClasse(${classe.id_classe})">Supprimer</button>
 					</td>
 				`;
@@ -86,6 +96,7 @@ ob_start();
 		const nom = document.getElementById('nom').value;
 		const niveau = document.getElementById('niveau').value;
 		const numero = document.getElementById('numero').value;
+		const rythme = document.getElementById('rythme').value;
 
 		try {
 			const response = await fetch('api/classes', {
@@ -96,7 +107,8 @@ ob_start();
 				body: JSON.stringify({
 					nom_classe: nom,
 					niveau,
-					numero
+					numero,
+					rythme
 				})
 			});
 
@@ -104,6 +116,7 @@ ob_start();
 				document.getElementById('nom').value = '';
 				document.getElementById('niveau').value = '';
 				document.getElementById('numero').value = '';
+				document.getElementById('rythme').value = '';
 				loadClasses();
 			} else {
 				const error = await response.json();
@@ -116,13 +129,14 @@ ob_start();
 	});
 
 	// Fonction pour modifier une classe
-	async function editClasse(id, currentNom, currentNiveau, currentNumero) {
+	async function editClasse(id, currentNom, currentNiveau, currentNumero, currentRythme) {
 		const newNom = prompt('Nouveau nom de la classe:', currentNom);
 		const newNiveau = prompt('Nouveau niveau:', currentNiveau);
 		const newNumero = prompt('Nouveau numéro:', currentNumero);
+		const newRythme = prompt('Nouveau rythme (Alternance ou Initial):', currentRythme);
 
-		if (newNom && newNiveau && newNumero &&
-			(newNom !== currentNom || newNiveau !== currentNiveau || newNumero !== currentNumero)) {
+		if (newNom && newNiveau && newNumero && newRythme &&
+			(newNom !== currentNom || newNiveau !== currentNiveau || newNumero !== currentNumero || newRythme !== currentRythme)) {
 			try {
 				const response = await fetch(`api/classes/${id}`, {
 					method: 'PUT',
@@ -132,7 +146,8 @@ ob_start();
 					body: JSON.stringify({
 						nom_classe: newNom,
 						niveau: newNiveau,
-						numero: newNumero
+						numero: newNumero,
+						rythme: newRythme
 					})
 				});
 
