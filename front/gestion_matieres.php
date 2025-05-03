@@ -47,23 +47,40 @@ ob_start();
 	// Fonction pour charger les matières
 	async function loadMatieres() {
 		try {
+			console.log('Début du chargement des matières...');
 			const response = await fetch('../api/matieres');
+			console.log('Réponse reçue:', response);
 
 			if (!response.ok) {
 				const errorData = await response.json();
+				console.error('Erreur HTTP:', errorData);
 				throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
 			}
 
 			const result = await response.json();
+			console.log('Données reçues:', result);
+
 			const tbody = document.querySelector('#matieresTable tbody');
 			tbody.innerHTML = '';
 
 			// Vérification que result est un tableau
 			if (!Array.isArray(result)) {
-				throw new Error('Format de données invalide : tableau attendu');
+				console.error('Format de données invalide:', {
+					type: typeof result,
+					value: result,
+					expected: 'array'
+				});
+				throw new Error(`Format de données invalide : tableau attendu, reçu ${typeof result}`);
+			}
+
+			if (result.length === 0) {
+				console.log('Aucune matière trouvée');
+				tbody.innerHTML = '<tr><td colspan="2">Aucune matière trouvée</td></tr>';
+				return;
 			}
 
 			result.forEach(matiere => {
+				console.log('Traitement de la matière:', matiere);
 				const tr = document.createElement('tr');
 				tr.innerHTML = `
 					<td>${matiere.nom}</td>
@@ -75,6 +92,7 @@ ob_start();
 				tbody.appendChild(tr);
 			});
 		} catch (error) {
+			console.error('Erreur détaillée:', error);
 			handleApiError(error);
 		}
 	}
