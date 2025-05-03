@@ -10,16 +10,36 @@ class ErrorService
 		'general' => 'general/errors.log'
 	];
 
+	private $errorMessages = [
+		'CONNECTION_FAILED' => [
+			'message' => 'Impossible de se connecter au serveur',
+			'details' => 'Vérifiez que le serveur est en cours d\'exécution et que vous avez les permissions nécessaires'
+		],
+		'DATABASE_ERROR' => [
+			'message' => 'Erreur de connexion à la base de données',
+			'details' => 'Vérifiez les identifiants de connexion et que le serveur MySQL est en cours d\'exécution'
+		],
+		'AUTH_FAILED' => [
+			'message' => 'Échec de l\'authentification',
+			'details' => 'Vérifiez vos identifiants de connexion'
+		],
+		'PERMISSION_DENIED' => [
+			'message' => 'Permission refusée',
+			'details' => 'Vous n\'avez pas les droits nécessaires pour effectuer cette action'
+		],
+		'INVALID_REQUEST' => [
+			'message' => 'Requête invalide',
+			'details' => 'La requête envoyée au serveur est incorrecte'
+		],
+		'SERVER_ERROR' => [
+			'message' => 'Erreur interne du serveur',
+			'details' => 'Une erreur inattendue s\'est produite sur le serveur'
+		]
+	];
+
 	private function __construct()
 	{
-		// Essayer d'abord le répertoire temporaire système
-		$this->logDir = sys_get_temp_dir() . '/azure-app-logs/';
-
-		// Si le répertoire temporaire n'est pas accessible, essayer le répertoire de l'application
-		if (!is_writable($this->logDir)) {
-			$this->logDir = __DIR__ . '/../../logs/';
-		}
-
+		$this->logDir = __DIR__ . '/../../logs/';
 		$this->ensureLogDirectories();
 	}
 
@@ -37,7 +57,6 @@ class ErrorService
 				}
 			}
 		} catch (Exception $e) {
-			// En cas d'échec, utiliser error_log() comme fallback
 			error_log("Impossible de créer les répertoires de logs: " . $e->getMessage());
 		}
 	}
@@ -52,39 +71,47 @@ class ErrorService
 
 	public function logError($type, $message, $details = [])
 	{
-		try {
-			$timestamp = date('Y-m-d H:i:s');
-			$logMessage = "[$timestamp] $message\n";
+		$timestamp = date('Y-m-d H:i:s');
+		$logMessage = "[$timestamp] [$type] $message\n";
 
-			if (!empty($details)) {
-				$logMessage .= "Details: " . json_encode($details, JSON_PRETTY_PRINT) . "\n";
-			}
-
-			$logMessage .= "----------------------------------------\n";
-
-			$logFile = $this->logDir . $this->logFiles[$type];
-			if (is_writable(dirname($logFile))) {
-				@file_put_contents($logFile, $logMessage, FILE_APPEND);
-			} else {
-				error_log($logMessage);
-			}
-		} catch (Exception $e) {
-			error_log("Erreur lors de l'écriture des logs: " . $e->getMessage());
+		if (!empty($details)) {
+			$logMessage .= "Détails: " . print_r($details, true) . "\n";
 		}
 
-		return $this->formatErrorResponse($type, $message, $details);
+		$logMessage .= "Trace: " . debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5) . "\n";
+		$logMessage .= "----------------------------------------\n";
+
+		$logFile = $this->logDir . $this->logFiles[$type] ?? 'general/errors.log';
+		error_log($logMessage, 3, $logFile);
 	}
 
-	private function formatErrorResponse($type, $message, $details)
+	public function getErrorResponse($errorCode, $additionalDetails = [])
 	{
-		return [
-			'success' => false,
-			'error' => [
-				'type' => $type,
-				'message' => $message,
-				'details' => $details,
-				'timestamp' => date('Y-m-d H:i:s')
-			]
+		if (!isset($this->errorMessages[$errorCode])) {
+			$errorCode = 'SERVER_ERROR';
+		}
+
+		$error = $this->errorMessages[$errorCode];
+		$response = [
+			'error' => true,
+			'code' => $errorCode,
+			'message' => $error['message'],
+			'details' => $error['details']
 		];
+
+		if (!empty($additionalDetails)) {
+			$response['additional_details'] = $additionalDetails;
+		}
+
+		return $response;
+	}
+
+	public function sendErrorResponse($errorCode, $additionalDetails = [], $httpCode = 500)
+	{
+		$response = $this->getErrorResponse($errorCode, $additionalDetails);
+		http_response_code($httpCode);
+		header('Content-Type: application/json');
+		echo json_encode($response);
+		exit;
 	}
 }

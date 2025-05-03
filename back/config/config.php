@@ -1,8 +1,17 @@
 <?php
-// Désactivation de l'affichage des erreurs pour l'API
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(0);
+// Configuration de l'environnement
+define('ENVIRONMENT', 'development'); // 'development' ou 'production'
+
+// Configuration de l'affichage des erreurs selon l'environnement
+if (ENVIRONMENT === 'development') {
+	ini_set('display_errors', 1);
+	ini_set('display_startup_errors', 1);
+	error_reporting(E_ALL);
+} else {
+	ini_set('display_errors', 0);
+	ini_set('display_startup_errors', 0);
+	error_reporting(0);
+}
 
 // Configuration de la base de données
 define('DB_HOST', 'localhost:3306');

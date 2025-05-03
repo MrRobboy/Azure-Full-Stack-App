@@ -1,2 +1,4 @@
 Je suis en train de coder sur un windows.
-Ce code ira dans un github depuis lequel un debian récupérera l'utilisateur user-00 et qui l'affichera en localhost sur le port 727.
+Ce code ira dans un github depuis lequel l'utilisateur "user-00" sur un debian le récupérera l'affichera en localhost sur le port 727.
+Ce site web aura comme racine /var/www/azure et là où Azure-Full-Stack-App sera mis à jour à chaque git push/pull.
+Dans apache2, la conf du site-enabled se nomme "azure-app.conf"
