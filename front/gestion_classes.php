@@ -238,7 +238,8 @@ ob_start();
 
 			// Vérifier si la réponse est vide
 			if (!responseText) {
-				throw new Error('Réponse vide du serveur');
+				showError('Le serveur n\'a pas renvoyé de réponse');
+				return;
 			}
 
 			// Tenter de parser la réponse
@@ -246,17 +247,19 @@ ob_start();
 			try {
 				data = JSON.parse(responseText);
 			} catch (e) {
-				console.error('Réponse reçue:', responseText);
-				throw new Error('Format de réponse invalide');
+				showError(`Erreur de format de réponse: ${responseText}`);
+				return;
 			}
 
 			if (!data.success) {
-				throw new Error(data.message || 'Erreur lors de la récupération de la classe');
+				showError(data.message || 'Erreur lors de la récupération de la classe');
+				return;
 			}
 
 			const classe = data.data;
 			if (!classe) {
-				throw new Error('Données de la classe non trouvées');
+				showError('Aucune donnée de classe trouvée');
+				return;
 			}
 
 			document.getElementById('edit_id_classe').value = classe.id_classe;
@@ -268,33 +271,7 @@ ob_start();
 			// Afficher le modal
 			document.getElementById('editClasseModal').style.display = 'block';
 		} catch (error) {
-			// Afficher l'erreur dans un message sur la page
-			const errorMessage = document.createElement('div');
-			errorMessage.className = 'error-message';
-			errorMessage.style.cssText = `
-				position: fixed;
-				top: 20px;
-				right: 20px;
-				padding: 15px;
-				background-color: #ff4444;
-				color: white;
-				border-radius: 5px;
-				z-index: 1001;
-				max-width: 400px;
-			`;
-			errorMessage.innerHTML = `
-				<strong>Erreur lors de l'ouverture du modal :</strong><br>
-				${error.message}<br>
-				<small>Veuillez réessayer ou contacter l'administrateur si le problème persiste.</small>
-			`;
-			document.body.appendChild(errorMessage);
-
-			// Supprimer le message après 5 secondes
-			setTimeout(() => {
-				errorMessage.remove();
-			}, 5000);
-
-			console.error('Erreur détaillée:', error);
+			showError(`Erreur: ${error.message}`);
 		}
 	}
 
@@ -361,6 +338,110 @@ ob_start();
 			console.error('Erreur lors de la suppression de la classe:', error);
 			showError(`Erreur lors de la suppression de la classe: ${error.message}`);
 		}
+	}
+
+	// Fonction pour afficher les erreurs
+	function showError(message) {
+		// Supprimer les messages d'erreur existants
+		const existingErrors = document.querySelectorAll('.error-message');
+		existingErrors.forEach(error => error.remove());
+
+		// Créer le message d'erreur
+		const errorMessage = document.createElement('div');
+		errorMessage.className = 'error-message';
+		errorMessage.style.cssText = `
+			position: fixed;
+			top: 20px;
+			right: 20px;
+			padding: 15px;
+			background-color: #ff4444;
+			color: white;
+			border-radius: 5px;
+			z-index: 1001;
+			max-width: 400px;
+			box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+			animation: slideIn 0.3s ease-out;
+		`;
+
+		errorMessage.innerHTML = `
+			<div style="display: flex; align-items: center; justify-content: space-between;">
+				<div style="flex: 1;">
+					<strong style="display: block; margin-bottom: 5px;">Erreur</strong>
+					${message}
+				</div>
+				<button onclick="this.parentElement.parentElement.remove()" 
+					style="background: none; border: none; color: white; cursor: pointer; margin-left: 10px;">
+					×
+				</button>
+			</div>
+		`;
+
+		// Ajouter le style d'animation
+		const style = document.createElement('style');
+		style.textContent = `
+			@keyframes slideIn {
+				from { transform: translateX(100%); opacity: 0; }
+				to { transform: translateX(0); opacity: 1; }
+			}
+		`;
+		document.head.appendChild(style);
+
+		document.body.appendChild(errorMessage);
+
+		// Supprimer le message après 5 secondes
+		setTimeout(() => {
+			if (errorMessage.parentNode) {
+				errorMessage.style.animation = 'slideOut 0.3s ease-in';
+				setTimeout(() => errorMessage.remove(), 300);
+			}
+		}, 5000);
+	}
+
+	// Fonction pour afficher les succès
+	function showSuccess(message) {
+		// Supprimer les messages de succès existants
+		const existingSuccess = document.querySelectorAll('.success-message');
+		existingSuccess.forEach(success => success.remove());
+
+		// Créer le message de succès
+		const successMessage = document.createElement('div');
+		successMessage.className = 'success-message';
+		successMessage.style.cssText = `
+			position: fixed;
+			top: 20px;
+			right: 20px;
+			padding: 15px;
+			background-color: #4CAF50;
+			color: white;
+			border-radius: 5px;
+			z-index: 1001;
+			max-width: 400px;
+			box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+			animation: slideIn 0.3s ease-out;
+		`;
+
+		successMessage.innerHTML = `
+			<div style="display: flex; align-items: center; justify-content: space-between;">
+				<div style="flex: 1;">
+					<strong style="display: block; margin-bottom: 5px;">Succès</strong>
+					${message}
+				</div>
+				<button onclick="this.parentElement.parentElement.remove()" 
+					style="background: none; border: none; color: white; cursor: pointer; margin-left: 10px;">
+					×
+				</button>
+			</div>
+		`;
+
+		document.body.appendChild(successMessage);
+
+		// Supprimer le message après 3 secondes
+		setTimeout(() => {
+			if (successMessage.parentNode) {
+				successMessage.style.animation = 'slideOut 0.3s ease-in';
+				setTimeout(() => successMessage.remove(), 300);
+			}
+		}, 3000);
 	}
 
 	// Gestionnaires d'événements
