@@ -55,12 +55,23 @@ function sendResponse($data, $status = 200)
 
 	// Vérification que les données sont valides
 	if ($data === null) {
-		$data = ['error' => 'Données invalides'];
+		$data = ['success' => false, 'message' => 'Données invalides'];
 	}
 
 	// Conversion des données en tableau si nécessaire
 	if (!is_array($data)) {
-		$data = ['data' => $data];
+		$data = ['success' => true, 'data' => $data];
+	}
+
+	// Si c'est une réponse d'erreur, on s'assure qu'elle a le bon format
+	if ($status >= 400 || (isset($data['success']) && $data['success'] === false)) {
+		if (!isset($data['message'])) {
+			$data['message'] = $data['error'] ?? 'Une erreur est survenue';
+			unset($data['error']);
+		}
+		$data['success'] = false;
+	} else {
+		$data['success'] = true;
 	}
 
 	$json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
@@ -68,7 +79,10 @@ function sendResponse($data, $status = 200)
 	if ($json === false) {
 		error_log("Erreur d'encodage JSON: " . json_last_error_msg());
 		error_log("Données à encoder: " . print_r($data, true));
-		$json = json_encode(['error' => 'Erreur d\'encodage JSON'], JSON_UNESCAPED_UNICODE);
+		$json = json_encode([
+			'success' => false,
+			'message' => 'Erreur d\'encodage JSON'
+		], JSON_UNESCAPED_UNICODE);
 	}
 
 	error_log("Réponse envoyée: " . $json);
@@ -200,27 +214,19 @@ try {
 				$result = $matiereController->getMatiereById($segments[1]);
 				error_log("Résultat brut: " . print_r($result, true));
 
-				// Vérification du format des données
-				if (!is_array($result)) {
-					error_log("Le résultat n'est pas un tableau");
-					$result = ['error' => 'Format de données invalide'];
+				if (!$result['success']) {
+					sendResponse(['message' => $result['error']], 404);
 				}
-
-				error_log("Résultat formaté: " . print_r($result, true));
-				sendResponse($result);
+				sendResponse($result['data']);
 			} else {
 				error_log("Récupération de toutes les matières");
 				$result = $matiereController->getAllMatieres();
 				error_log("Résultat brut: " . print_r($result, true));
 
-				// Vérification du format des données
-				if (!is_array($result)) {
-					error_log("Le résultat n'est pas un tableau");
-					$result = ['error' => 'Format de données invalide'];
+				if (!$result['success']) {
+					sendResponse(['message' => $result['error']], 500);
 				}
-
-				error_log("Résultat formaté: " . print_r($result, true));
-				sendResponse($result);
+				sendResponse($result['data']);
 			}
 		} elseif ($method === 'POST') {
 			error_log("Création d'une nouvelle matière");
@@ -228,31 +234,43 @@ try {
 			error_log("Données reçues: " . print_r($data, true));
 
 			if (!$data || !isset($data['nom'])) {
-				throw new Exception("Données invalides", 400);
+				sendResponse(['message' => 'Le nom de la matière est requis'], 400);
 			}
 
-			$result = $matiereController->createMatiere($data['nom']);
+			$result = $matiereController->createMatiere($data);
 			error_log("Résultat: " . print_r($result, true));
-			sendResponse(['id' => $result], 201);
+
+			if (!$result['success']) {
+				sendResponse(['message' => $result['error']], 400);
+			}
+			sendResponse(['message' => 'Matière créée avec succès', 'data' => $result['data']], 201);
 		} elseif ($method === 'PUT' && isset($segments[1])) {
 			error_log("Mise à jour de la matière avec l'ID: " . $segments[1]);
 			$data = json_decode(file_get_contents('php://input'), true);
 			error_log("Données reçues: " . print_r($data, true));
 
 			if (!$data || !isset($data['nom'])) {
-				throw new Exception("Données invalides", 400);
+				sendResponse(['message' => 'Le nom de la matière est requis'], 400);
 			}
 
-			$result = $matiereController->updateMatiere($segments[1], $data['nom']);
+			$result = $matiereController->updateMatiere($segments[1], $data);
 			error_log("Résultat: " . print_r($result, true));
-			sendResponse(['message' => 'Matière mise à jour']);
+
+			if (!$result['success']) {
+				sendResponse(['message' => $result['error']], 400);
+			}
+			sendResponse(['message' => 'Matière mise à jour avec succès', 'data' => $result['data']]);
 		} elseif ($method === 'DELETE' && isset($segments[1])) {
 			error_log("Suppression de la matière avec l'ID: " . $segments[1]);
 			$result = $matiereController->deleteMatiere($segments[1]);
 			error_log("Résultat: " . print_r($result, true));
-			sendResponse(['message' => 'Matière supprimée']);
+
+			if (!$result['success']) {
+				sendResponse(['message' => $result['error']], 400);
+			}
+			sendResponse(['message' => 'Matière supprimée avec succès']);
 		} else {
-			throw new Exception("Méthode non autorisée", 405);
+			sendResponse(['message' => 'Méthode non autorisée'], 405);
 		}
 	}
 

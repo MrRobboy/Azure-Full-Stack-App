@@ -42,31 +42,19 @@ ob_start();
 	</div>
 </div>
 
+<script src="assets/js/error-handler.js"></script>
 <script>
 	// Fonction pour charger les matières
 	async function loadMatieres() {
 		try {
-			console.log('Chargement des matières...');
 			const response = await fetch('../api/matieres');
-			console.log('Réponse reçue:', response);
 
 			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
+				const errorData = await response.json();
+				throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
 			}
 
-			const text = await response.text();
-			console.log('Texte reçu:', text);
-
-			let matieres;
-			try {
-				matieres = JSON.parse(text);
-			} catch (e) {
-				console.error('Erreur de parsing JSON:', e);
-				throw new Error('Réponse invalide du serveur');
-			}
-
-			console.log('Matières chargées:', matieres);
-
+			const matieres = await response.json();
 			const tbody = document.querySelector('#matieresTable tbody');
 			tbody.innerHTML = '';
 
@@ -82,7 +70,6 @@ ob_start();
 				tbody.appendChild(tr);
 			});
 		} catch (error) {
-			console.error('Erreur lors du chargement des matières:', error);
 			handleApiError(error);
 		}
 	}
@@ -103,16 +90,15 @@ ob_start();
 				})
 			});
 
-			if (response.ok) {
-				document.getElementById('nom').value = '';
-				showSuccess('Matière ajoutée avec succès');
-				loadMatieres();
-			} else {
-				const error = await response.json();
-				showError(error.message || 'Erreur lors de l\'ajout de la matière');
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.message || 'Erreur lors de l\'ajout de la matière');
 			}
+
+			document.getElementById('nom').value = '';
+			showSuccess('Matière ajoutée avec succès');
+			loadMatieres();
 		} catch (error) {
-			console.error('Erreur:', error);
 			handleApiError(error);
 		}
 	});
@@ -132,15 +118,14 @@ ob_start();
 					})
 				});
 
-				if (response.ok) {
-					showSuccess('Matière modifiée avec succès');
-					loadMatieres();
-				} else {
-					const error = await response.json();
-					showError(error.message || 'Erreur lors de la modification de la matière');
+				if (!response.ok) {
+					const errorData = await response.json();
+					throw new Error(errorData.message || 'Erreur lors de la modification de la matière');
 				}
+
+				showSuccess('Matière modifiée avec succès');
+				loadMatieres();
 			} catch (error) {
-				console.error('Erreur:', error);
 				handleApiError(error);
 			}
 		}
@@ -154,15 +139,14 @@ ob_start();
 					method: 'DELETE'
 				});
 
-				if (response.ok) {
-					showSuccess('Matière supprimée avec succès');
-					loadMatieres();
-				} else {
-					const error = await response.json();
-					showError(error.message || 'Erreur lors de la suppression de la matière');
+				if (!response.ok) {
+					const errorData = await response.json();
+					throw new Error(errorData.message || 'Erreur lors de la suppression de la matière');
 				}
+
+				showSuccess('Matière supprimée avec succès');
+				loadMatieres();
 			} catch (error) {
-				console.error('Erreur:', error);
 				handleApiError(error);
 			}
 		}
