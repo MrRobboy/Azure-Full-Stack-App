@@ -61,12 +61,13 @@ ob_start();
 	</div>
 </div>
 
+<script src="js/config.js"></script>
 <script src="js/errorHandler.js"></script>
 <script>
 	// Fonction pour charger les classes
 	async function loadClasses() {
 		try {
-			const response = await fetch('http://localhost:727/api/classes');
+			const response = await fetch(getApiUrl('classes'));
 			if (!response.ok) {
 				throw new Error(`Erreur HTTP: ${response.status}`);
 			}
@@ -114,7 +115,7 @@ ob_start();
 		const formData = new FormData(form);
 
 		try {
-			const response = await fetch('http://localhost:727/api/classes', {
+			const response = await fetch(getApiUrl('classes'), {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -157,7 +158,7 @@ ob_start();
 				numero !== document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(3)`).textContent ||
 				rythme !== document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(4)`).textContent)) {
 			try {
-				const response = await fetch(`../back/routes/api.php/classes/${id}`, {
+				const response = await fetch(getApiUrl(`classes/${id}`), {
 					method: 'PUT',
 					headers: {
 						'Content-Type': 'application/json',
@@ -195,7 +196,7 @@ ob_start();
 		}
 
 		try {
-			const response = await fetch(`../back/routes/api.php/classes/${id}`, {
+			const response = await fetch(getApiUrl(`classes/${id}`), {
 				method: 'DELETE'
 			});
 
