@@ -23,7 +23,14 @@ ob_start();
 				</div>
 				<div class="form-row">
 					<label for="niveau">Niveau :</label>
-					<input type="text" name="niveau" id="niveau" required>
+					<select name="niveau" id="niveau" required>
+						<option value="">Sélectionnez un niveau</option>
+						<option value="1ère Année">1ère Année</option>
+						<option value="2ème Année">2ème Année</option>
+						<option value="3ème Année">3ème Année</option>
+						<option value="4ème Année">4ème Année</option>
+						<option value="5ème Année">5ème Année</option>
+					</select>
 				</div>
 				<div class="form-row">
 					<label for="numero">Numéro :</label>
@@ -34,7 +41,7 @@ ob_start();
 					<select name="rythme" id="rythme" required>
 						<option value="">Sélectionnez un rythme</option>
 						<option value="Alternance">Alternance</option>
-						<option value="Initial">Initial</option>
+						<option value="Inital">Initial</option>
 					</select>
 				</div>
 				<button type="submit" class="btn">Ajouter la classe</button>
@@ -74,7 +81,14 @@ ob_start();
 			</div>
 			<div class="form-row">
 				<label for="edit_niveau">Niveau :</label>
-				<input type="text" name="niveau" id="edit_niveau" required>
+				<select name="niveau" id="edit_niveau" required>
+					<option value="">Sélectionnez un niveau</option>
+					<option value="1ère Année">1ère Année</option>
+					<option value="2ème Année">2ème Année</option>
+					<option value="3ème Année">3ème Année</option>
+					<option value="4ème Année">4ème Année</option>
+					<option value="5ème Année">5ème Année</option>
+				</select>
 			</div>
 			<div class="form-row">
 				<label for="edit_numero">Numéro :</label>
@@ -85,7 +99,7 @@ ob_start();
 				<select name="rythme" id="edit_rythme" required>
 					<option value="">Sélectionnez un rythme</option>
 					<option value="Alternance">Alternance</option>
-					<option value="Initial">Initial</option>
+					<option value="Inital">Initial</option>
 				</select>
 			</div>
 			<button type="submit" class="btn">Enregistrer les modifications</button>
@@ -265,38 +279,79 @@ ob_start();
 	// Fonction pour ajouter une classe
 	async function addClasse(event) {
 		event.preventDefault();
-		const form = event.target;
-		const formData = new FormData(form);
 
 		try {
-			const response = await fetch(getApiUrl('classes'), {
+			const formData = {
+				nom_classe: document.getElementById('nom_classe').value,
+				niveau: document.getElementById('niveau').value,
+				numero: document.getElementById('numero').value,
+				rythme: document.getElementById('rythme').value
+			};
+
+			// Vérifier que tous les champs sont remplis
+			if (!formData.nom_classe || !formData.niveau || !formData.numero || !formData.rythme) {
+				showError('Tous les champs sont obligatoires');
+				return;
+			}
+
+			// Vérifier les valeurs ENUM
+			const niveauxValides = ['1ère Année', '2ème Année', '3ème Année', '4ème Année', '5ème Année'];
+			const rythmesValides = ['Alternance', 'Inital'];
+
+			if (!niveauxValides.includes(formData.niveau)) {
+				showError('Niveau invalide. Les valeurs possibles sont : ' + niveauxValides.join(', '));
+				return;
+			}
+
+			if (!rythmesValides.includes(formData.rythme)) {
+				showError('Rythme invalide. Les valeurs possibles sont : ' + rythmesValides.join(', '));
+				return;
+			}
+
+			const apiUrl = `${window.location.origin}/api/classes`;
+			const response = await fetch(apiUrl, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({
-					nom_classe: formData.get('nom_classe'),
-					niveau: formData.get('niveau'),
-					numero: formData.get('numero'),
-					rythme: formData.get('rythme')
-				})
+				body: JSON.stringify(formData)
 			});
 
 			if (!response.ok) {
-				throw new Error(`Erreur HTTP: ${response.status}`);
+				const errorText = await response.text();
+				showError(`Erreur serveur (${response.status}): ${errorText}`);
+				return;
 			}
 
-			const data = await response.json();
+			const responseText = await response.text();
+			if (!responseText) {
+				showError('Le serveur n\'a pas renvoyé de réponse');
+				return;
+			}
+
+			let data;
+			try {
+				data = JSON.parse(responseText);
+			} catch (e) {
+				showError(`Erreur de format de réponse: ${responseText}`);
+				return;
+			}
+
 			if (!data.success) {
-				throw new Error(data.message || 'Erreur lors de l\'ajout de la classe');
+				showError(data.message || 'Erreur lors de l\'ajout de la classe');
+				return;
 			}
 
-			form.reset();
-			loadClasses();
+			// Réinitialiser le formulaire
+			document.getElementById('addClasseForm').reset();
+
+			// Recharger la liste des classes
+			await loadClasses();
+
+			// Afficher un message de succès
 			showSuccess('Classe ajoutée avec succès');
 		} catch (error) {
-			console.error('Erreur lors de l\'ajout de la classe:', error);
-			showError(`Erreur lors de l'ajout de la classe: ${error.message}`);
+			showError(`Erreur: ${error.message}`);
 		}
 	}
 
@@ -388,6 +443,20 @@ ob_start();
 			// Vérifier que tous les champs sont remplis
 			if (!formData.nom_classe || !formData.niveau || !formData.numero || !formData.rythme) {
 				showError('Tous les champs sont obligatoires');
+				return;
+			}
+
+			// Vérifier les valeurs ENUM
+			const niveauxValides = ['1ère Année', '2ème Année', '3ème Année', '4ème Année', '5ème Année'];
+			const rythmesValides = ['Alternance', 'Inital'];
+
+			if (!niveauxValides.includes(formData.niveau)) {
+				showError('Niveau invalide. Les valeurs possibles sont : ' + niveauxValides.join(', '));
+				return;
+			}
+
+			if (!rythmesValides.includes(formData.rythme)) {
+				showError('Rythme invalide. Les valeurs possibles sont : ' + rythmesValides.join(', '));
 				return;
 			}
 

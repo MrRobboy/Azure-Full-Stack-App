@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : localhost:3306
--- Généré le : sam. 03 mai 2025 à 18:14
+-- Généré le : sam. 03 mai 2025 à 19:22
 -- Version du serveur : 10.11.11-MariaDB-0+deb12u1
 -- Version de PHP : 8.2.28
 
@@ -30,7 +30,7 @@ SET time_zone = "+00:00";
 CREATE TABLE `CLASSE` (
   `id_classe` int(11) NOT NULL,
   `nom_classe` varchar(255) NOT NULL,
-  `niveau` varchar(50) NOT NULL,
+  `niveau` enum('1ère Année','2ème Année','3ème Année','4ème Année','5ème Année') DEFAULT NULL,
   `rythme` enum('Alternance','Inital') DEFAULT NULL,
   `numero` varchar(50) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -40,7 +40,10 @@ CREATE TABLE `CLASSE` (
 --
 
 INSERT INTO `CLASSE` (`id_classe`, `nom_classe`, `niveau`, `rythme`, `numero`) VALUES
-(1, '2A1', '2ème Année', 'Alternance', '2');
+(1, '2A1', NULL, 'Alternance', '1'),
+(3, '2A2', NULL, 'Alternance', '2'),
+(4, '2A3', NULL, 'Alternance', '3'),
+(5, '2A4', NULL, 'Alternance', '4');
 
 -- --------------------------------------------------------
 
@@ -180,7 +183,7 @@ ALTER TABLE `USER`
 -- AUTO_INCREMENT pour la table `CLASSE`
 --
 ALTER TABLE `CLASSE`
-  MODIFY `id_classe` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_classe` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT pour la table `EXAM`
@@ -192,7 +195,7 @@ ALTER TABLE `EXAM`
 -- AUTO_INCREMENT pour la table `MATIERE`
 --
 ALTER TABLE `MATIERE`
-  MODIFY `id_matiere` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id_matiere` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT pour la table `NOTES`
