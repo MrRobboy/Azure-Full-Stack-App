@@ -20,6 +20,9 @@ class MatiereController
 			if ($result === false) {
 				throw new Exception("Erreur lors de la récupération des matières");
 			}
+			if (!is_array($result)) {
+				$result = [];
+			}
 			return [
 				'success' => true,
 				'data' => $result
@@ -42,6 +45,9 @@ class MatiereController
 			$result = $this->matiere->getById($id);
 			if ($result === false) {
 				throw new Exception("Matière non trouvée");
+			}
+			if (!is_array($result)) {
+				$result = [];
 			}
 			return [
 				'success' => true,

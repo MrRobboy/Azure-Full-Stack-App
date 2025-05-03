@@ -54,11 +54,16 @@ ob_start();
 				throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
 			}
 
-			const matieres = await response.json();
+			const result = await response.json();
 			const tbody = document.querySelector('#matieresTable tbody');
 			tbody.innerHTML = '';
 
-			matieres.forEach(matiere => {
+			// Vérification que result est un tableau
+			if (!Array.isArray(result)) {
+				throw new Error('Format de données invalide : tableau attendu');
+			}
+
+			result.forEach(matiere => {
 				const tr = document.createElement('tr');
 				tr.innerHTML = `
 					<td>${matiere.nom}</td>

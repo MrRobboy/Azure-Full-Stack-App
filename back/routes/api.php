@@ -220,7 +220,7 @@ try {
 				if (!$result['success']) {
 					sendResponse(['message' => $result['error']], 404);
 				}
-				sendResponse($result['data']);
+				sendResponse([$result['data']]);
 			} else {
 				error_log("Récupération de toutes les matières");
 				$result = $matiereController->getAllMatieres();
@@ -246,7 +246,7 @@ try {
 			if (!$result['success']) {
 				sendResponse(['message' => $result['error']], 400);
 			}
-			sendResponse(['message' => 'Matière créée avec succès', 'data' => $result['data']], 201);
+			sendResponse([$result['data']], 201);
 		} elseif ($method === 'PUT' && isset($segments[1])) {
 			error_log("Mise à jour de la matière avec l'ID: " . $segments[1]);
 			$data = json_decode(file_get_contents('php://input'), true);
@@ -262,7 +262,7 @@ try {
 			if (!$result['success']) {
 				sendResponse(['message' => $result['error']], 400);
 			}
-			sendResponse(['message' => 'Matière mise à jour avec succès', 'data' => $result['data']]);
+			sendResponse([$result['data']]);
 		} elseif ($method === 'DELETE' && isset($segments[1])) {
 			error_log("Suppression de la matière avec l'ID: " . $segments[1]);
 			$result = $matiereController->deleteMatiere($segments[1]);
