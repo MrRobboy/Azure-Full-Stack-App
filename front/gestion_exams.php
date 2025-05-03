@@ -233,8 +233,15 @@ ob_start();
 
 <script src="js/error-messages.js"></script>
 <script>
+	// Vérifier que le script d'erreurs est chargé
+	if (typeof ErrorMessages === 'undefined') {
+		console.error('Le script error-messages.js n\'est pas chargé correctement');
+	}
+
 	// Fonction pour afficher une notification
 	function showNotification(message, type) {
+		console.log(`Affichage d'une notification de type ${type}: ${message}`);
+
 		// Créer le conteneur s'il n'existe pas
 		let container = document.querySelector('.notification-container');
 		if (!container) {
@@ -275,11 +282,13 @@ ob_start();
 
 	// Fonction pour afficher une erreur
 	function showError(message) {
+		console.error('Erreur:', message);
 		showNotification(message, 'error');
 	}
 
 	// Fonction pour afficher un succès
 	function showSuccess(message) {
+		console.log('Succès:', message);
 		showNotification(message, 'success');
 	}
 
@@ -334,8 +343,11 @@ ob_start();
 	// Fonction pour charger les examens
 	async function loadExams() {
 		try {
+			console.log('Chargement des examens...');
 			const response = await fetch('api/examens');
+			console.log('Réponse:', response.status);
 			const result = await response.json();
+			console.log('Données reçues:', result);
 
 			if (!result.success) {
 				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
@@ -363,6 +375,7 @@ ob_start();
 				tbody.appendChild(tr);
 			});
 		} catch (error) {
+			console.error('Erreur lors du chargement des examens:', error);
 			showError(error.message);
 		}
 	}
@@ -370,10 +383,17 @@ ob_start();
 	// Fonction pour ajouter un examen
 	document.getElementById('addExamForm').addEventListener('submit', async function(e) {
 		e.preventDefault();
+		console.log('Tentative d\'ajout d\'un examen...');
 
 		const titre = document.getElementById('titre').value;
 		const matiere = document.getElementById('matiere').value;
 		const classe = document.getElementById('classe').value;
+
+		console.log('Données du formulaire:', {
+			titre,
+			matiere,
+			classe
+		});
 
 		if (!titre || !matiere || !classe) {
 			showError(ErrorMessages.GENERAL.REQUIRED_FIELDS);
@@ -381,6 +401,7 @@ ob_start();
 		}
 
 		try {
+			console.log('Envoi de la requête...');
 			const response = await fetch('api/examens', {
 				method: 'POST',
 				headers: {
@@ -393,7 +414,9 @@ ob_start();
 				})
 			});
 
+			console.log('Réponse:', response.status);
 			const result = await response.json();
+			console.log('Résultat:', result);
 
 			if (!response.ok) {
 				throw new Error(result.error || ErrorMessages.EXAMS.CREATE.ERROR);
@@ -409,6 +432,7 @@ ob_start();
 			showSuccess(ErrorMessages.EXAMS.CREATE.SUCCESS);
 			loadExams();
 		} catch (error) {
+			console.error('Erreur lors de l\'ajout de l\'examen:', error);
 			showError(error.message);
 		}
 	});
@@ -485,6 +509,7 @@ ob_start();
 
 	// Charger les données au chargement de la page
 	document.addEventListener('DOMContentLoaded', () => {
+		console.log('Chargement de la page...');
 		loadMatieres();
 		loadClasses();
 		loadExams();
