@@ -225,6 +225,12 @@ ob_start();
 <script src="js/error-messages.js"></script>
 <script>
 	// Vérifier que le script d'erreurs est chargé
+	console.log('Vérification du chargement du script...');
+	console.log('ErrorMessages:', typeof ErrorMessages);
+	console.log('showError:', typeof showError);
+	console.log('showSuccess:', typeof showSuccess);
+	console.log('showNotification:', typeof showNotification);
+
 	if (typeof ErrorMessages === 'undefined') {
 		console.error('Le script error-messages.js n\'est pas chargé correctement');
 	}
@@ -232,8 +238,10 @@ ob_start();
 	// Fonction pour charger les matières
 	async function loadMatieres() {
 		try {
+			console.log('Chargement des matières...');
 			const response = await fetch('api/matieres');
 			const result = await response.json();
+			console.log('Résultat matières:', result);
 
 			if (!result.success) {
 				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
@@ -249,6 +257,7 @@ ob_start();
 				select.appendChild(option);
 			});
 		} catch (error) {
+			console.error('Erreur lors du chargement des matières:', error);
 			showError(error.message);
 		}
 	}
@@ -256,8 +265,10 @@ ob_start();
 	// Fonction pour charger les classes
 	async function loadClasses() {
 		try {
+			console.log('Chargement des classes...');
 			const response = await fetch('api/classes');
 			const result = await response.json();
+			console.log('Résultat classes:', result);
 
 			if (!result.success) {
 				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
@@ -273,6 +284,7 @@ ob_start();
 				select.appendChild(option);
 			});
 		} catch (error) {
+			console.error('Erreur lors du chargement des classes:', error);
 			showError(error.message);
 		}
 	}
@@ -280,8 +292,10 @@ ob_start();
 	// Fonction pour charger les examens
 	async function loadExams() {
 		try {
+			console.log('Chargement des examens...');
 			const response = await fetch('api/examens');
 			const result = await response.json();
+			console.log('Résultat examens:', result);
 
 			if (!result.success) {
 				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
@@ -309,6 +323,7 @@ ob_start();
 				tbody.appendChild(tr);
 			});
 		} catch (error) {
+			console.error('Erreur lors du chargement des examens:', error);
 			showError(error.message);
 		}
 	}
@@ -378,17 +393,26 @@ ob_start();
 	// Fonction pour ajouter un examen
 	document.getElementById('addExamForm').addEventListener('submit', async function(e) {
 		e.preventDefault();
+		console.log('Tentative d\'ajout d\'un examen...');
 
 		const titre = document.getElementById('titre').value;
 		const matiere = document.getElementById('matiere').value;
 		const classe = document.getElementById('classe').value;
 
+		console.log('Données du formulaire:', {
+			titre,
+			matiere,
+			classe
+		});
+
 		if (!titre || !matiere || !classe) {
+			console.log('Champs manquants, affichage de l\'erreur...');
 			showError(ErrorMessages.GENERAL.REQUIRED_FIELDS);
 			return;
 		}
 
 		try {
+			console.log('Envoi de la requête...');
 			const response = await fetch('api/examens', {
 				method: 'POST',
 				headers: {
@@ -402,6 +426,7 @@ ob_start();
 			});
 
 			const result = await response.json();
+			console.log('Résultat de la création:', result);
 
 			if (!response.ok) {
 				throw new Error(result.error || ErrorMessages.EXAMS.CREATE.ERROR);
@@ -414,15 +439,18 @@ ob_start();
 			document.getElementById('titre').value = '';
 			document.getElementById('matiere').value = '';
 			document.getElementById('classe').value = '';
+			console.log('Succès, affichage du message...');
 			showSuccess(ErrorMessages.EXAMS.CREATE.SUCCESS);
 			loadExams();
 		} catch (error) {
+			console.error('Erreur lors de l\'ajout de l\'examen:', error);
 			showError(error.message);
 		}
 	});
 
 	// Charger les données au chargement de la page
 	document.addEventListener('DOMContentLoaded', () => {
+		console.log('Chargement de la page...');
 		loadMatieres();
 		loadClasses();
 		loadExams();
