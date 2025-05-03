@@ -10,7 +10,7 @@ class Examen
 	public function __construct()
 	{
 		$this->db = DatabaseService::getInstance()->getConnection();
-		$this->errorService = new ErrorService();
+		$this->errorService = ErrorService::getInstance();
 	}
 
 	public function getAll()
