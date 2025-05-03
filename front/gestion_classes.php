@@ -260,7 +260,6 @@ ob_start();
 	// Fonction pour modifier une classe
 	async function editClasse(event) {
 		event.preventDefault();
-		const form = event.target;
 		const id = document.getElementById('edit_id_classe').value;
 
 		try {
