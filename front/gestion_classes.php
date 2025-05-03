@@ -302,23 +302,29 @@ ob_start();
 
 	// Fonction pour ouvrir le modal de modification
 	async function openEditModal(id) {
-		console.log('Tentative d\'ouverture du modal pour la classe ID:', id);
 		try {
-			const response = await fetch(getApiUrl(`classes/${id}`));
-			console.log('Réponse reçue:', response);
+			// Vérifier que l'ID est valide
+			if (!id) {
+				showError('ID de classe invalide');
+				return;
+			}
+
+			// Construire l'URL de l'API correctement
+			const apiUrl = `${window.location.origin}/api/classes/${id}`;
+			console.log('URL de l\'API:', apiUrl);
+
+			const response = await fetch(apiUrl);
 
 			if (!response.ok) {
-				console.error('Erreur HTTP:', response.status, response.statusText);
-				showError(`Erreur HTTP ${response.status}: ${response.statusText}`);
+				const errorText = await response.text();
+				showError(`Erreur serveur (${response.status}): ${errorText}`);
 				return;
 			}
 
 			const responseText = await response.text();
-			console.log('Texte de la réponse:', responseText);
 
 			// Vérifier si la réponse est vide
 			if (!responseText) {
-				console.error('Réponse vide');
 				showError('Le serveur n\'a pas renvoyé de réponse');
 				return;
 			}
@@ -327,27 +333,22 @@ ob_start();
 			let data;
 			try {
 				data = JSON.parse(responseText);
-				console.log('Données parsées:', data);
 			} catch (e) {
-				console.error('Erreur de parsing JSON:', e);
 				showError(`Erreur de format de réponse: ${responseText}`);
 				return;
 			}
 
 			if (!data.success) {
-				console.error('Erreur dans la réponse:', data);
 				showError(data.message || 'Erreur lors de la récupération de la classe');
 				return;
 			}
 
 			const classe = data.data;
 			if (!classe) {
-				console.error('Aucune donnée de classe trouvée');
 				showError('Aucune donnée de classe trouvée');
 				return;
 			}
 
-			console.log('Données de la classe:', classe);
 			document.getElementById('edit_id_classe').value = classe.id_classe;
 			document.getElementById('edit_nom_classe').value = classe.nom_classe;
 			document.getElementById('edit_niveau').value = classe.niveau;
@@ -356,10 +357,12 @@ ob_start();
 
 			// Afficher le modal
 			const modal = document.getElementById('editClasseModal');
-			console.log('Modal:', modal);
+			if (!modal) {
+				showError('Le modal de modification n\'a pas été trouvé');
+				return;
+			}
 			modal.style.display = 'block';
 		} catch (error) {
-			console.error('Erreur dans openEditModal:', error);
 			showError(`Erreur: ${error.message}`);
 		}
 	}
@@ -446,7 +449,13 @@ ob_start();
 			<button class="close-btn" onclick="this.parentElement.remove()">×</button>
 		`;
 
-		document.body.appendChild(errorMessage);
+		// Ajouter le message en haut de la page
+		const mainContent = document.querySelector('.main-content');
+		if (mainContent) {
+			mainContent.insertBefore(errorMessage, mainContent.firstChild);
+		} else {
+			document.body.insertBefore(errorMessage, document.body.firstChild);
+		}
 
 		// Supprimer le message après 5 secondes
 		setTimeout(() => {
@@ -474,7 +483,13 @@ ob_start();
 			<button class="close-btn" onclick="this.parentElement.remove()">×</button>
 		`;
 
-		document.body.appendChild(successMessage);
+		// Ajouter le message en haut de la page
+		const mainContent = document.querySelector('.main-content');
+		if (mainContent) {
+			mainContent.insertBefore(successMessage, mainContent.firstChild);
+		} else {
+			document.body.insertBefore(successMessage, document.body.firstChild);
+		}
 
 		// Supprimer le message après 3 secondes
 		setTimeout(() => {
