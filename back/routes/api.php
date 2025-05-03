@@ -1,8 +1,8 @@
 <?php
-// Activation de l'affichage des erreurs
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+// Désactivation de l'affichage des erreurs pour l'API
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(0);
 
 // Configuration des logs
 ini_set('log_errors', 1);
@@ -113,7 +113,10 @@ function handleError($e)
 	if (json_last_error() === JSON_ERROR_NONE) {
 		sendResponse($error_data, $status);
 	} else {
-		sendResponse(['error' => 'Une erreur est survenue', 'message' => $message], $status);
+		sendResponse([
+			'success' => false,
+			'message' => $message
+		], $status);
 	}
 }
 
