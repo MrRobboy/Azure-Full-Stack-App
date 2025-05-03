@@ -16,17 +16,20 @@ class Matiere
 	public function getAll()
 	{
 		try {
-			$stmt = $this->db->query("SELECT * FROM MATIERE");
-			if ($stmt === false) {
-				throw new Exception("Erreur lors de la requête SQL");
+			$stmt = $this->db->prepare("SELECT * FROM MATIERE ORDER BY nom ASC");
+
+			if (!$stmt->execute()) {
+				throw new Exception("Erreur lors de l'exécution de la requête");
 			}
+
 			$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-			if (!is_array($result)) {
-				$result = [];
+			if ($result === false) {
+				return [];
 			}
+
 			return $result;
 		} catch (Exception $e) {
-			$this->errorService->logError($e->getMessage(), 'matiere');
+			$this->errorService->logError('Matiere::getAll', $e->getMessage());
 			return [];
 		}
 	}

@@ -17,18 +17,17 @@ class MatiereController
 	{
 		try {
 			$result = $this->matiere->getAll();
-			if ($result === false) {
-				throw new Exception("Erreur lors de la récupération des matières");
-			}
+
 			if (!is_array($result)) {
-				$result = [];
+				throw new Exception("Format de données invalide");
 			}
+
 			return [
 				'success' => true,
 				'data' => $result
 			];
 		} catch (Exception $e) {
-			$this->errorService->logError($e->getMessage(), 'matiere');
+			$this->errorService->logError('MatiereController::getAllMatieres', $e->getMessage());
 			return [
 				'success' => false,
 				'error' => $e->getMessage()
