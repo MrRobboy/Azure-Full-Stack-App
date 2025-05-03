@@ -191,7 +191,7 @@ ob_start();
 					<select name="rythme" id="rythme" required>
 						<option value="">Sélectionnez un rythme</option>
 						<option value="Alternance">Alternance</option>
-						<option value="Inital">Initial</option>
+						<option value="Initial">Initial</option>
 					</select>
 				</div>
 				<button type="submit" class="btn">Ajouter la classe</button>
@@ -346,7 +346,7 @@ ob_start();
 						<select id="edit_rythme" required>
 							<option value="">Sélectionnez un rythme</option>
 							<option value="Alternance" ${currentRythme === 'Alternance' ? 'selected' : ''}>Alternance</option>
-							<option value="Inital" ${currentRythme === 'Inital' ? 'selected' : ''}>Initial</option>
+							<option value="Initial" ${currentRythme === 'Initial' ? 'selected' : ''}>Initial</option>
 						</select>
 					</div>
 					<div class="form-actions">
