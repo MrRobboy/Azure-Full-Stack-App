@@ -209,6 +209,7 @@ ob_start();
 	</div>
 </div>
 
+<script src="js/error-messages.js"></script>
 <script>
 	// Fonction pour charger les matières
 	async function loadMatieres() {
@@ -217,7 +218,7 @@ ob_start();
 			const result = await response.json();
 
 			if (!result.success) {
-				throw new Error(result.error || 'Erreur lors du chargement des matières');
+				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
 			}
 
 			const select = document.getElementById('matiere');
@@ -230,8 +231,7 @@ ob_start();
 				select.appendChild(option);
 			});
 		} catch (error) {
-			console.error('Erreur lors du chargement des matières:', error);
-			handleApiError(error);
+			showError(error.message);
 		}
 	}
 
@@ -242,7 +242,7 @@ ob_start();
 			const result = await response.json();
 
 			if (!result.success) {
-				throw new Error(result.error || 'Erreur lors du chargement des classes');
+				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
 			}
 
 			const select = document.getElementById('classe');
@@ -255,8 +255,7 @@ ob_start();
 				select.appendChild(option);
 			});
 		} catch (error) {
-			console.error('Erreur lors du chargement des classes:', error);
-			handleApiError(error);
+			showError(error.message);
 		}
 	}
 
@@ -267,7 +266,7 @@ ob_start();
 			const result = await response.json();
 
 			if (!result.success) {
-				throw new Error(result.error || 'Erreur lors du chargement des examens');
+				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
 			}
 
 			const tbody = document.querySelector('#examsTable tbody');
@@ -292,8 +291,7 @@ ob_start();
 				tbody.appendChild(tr);
 			});
 		} catch (error) {
-			console.error('Erreur lors du chargement des examens:', error);
-			handleApiError(error);
+			showError(error.message);
 		}
 	}
 
@@ -305,7 +303,7 @@ ob_start();
 		const classe = document.getElementById('classe').value;
 
 		if (!titre || !matiere || !classe) {
-			showError('Veuillez remplir tous les champs');
+			showError(ErrorMessages.GENERAL.REQUIRED_FIELDS);
 			return;
 		}
 
@@ -325,17 +323,17 @@ ob_start();
 			const result = await response.json();
 
 			if (!response.ok) {
-				throw new Error(result.error || 'Erreur lors de l\'ajout de l\'examen');
+				throw new Error(result.error || ErrorMessages.EXAMS.CREATE.ERROR);
 			}
 
 			if (!result.success) {
-				throw new Error(result.error || 'Erreur lors de l\'ajout de l\'examen');
+				throw new Error(result.error || ErrorMessages.EXAMS.CREATE.ERROR);
 			}
 
 			document.getElementById('titre').value = '';
 			document.getElementById('matiere').value = '';
 			document.getElementById('classe').value = '';
-			showSuccess(result.message || 'Examen ajouté avec succès');
+			showSuccess(ErrorMessages.EXAMS.CREATE.SUCCESS);
 			loadExams();
 		} catch (error) {
 			showError(error.message);
@@ -360,18 +358,17 @@ ob_start();
 					})
 				});
 
-				if (!response.ok) {
-					const errorData = await response.json();
-					throw new Error(errorData.error || 'Erreur lors de la modification de l\'examen');
-				}
-
 				const result = await response.json();
 
-				if (!result.success) {
-					throw new Error(result.error || 'Erreur lors de la modification de l\'examen');
+				if (!response.ok) {
+					throw new Error(result.error || ErrorMessages.EXAMS.UPDATE.ERROR);
 				}
 
-				showSuccess(result.message || 'Examen modifié avec succès');
+				if (!result.success) {
+					throw new Error(result.error || ErrorMessages.EXAMS.UPDATE.ERROR);
+				}
+
+				showSuccess(ErrorMessages.EXAMS.UPDATE.SUCCESS);
 				loadExams();
 			} catch (error) {
 				showError(error.message);
@@ -387,85 +384,22 @@ ob_start();
 					method: 'DELETE'
 				});
 
-				if (!response.ok) {
-					const errorData = await response.json();
-					throw new Error(errorData.error || 'Erreur lors de la suppression de l\'examen');
-				}
-
 				const result = await response.json();
 
-				if (!result.success) {
-					throw new Error(result.error || 'Erreur lors de la suppression de l\'examen');
+				if (!response.ok) {
+					throw new Error(result.error || ErrorMessages.EXAMS.DELETE.ERROR);
 				}
 
-				showSuccess(result.message || 'Examen supprimé avec succès');
+				if (!result.success) {
+					throw new Error(result.error || ErrorMessages.EXAMS.DELETE.ERROR);
+				}
+
+				showSuccess(ErrorMessages.EXAMS.DELETE.SUCCESS);
 				loadExams();
 			} catch (error) {
 				showError(error.message);
 			}
 		}
-	}
-
-	// Fonction pour afficher une erreur
-	function showError(message) {
-		const notification = document.createElement('div');
-		notification.className = 'notification error';
-		notification.innerHTML = `
-			<span class="close">&times;</span>
-			<p>${message}</p>
-		`;
-		document.body.appendChild(notification);
-
-		// Supprimer les anciennes notifications
-		const oldNotifications = document.querySelectorAll('.notification.error');
-		oldNotifications.forEach((old, index) => {
-			if (index < oldNotifications.length - 1) {
-				old.remove();
-			}
-		});
-
-		// Fermer la notification après 5 secondes
-		setTimeout(() => {
-			notification.classList.add('slideOut');
-			setTimeout(() => notification.remove(), 500);
-		}, 5000);
-
-		// Fermer la notification au clic sur le bouton
-		notification.querySelector('.close').addEventListener('click', () => {
-			notification.classList.add('slideOut');
-			setTimeout(() => notification.remove(), 500);
-		});
-	}
-
-	// Fonction pour afficher un succès
-	function showSuccess(message) {
-		const notification = document.createElement('div');
-		notification.className = 'notification success';
-		notification.innerHTML = `
-			<span class="close">&times;</span>
-			<p>${message}</p>
-		`;
-		document.body.appendChild(notification);
-
-		// Supprimer les anciennes notifications
-		const oldNotifications = document.querySelectorAll('.notification.success');
-		oldNotifications.forEach((old, index) => {
-			if (index < oldNotifications.length - 1) {
-				old.remove();
-			}
-		});
-
-		// Fermer la notification après 5 secondes
-		setTimeout(() => {
-			notification.classList.add('slideOut');
-			setTimeout(() => notification.remove(), 500);
-		}, 5000);
-
-		// Fermer la notification au clic sur le bouton
-		notification.querySelector('.close').addEventListener('click', () => {
-			notification.classList.add('slideOut');
-			setTimeout(() => notification.remove(), 500);
-		});
 	}
 
 	// Charger les données au chargement de la page

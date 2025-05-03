@@ -70,24 +70,34 @@ class Examen
 	public function create($titre, $matiere, $classe)
 	{
 		try {
+			error_log("Tentative de création d'un examen avec les données suivantes:");
+			error_log("Titre: " . $titre);
+			error_log("Matière: " . $matiere);
+			error_log("Classe: " . $classe);
+
 			$stmt = $this->db->prepare("
 				INSERT INTO EXAMEN (titre, id_matiere, id_classe) 
 				VALUES (?, ?, ?)
 			");
 
 			if (!$stmt) {
-				throw new Exception("Erreur de préparation de la requête");
+				$error = $this->db->errorInfo();
+				error_log("Erreur de préparation de la requête: " . implode(", ", $error));
+				throw new Exception("Erreur de préparation de la requête: " . $error[2]);
 			}
 
 			if (!$stmt->execute([$titre, $matiere, $classe])) {
-				throw new Exception("Erreur lors de l'insertion de l'examen: " . implode(", ", $stmt->errorInfo()));
+				$error = $stmt->errorInfo();
+				error_log("Erreur lors de l'insertion de l'examen: " . implode(", ", $error));
+				throw new Exception("Erreur lors de l'insertion de l'examen: " . $error[2]);
 			}
 
 			$id = $this->db->lastInsertId();
+			error_log("Examen créé avec succès, ID: " . $id);
 			return $this->getById($id);
 		} catch (Exception $e) {
 			$this->errorService->logError('Examen::create', $e->getMessage());
-			return false;
+			throw $e;
 		}
 	}
 
