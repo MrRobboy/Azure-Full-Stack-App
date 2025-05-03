@@ -94,6 +94,76 @@ ob_start();
 </div>
 
 <style>
+	/* Styles pour les messages de notification */
+	.notification {
+		position: fixed;
+		top: 20px;
+		right: 20px;
+		padding: 15px;
+		border-radius: 5px;
+		z-index: 1001;
+		max-width: 400px;
+		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+		animation: slideIn 0.3s ease-out;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.notification.error {
+		background-color: #ff4444;
+		color: white;
+	}
+
+	.notification.success {
+		background-color: #4CAF50;
+		color: white;
+	}
+
+	.notification .content {
+		flex: 1;
+	}
+
+	.notification .title {
+		display: block;
+		margin-bottom: 5px;
+		font-weight: bold;
+	}
+
+	.notification .close-btn {
+		background: none;
+		border: none;
+		color: inherit;
+		cursor: pointer;
+		margin-left: 10px;
+		font-size: 20px;
+		padding: 0;
+	}
+
+	@keyframes slideIn {
+		from {
+			transform: translateX(100%);
+			opacity: 0;
+		}
+
+		to {
+			transform: translateX(0);
+			opacity: 1;
+		}
+	}
+
+	@keyframes slideOut {
+		from {
+			transform: translateX(0);
+			opacity: 1;
+		}
+
+		to {
+			transform: translateX(100%);
+			opacity: 0;
+		}
+	}
+
 	.modal {
 		display: none;
 		position: fixed;
@@ -343,48 +413,19 @@ ob_start();
 	// Fonction pour afficher les erreurs
 	function showError(message) {
 		// Supprimer les messages d'erreur existants
-		const existingErrors = document.querySelectorAll('.error-message');
+		const existingErrors = document.querySelectorAll('.notification.error');
 		existingErrors.forEach(error => error.remove());
 
 		// Créer le message d'erreur
 		const errorMessage = document.createElement('div');
-		errorMessage.className = 'error-message';
-		errorMessage.style.cssText = `
-			position: fixed;
-			top: 20px;
-			right: 20px;
-			padding: 15px;
-			background-color: #ff4444;
-			color: white;
-			border-radius: 5px;
-			z-index: 1001;
-			max-width: 400px;
-			box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-			animation: slideIn 0.3s ease-out;
-		`;
-
+		errorMessage.className = 'notification error';
 		errorMessage.innerHTML = `
-			<div style="display: flex; align-items: center; justify-content: space-between;">
-				<div style="flex: 1;">
-					<strong style="display: block; margin-bottom: 5px;">Erreur</strong>
-					${message}
-				</div>
-				<button onclick="this.parentElement.parentElement.remove()" 
-					style="background: none; border: none; color: white; cursor: pointer; margin-left: 10px;">
-					×
-				</button>
+			<div class="content">
+				<span class="title">Erreur</span>
+				${message}
 			</div>
+			<button class="close-btn" onclick="this.parentElement.remove()">×</button>
 		`;
-
-		// Ajouter le style d'animation
-		const style = document.createElement('style');
-		style.textContent = `
-			@keyframes slideIn {
-				from { transform: translateX(100%); opacity: 0; }
-				to { transform: translateX(0); opacity: 1; }
-			}
-		`;
-		document.head.appendChild(style);
 
 		document.body.appendChild(errorMessage);
 
@@ -400,37 +441,18 @@ ob_start();
 	// Fonction pour afficher les succès
 	function showSuccess(message) {
 		// Supprimer les messages de succès existants
-		const existingSuccess = document.querySelectorAll('.success-message');
+		const existingSuccess = document.querySelectorAll('.notification.success');
 		existingSuccess.forEach(success => success.remove());
 
 		// Créer le message de succès
 		const successMessage = document.createElement('div');
-		successMessage.className = 'success-message';
-		successMessage.style.cssText = `
-			position: fixed;
-			top: 20px;
-			right: 20px;
-			padding: 15px;
-			background-color: #4CAF50;
-			color: white;
-			border-radius: 5px;
-			z-index: 1001;
-			max-width: 400px;
-			box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-			animation: slideIn 0.3s ease-out;
-		`;
-
+		successMessage.className = 'notification success';
 		successMessage.innerHTML = `
-			<div style="display: flex; align-items: center; justify-content: space-between;">
-				<div style="flex: 1;">
-					<strong style="display: block; margin-bottom: 5px;">Succès</strong>
-					${message}
-				</div>
-				<button onclick="this.parentElement.parentElement.remove()" 
-					style="background: none; border: none; color: white; cursor: pointer; margin-left: 10px;">
-					×
-				</button>
+			<div class="content">
+				<span class="title">Succès</span>
+				${message}
 			</div>
+			<button class="close-btn" onclick="this.parentElement.remove()">×</button>
 		`;
 
 		document.body.appendChild(successMessage);
