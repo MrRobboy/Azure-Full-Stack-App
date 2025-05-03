@@ -582,8 +582,8 @@ ob_start();
 	}
 
 	// Ajouter les styles pour le modal et les notifications
-	const style = document.createElement('style');
-	style.textContent = `
+	const modalStyle = document.createElement('style');
+	modalStyle.textContent = `
 		.modal {
 			position: fixed;
 			top: 0;
@@ -664,72 +664,8 @@ ob_start();
 		.btn-primary:hover {
 			background: #0056b3;
 		}
-
-		.notification-container {
-			position: fixed;
-			top: 20px;
-			right: 20px;
-			z-index: 1001;
-		}
-
-		.notification {
-			padding: 15px;
-			margin-bottom: 10px;
-			border-radius: 4px;
-			color: white;
-			animation: slideIn 0.3s ease-out;
-			position: relative;
-			min-width: 300px;
-			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-		}
-
-		.notification.error {
-			background-color: #dc3545;
-		}
-
-		.notification.success {
-			background-color: #28a745;
-		}
-
-		.notification .close {
-			position: absolute;
-			right: 10px;
-			top: 10px;
-			cursor: pointer;
-			font-size: 20px;
-			background: none;
-			border: none;
-			color: white;
-			padding: 0;
-		}
-
-		@keyframes slideIn {
-			from {
-				transform: translateX(100%);
-				opacity: 0;
-			}
-			to {
-				transform: translateX(0);
-				opacity: 1;
-			}
-		}
-
-		.slideOut {
-			animation: slideOut 0.3s ease-in forwards;
-		}
-
-		@keyframes slideOut {
-			from {
-				transform: translateX(0);
-				opacity: 1;
-			}
-			to {
-				transform: translateX(100%);
-				opacity: 0;
-			}
-		}
 	`;
-	document.head.appendChild(style);
+	document.head.appendChild(modalStyle);
 </script>
 
 <?php
