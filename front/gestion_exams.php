@@ -347,7 +347,7 @@ ob_start();
 
 		// Tester le système de notification
 		console.log('Test du système de notification...');
-		NotificationSystem.success('Test de notification');
+		NotificationSystem.info('Bienvenue sur la page de gestion des examens');
 
 		loadExams();
 		loadMatieres();
@@ -360,6 +360,7 @@ ob_start();
 			examForm.addEventListener('submit', createExam);
 		} else {
 			console.error('Formulaire non trouvé');
+			NotificationSystem.error('Erreur : Le formulaire d\'ajout d\'examen n\'a pas été trouvé');
 		}
 	});
 
@@ -377,7 +378,7 @@ ob_start();
 		console.log('Données du formulaire:', formData);
 
 		if (!formData.titre || !formData.matiere || !formData.classe) {
-			NotificationSystem.error(ErrorMessages.GENERAL.REQUIRED_FIELDS);
+			NotificationSystem.warning('Veuillez remplir tous les champs du formulaire');
 			return;
 		}
 
@@ -395,15 +396,15 @@ ob_start();
 			console.log('Résultat de la création:', result);
 
 			if (!response.ok) {
-				throw new Error(result.error || ErrorMessages.EXAMS.CREATE.ERROR);
+				throw new Error(result.error || 'Erreur lors de la création de l\'examen');
 			}
 
 			if (!result.success) {
-				throw new Error(result.error || ErrorMessages.EXAMS.CREATE.ERROR);
+				throw new Error(result.error || 'Erreur lors de la création de l\'examen');
 			}
 
 			console.log('Succès, affichage du message...');
-			NotificationSystem.success(ErrorMessages.EXAMS.CREATE.SUCCESS);
+			NotificationSystem.success('L\'examen a été créé avec succès');
 			document.getElementById('addExamForm').reset();
 			console.log('Chargement des examens...');
 			loadExams();
@@ -548,36 +549,35 @@ ob_start();
 
 	// Fonction pour supprimer un examen
 	async function deleteExam(id) {
-		console.log('Tentative de suppression de l\'examen:', id);
-		if (confirm('Êtes-vous sûr de vouloir supprimer cet examen ?')) {
-			try {
-				console.log('Envoi de la requête de suppression...');
-				const response = await fetch(`api/examens/${id}`, {
-					method: 'DELETE',
-					headers: {
-						'Content-Type': 'application/json'
-					}
-				});
+		if (!confirm('Êtes-vous sûr de vouloir supprimer cet examen ?')) {
+			return;
+		}
 
-				console.log('Réponse reçue:', response);
-				const result = await response.json();
-				console.log('Résultat de la suppression:', result);
-
-				if (!response.ok) {
-					throw new Error(result.error || ErrorMessages.EXAMS.DELETE.ERROR);
+		try {
+			console.log('Tentative de suppression de l\'examen:', id);
+			const response = await fetch(`api/examens/${id}`, {
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json'
 				}
+			});
 
-				if (!result.success) {
-					throw new Error(result.error || ErrorMessages.EXAMS.DELETE.ERROR);
-				}
+			const result = await response.json();
+			console.log('Résultat de la suppression:', result);
 
-				console.log('Suppression réussie, affichage du message de succès');
-				NotificationSystem.success(ErrorMessages.EXAMS.DELETE.SUCCESS);
-				loadExams();
-			} catch (error) {
-				console.error('Erreur lors de la suppression:', error);
-				NotificationSystem.error(error.message);
+			if (!response.ok) {
+				throw new Error(result.error || 'Erreur lors de la suppression de l\'examen');
 			}
+
+			if (!result.success) {
+				throw new Error(result.error || 'Erreur lors de la suppression de l\'examen');
+			}
+
+			NotificationSystem.success('L\'examen a été supprimé avec succès');
+			loadExams();
+		} catch (error) {
+			console.error('Erreur lors de la suppression:', error);
+			NotificationSystem.error(error.message);
 		}
 	}
 
