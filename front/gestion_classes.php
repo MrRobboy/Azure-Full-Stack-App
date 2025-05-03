@@ -370,37 +370,71 @@ ob_start();
 	// Fonction pour modifier une classe
 	async function editClasse(event) {
 		event.preventDefault();
-		const id = document.getElementById('edit_id_classe').value;
 
 		try {
-			const response = await fetch(getApiUrl(`classes/${id}`), {
+			const id = document.getElementById('edit_id_classe').value;
+			if (!id) {
+				showError('ID de classe invalide');
+				return;
+			}
+
+			const formData = {
+				nom_classe: document.getElementById('edit_nom_classe').value,
+				niveau: document.getElementById('edit_niveau').value,
+				numero: document.getElementById('edit_numero').value,
+				rythme: document.getElementById('edit_rythme').value
+			};
+
+			// Vérifier que tous les champs sont remplis
+			if (!formData.nom_classe || !formData.niveau || !formData.numero || !formData.rythme) {
+				showError('Tous les champs sont obligatoires');
+				return;
+			}
+
+			const apiUrl = `${window.location.origin}/api/classes/${id}`;
+			const response = await fetch(apiUrl, {
 				method: 'PUT',
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({
-					nom_classe: document.getElementById('edit_nom_classe').value,
-					niveau: document.getElementById('edit_niveau').value,
-					numero: document.getElementById('edit_numero').value,
-					rythme: document.getElementById('edit_rythme').value
-				})
+				body: JSON.stringify(formData)
 			});
 
 			if (!response.ok) {
-				throw new Error(`Erreur HTTP: ${response.status}`);
+				const errorText = await response.text();
+				showError(`Erreur serveur (${response.status}): ${errorText}`);
+				return;
 			}
 
-			const data = await response.json();
+			const responseText = await response.text();
+			if (!responseText) {
+				showError('Le serveur n\'a pas renvoyé de réponse');
+				return;
+			}
+
+			let data;
+			try {
+				data = JSON.parse(responseText);
+			} catch (e) {
+				showError(`Erreur de format de réponse: ${responseText}`);
+				return;
+			}
+
 			if (!data.success) {
-				throw new Error(data.message || 'Erreur lors de la modification de la classe');
+				showError(data.message || 'Erreur lors de la modification de la classe');
+				return;
 			}
 
+			// Fermer le modal
 			document.getElementById('editClasseModal').style.display = 'none';
-			loadClasses();
+
+			// Recharger la liste des classes
+			await loadClasses();
+
+			// Afficher un message de succès
 			showSuccess('Classe modifiée avec succès');
 		} catch (error) {
-			console.error('Erreur lors de la modification de la classe:', error);
-			showError(`Erreur lors de la modification de la classe: ${error.message}`);
+			showError(`Erreur: ${error.message}`);
 		}
 	}
 
