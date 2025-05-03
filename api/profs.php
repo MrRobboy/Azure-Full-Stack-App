@@ -17,21 +17,38 @@ try {
 	switch ($method) {
 		case 'GET':
 			if ($id) {
-				// Récupérer un professeur spécifique
-				$stmt = $conn->prepare("SELECT * FROM PROF WHERE id_prof = ?");
+				// Récupérer un professeur spécifique avec sa matière
+				$stmt = $conn->prepare("
+					SELECT p.*, m.nom as nom_matiere 
+					FROM PROF p 
+					LEFT JOIN MATIERE m ON p.matiere = m.id_matiere 
+					WHERE p.id_prof = ?
+				");
 				$stmt->execute([$id]);
 				$prof = $stmt->fetch(PDO::FETCH_ASSOC);
 
 				if ($prof) {
+					// Ne pas renvoyer le mot de passe
+					unset($prof['password']);
 					echo json_encode(['success' => true, 'data' => $prof]);
 				} else {
 					http_response_code(404);
 					echo json_encode(['success' => false, 'message' => 'Professeur non trouvé']);
 				}
 			} else {
-				// Récupérer tous les professeurs
-				$stmt = $conn->query("SELECT * FROM PROF");
+				// Récupérer tous les professeurs avec leurs matières
+				$stmt = $conn->query("
+					SELECT p.*, m.nom as nom_matiere 
+					FROM PROF p 
+					LEFT JOIN MATIERE m ON p.matiere = m.id_matiere
+				");
 				$profs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+				// Ne pas renvoyer les mots de passe
+				foreach ($profs as &$prof) {
+					unset($prof['password']);
+				}
+
 				echo json_encode(['success' => true, 'data' => $profs]);
 			}
 			break;
@@ -40,14 +57,20 @@ try {
 			// Créer un nouveau professeur
 			$data = json_decode(file_get_contents('php://input'), true);
 
-			if (!isset($data['nom']) || !isset($data['prenom']) || !isset($data['email'])) {
+			if (!isset($data['nom']) || !isset($data['prenom']) || !isset($data['email']) || !isset($data['password'])) {
 				http_response_code(400);
 				echo json_encode(['success' => false, 'message' => 'Données manquantes']);
 				exit;
 			}
 
-			$stmt = $conn->prepare("INSERT INTO PROF (nom, prenom, email) VALUES (?, ?, ?)");
-			$stmt->execute([$data['nom'], $data['prenom'], $data['email']]);
+			$stmt = $conn->prepare("INSERT INTO PROF (nom, prenom, email, password, matiere) VALUES (?, ?, ?, ?, ?)");
+			$stmt->execute([
+				$data['nom'],
+				$data['prenom'],
+				$data['email'],
+				$data['password'],
+				$data['matiere'] ?? null
+			]);
 
 			echo json_encode(['success' => true, 'message' => 'Professeur créé avec succès']);
 			break;
@@ -68,8 +91,33 @@ try {
 				exit;
 			}
 
-			$stmt = $conn->prepare("UPDATE PROF SET nom = ?, prenom = ?, email = ? WHERE id_prof = ?");
-			$stmt->execute([$data['nom'], $data['prenom'], $data['email'], $id]);
+			// Construire la requête dynamiquement en fonction des champs fournis
+			$fields = [];
+			$values = [];
+
+			$fields[] = "nom = ?";
+			$values[] = $data['nom'];
+
+			$fields[] = "prenom = ?";
+			$values[] = $data['prenom'];
+
+			$fields[] = "email = ?";
+			$values[] = $data['email'];
+
+			if (isset($data['password'])) {
+				$fields[] = "password = ?";
+				$values[] = $data['password'];
+			}
+
+			if (isset($data['matiere'])) {
+				$fields[] = "matiere = ?";
+				$values[] = $data['matiere'];
+			}
+
+			$values[] = $id;
+
+			$stmt = $conn->prepare("UPDATE PROF SET " . implode(", ", $fields) . " WHERE id_prof = ?");
+			$stmt->execute($values);
 
 			echo json_encode(['success' => true, 'message' => 'Professeur mis à jour avec succès']);
 			break;
