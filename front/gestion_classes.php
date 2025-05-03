@@ -302,12 +302,23 @@ ob_start();
 
 	// Fonction pour ouvrir le modal de modification
 	async function openEditModal(id) {
+		console.log('Tentative d\'ouverture du modal pour la classe ID:', id);
 		try {
 			const response = await fetch(getApiUrl(`classes/${id}`));
+			console.log('Réponse reçue:', response);
+
+			if (!response.ok) {
+				console.error('Erreur HTTP:', response.status, response.statusText);
+				showError(`Erreur HTTP ${response.status}: ${response.statusText}`);
+				return;
+			}
+
 			const responseText = await response.text();
+			console.log('Texte de la réponse:', responseText);
 
 			// Vérifier si la réponse est vide
 			if (!responseText) {
+				console.error('Réponse vide');
 				showError('Le serveur n\'a pas renvoyé de réponse');
 				return;
 			}
@@ -316,22 +327,27 @@ ob_start();
 			let data;
 			try {
 				data = JSON.parse(responseText);
+				console.log('Données parsées:', data);
 			} catch (e) {
+				console.error('Erreur de parsing JSON:', e);
 				showError(`Erreur de format de réponse: ${responseText}`);
 				return;
 			}
 
 			if (!data.success) {
+				console.error('Erreur dans la réponse:', data);
 				showError(data.message || 'Erreur lors de la récupération de la classe');
 				return;
 			}
 
 			const classe = data.data;
 			if (!classe) {
+				console.error('Aucune donnée de classe trouvée');
 				showError('Aucune donnée de classe trouvée');
 				return;
 			}
 
+			console.log('Données de la classe:', classe);
 			document.getElementById('edit_id_classe').value = classe.id_classe;
 			document.getElementById('edit_nom_classe').value = classe.nom_classe;
 			document.getElementById('edit_niveau').value = classe.niveau;
@@ -339,8 +355,11 @@ ob_start();
 			document.getElementById('edit_rythme').value = classe.rythme;
 
 			// Afficher le modal
-			document.getElementById('editClasseModal').style.display = 'block';
+			const modal = document.getElementById('editClasseModal');
+			console.log('Modal:', modal);
+			modal.style.display = 'block';
 		} catch (error) {
+			console.error('Erreur dans openEditModal:', error);
 			showError(`Erreur: ${error.message}`);
 		}
 	}
