@@ -21,10 +21,13 @@ class Matiere
 				throw new Exception("Erreur lors de la requête SQL");
 			}
 			$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+			if (!is_array($result)) {
+				$result = [];
+			}
 			return $result;
 		} catch (Exception $e) {
 			$this->errorService->logError($e->getMessage(), 'matiere');
-			return false;
+			return [];
 		}
 	}
 
@@ -37,10 +40,13 @@ class Matiere
 			}
 			$stmt->execute([$id]);
 			$result = $stmt->fetch(PDO::FETCH_ASSOC);
+			if (!is_array($result)) {
+				$result = [];
+			}
 			return $result;
 		} catch (Exception $e) {
 			$this->errorService->logError($e->getMessage(), 'matiere');
-			return false;
+			return [];
 		}
 	}
 
@@ -55,13 +61,14 @@ class Matiere
 			if ($result === false) {
 				throw new Exception("Erreur lors de l'exécution de la requête SQL");
 			}
+			$id = $this->db->lastInsertId();
 			return [
-				'id_matiere' => $this->db->lastInsertId(),
+				'id_matiere' => $id,
 				'nom' => $data['nom']
 			];
 		} catch (Exception $e) {
 			$this->errorService->logError($e->getMessage(), 'matiere');
-			return false;
+			return [];
 		}
 	}
 
@@ -82,7 +89,7 @@ class Matiere
 			];
 		} catch (Exception $e) {
 			$this->errorService->logError($e->getMessage(), 'matiere');
-			return false;
+			return [];
 		}
 	}
 

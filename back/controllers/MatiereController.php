@@ -72,6 +72,9 @@ class MatiereController
 			if ($result === false) {
 				throw new Exception("Erreur lors de la création de la matière");
 			}
+			if (!is_array($result)) {
+				$result = [];
+			}
 			return [
 				'success' => true,
 				'data' => $result
@@ -97,6 +100,9 @@ class MatiereController
 			$result = $this->matiere->update($id, $data);
 			if ($result === false) {
 				throw new Exception("Erreur lors de la mise à jour de la matière");
+			}
+			if (!is_array($result)) {
+				$result = [];
 			}
 			return [
 				'success' => true,
