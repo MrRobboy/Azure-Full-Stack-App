@@ -607,6 +607,159 @@ ob_start();
 		loadClasses();
 		loadExams();
 	});
+
+	// Ajouter les styles pour le modal
+	const style = document.createElement('style');
+	style.textContent = `
+		.modal {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background-color: rgba(0, 0, 0, 0.5);
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			z-index: 1000;
+		}
+
+		.modal-content {
+			background: white;
+			padding: 20px;
+			border-radius: 8px;
+			width: 90%;
+			max-width: 500px;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+			position: relative;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+		}
+
+		.modal-content h3 {
+			margin-top: 0;
+			color: #333;
+		}
+
+		.form-row {
+			margin-bottom: 15px;
+		}
+
+		.form-row label {
+			display: block;
+			margin-bottom: 5px;
+			color: #555;
+		}
+
+		.form-row input,
+		.form-row select {
+			width: 100%;
+			padding: 8px;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+			font-size: 14px;
+		}
+
+		.form-actions {
+			display: flex;
+			justify-content: flex-end;
+			gap: 10px;
+			margin-top: 20px;
+		}
+
+		.btn {
+			padding: 8px 16px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 14px;
+			transition: background-color 0.3s;
+		}
+
+		.btn-secondary {
+			background: #6c757d;
+			color: white;
+		}
+
+		.btn-secondary:hover {
+			background: #5a6268;
+		}
+
+		.btn-primary {
+			background: #007bff;
+			color: white;
+		}
+
+		.btn-primary:hover {
+			background: #0056b3;
+		}
+
+		.notification-container {
+			position: fixed;
+			top: 20px;
+			right: 20px;
+			z-index: 1001;
+		}
+
+		.notification {
+			padding: 15px;
+			margin-bottom: 10px;
+			border-radius: 4px;
+			color: white;
+			animation: slideIn 0.3s ease-out;
+			position: relative;
+			min-width: 300px;
+			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+		}
+
+		.notification.error {
+			background-color: #dc3545;
+		}
+
+		.notification.success {
+			background-color: #28a745;
+		}
+
+		.notification .close {
+			position: absolute;
+			right: 10px;
+			top: 10px;
+			cursor: pointer;
+			font-size: 20px;
+			background: none;
+			border: none;
+			color: white;
+			padding: 0;
+		}
+
+		@keyframes slideIn {
+			from {
+				transform: translateX(100%);
+				opacity: 0;
+			}
+			to {
+				transform: translateX(0);
+				opacity: 1;
+			}
+		}
+
+		.slideOut {
+			animation: slideOut 0.3s ease-in forwards;
+		}
+
+		@keyframes slideOut {
+			from {
+				transform: translateX(0);
+				opacity: 1;
+			}
+			to {
+				transform: translateX(100%);
+				opacity: 0;
+			}
+		}
+	`;
+	document.head.appendChild(style);
 </script>
 
 <?php
