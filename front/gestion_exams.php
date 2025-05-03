@@ -528,13 +528,20 @@ ob_start();
 
 	// Fonction pour supprimer un examen
 	async function deleteExam(id) {
+		console.log('Tentative de suppression de l\'examen:', id);
 		if (confirm('Êtes-vous sûr de vouloir supprimer cet examen ?')) {
 			try {
+				console.log('Envoi de la requête de suppression...');
 				const response = await fetch(`api/examens/${id}`, {
-					method: 'DELETE'
+					method: 'DELETE',
+					headers: {
+						'Content-Type': 'application/json'
+					}
 				});
 
+				console.log('Réponse reçue:', response);
 				const result = await response.json();
+				console.log('Résultat de la suppression:', result);
 
 				if (!response.ok) {
 					throw new Error(result.error || ErrorMessages.EXAMS.DELETE.ERROR);
@@ -547,6 +554,7 @@ ob_start();
 				showSuccess(ErrorMessages.EXAMS.DELETE.SUCCESS);
 				loadExams();
 			} catch (error) {
+				console.error('Erreur lors de la suppression:', error);
 				showError(error.message);
 			}
 		}
