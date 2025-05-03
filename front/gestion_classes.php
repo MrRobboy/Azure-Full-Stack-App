@@ -61,6 +61,90 @@ ob_start();
 	</div>
 </div>
 
+<!-- Modal de modification -->
+<div id="editClasseModal" class="modal">
+	<div class="modal-content">
+		<span class="close">&times;</span>
+		<h2>Modifier la classe</h2>
+		<form id="editClasseForm">
+			<input type="hidden" id="edit_id_classe">
+			<div class="form-row">
+				<label for="edit_nom_classe">Nom de la classe :</label>
+				<input type="text" name="nom_classe" id="edit_nom_classe" required>
+			</div>
+			<div class="form-row">
+				<label for="edit_niveau">Niveau :</label>
+				<input type="text" name="niveau" id="edit_niveau" required>
+			</div>
+			<div class="form-row">
+				<label for="edit_numero">Numéro :</label>
+				<input type="text" name="numero" id="edit_numero" required>
+			</div>
+			<div class="form-row">
+				<label for="edit_rythme">Rythme :</label>
+				<select name="rythme" id="edit_rythme" required>
+					<option value="">Sélectionnez un rythme</option>
+					<option value="Alternance">Alternance</option>
+					<option value="Initial">Initial</option>
+				</select>
+			</div>
+			<button type="submit" class="btn">Enregistrer les modifications</button>
+		</form>
+	</div>
+</div>
+
+<style>
+	.modal {
+		display: none;
+		position: fixed;
+		z-index: 1000;
+		left: 0;
+		top: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.4);
+	}
+
+	.modal-content {
+		background-color: #fefefe;
+		margin: 15% auto;
+		padding: 20px;
+		border: 1px solid #888;
+		width: 80%;
+		max-width: 500px;
+		border-radius: 8px;
+	}
+
+	.close {
+		color: #aaa;
+		float: right;
+		font-size: 28px;
+		font-weight: bold;
+		cursor: pointer;
+	}
+
+	.close:hover {
+		color: black;
+	}
+
+	.form-row {
+		margin-bottom: 15px;
+	}
+
+	.form-row label {
+		display: block;
+		margin-bottom: 5px;
+	}
+
+	.form-row input,
+	.form-row select {
+		width: 100%;
+		padding: 8px;
+		border: 1px solid #ddd;
+		border-radius: 4px;
+	}
+</style>
+
 <script src="js/config.js"></script>
 <script src="js/errorHandler.js"></script>
 <script>
@@ -95,7 +179,7 @@ ob_start();
 					<td>${classe.numero || '-'}</td>
 					<td>${classe.rythme || '-'}</td>
 					<td>
-						<button onclick="editClasse(${classe.id_classe})" class="btn btn-warning btn-sm">Modifier</button>
+						<button onclick="openEditModal(${classe.id_classe})" class="btn btn-warning btn-sm">Modifier</button>
 						<button onclick="deleteClasse(${classe.id_classe})" class="btn btn-danger btn-sm">Supprimer</button>
 					</td>
 				`;
@@ -139,53 +223,75 @@ ob_start();
 
 			form.reset();
 			loadClasses();
+			showSuccess('Classe ajoutée avec succès');
 		} catch (error) {
 			console.error('Erreur lors de l\'ajout de la classe:', error);
-			alert(`Erreur lors de l'ajout de la classe: ${error.message}`);
+			showError(`Erreur lors de l'ajout de la classe: ${error.message}`);
+		}
+	}
+
+	// Fonction pour ouvrir le modal de modification
+	async function openEditModal(id) {
+		try {
+			const response = await fetch(getApiUrl(`classes/${id}`));
+			if (!response.ok) {
+				throw new Error(`Erreur HTTP: ${response.status}`);
+			}
+
+			const data = await response.json();
+			if (!data.success) {
+				throw new Error(data.message || 'Erreur lors de la récupération de la classe');
+			}
+
+			const classe = data.data;
+			document.getElementById('edit_id_classe').value = classe.id_classe;
+			document.getElementById('edit_nom_classe').value = classe.nom_classe;
+			document.getElementById('edit_niveau').value = classe.niveau;
+			document.getElementById('edit_numero').value = classe.numero;
+			document.getElementById('edit_rythme').value = classe.rythme;
+
+			document.getElementById('editClasseModal').style.display = 'block';
+		} catch (error) {
+			console.error('Erreur lors de l\'ouverture du modal:', error);
+			showError(`Erreur lors de la récupération de la classe: ${error.message}`);
 		}
 	}
 
 	// Fonction pour modifier une classe
-	async function editClasse(id) {
-		const nom_classe = prompt('Nouveau nom de la classe:', document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(1)`).textContent);
-		const niveau = prompt('Nouveau niveau:', document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(2)`).textContent);
-		const numero = prompt('Nouveau numéro:', document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(3)`).textContent);
-		const rythme = prompt('Nouveau rythme (Alternance ou Initial):', document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(4)`).textContent);
+	async function editClasse(event) {
+		event.preventDefault();
+		const form = event.target;
+		const id = document.getElementById('edit_id_classe').value;
 
-		if (nom_classe && niveau && numero && rythme &&
-			(nom_classe !== document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(1)`).textContent ||
-				niveau !== document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(2)`).textContent ||
-				numero !== document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(3)`).textContent ||
-				rythme !== document.querySelector(`#classesTable tbody tr[data-id="${id}"] td:nth-child(4)`).textContent)) {
-			try {
-				const response = await fetch(getApiUrl(`classes/${id}`), {
-					method: 'PUT',
-					headers: {
-						'Content-Type': 'application/json',
-					},
-					body: JSON.stringify({
-						nom_classe,
-						niveau,
-						numero,
-						rythme
-					})
-				});
+		try {
+			const response = await fetch(getApiUrl(`classes/${id}`), {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					nom_classe: document.getElementById('edit_nom_classe').value,
+					niveau: document.getElementById('edit_niveau').value,
+					numero: document.getElementById('edit_numero').value,
+					rythme: document.getElementById('edit_rythme').value
+				})
+			});
 
-				if (!response.ok) {
-					throw new Error(`Erreur HTTP: ${response.status}`);
-				}
-
-				const data = await response.json();
-				if (!data.success) {
-					throw new Error(data.message || 'Erreur lors de la modification de la classe');
-				}
-
-				ErrorHandler.showClasseSuccess('Classe modifiée avec succès', 'Modification');
-				loadClasses();
-			} catch (error) {
-				console.error('Erreur lors de la modification de la classe:', error);
-				ErrorHandler.handleClasseError(error, 'Modification de classe');
+			if (!response.ok) {
+				throw new Error(`Erreur HTTP: ${response.status}`);
 			}
+
+			const data = await response.json();
+			if (!data.success) {
+				throw new Error(data.message || 'Erreur lors de la modification de la classe');
+			}
+
+			document.getElementById('editClasseModal').style.display = 'none';
+			loadClasses();
+			showSuccess('Classe modifiée avec succès');
+		} catch (error) {
+			console.error('Erreur lors de la modification de la classe:', error);
+			showError(`Erreur lors de la modification de la classe: ${error.message}`);
 		}
 	}
 
@@ -209,19 +315,23 @@ ob_start();
 				throw new Error(data.message || 'Erreur lors de la suppression de la classe');
 			}
 
-			ErrorHandler.showClasseSuccess('Classe supprimée avec succès', 'Suppression');
 			loadClasses();
+			showSuccess('Classe supprimée avec succès');
 		} catch (error) {
 			console.error('Erreur lors de la suppression de la classe:', error);
-			ErrorHandler.handleClasseError(error, 'Suppression de classe');
+			showError(`Erreur lors de la suppression de la classe: ${error.message}`);
 		}
 	}
 
-	// Charger les classes au chargement de la page
-	document.addEventListener('DOMContentLoaded', () => {
-		loadClasses();
-		document.getElementById('addClasseForm').addEventListener('submit', addClasse);
+	// Gestionnaires d'événements
+	document.getElementById('addClasseForm').addEventListener('submit', addClasse);
+	document.getElementById('editClasseForm').addEventListener('submit', editClasse);
+	document.querySelector('.close').addEventListener('click', () => {
+		document.getElementById('editClasseModal').style.display = 'none';
 	});
+
+	// Charger les classes au chargement de la page
+	document.addEventListener('DOMContentLoaded', loadClasses);
 </script>
 
 <?php
