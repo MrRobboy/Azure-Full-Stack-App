@@ -233,29 +233,6 @@ ob_start();
 
 <script src="js/error-messages.js"></script>
 <script>
-	// Fonction pour afficher un message de débogage
-	function showDebug(message) {
-		const debugDiv = document.createElement('div');
-		debugDiv.className = 'notification debug';
-		debugDiv.innerHTML = `
-			<span class="close">&times;</span>
-			<p>${message}</p>
-		`;
-		document.body.appendChild(debugDiv);
-
-		// Fermer la notification après 10 secondes
-		setTimeout(() => {
-			debugDiv.classList.add('slideOut');
-			setTimeout(() => debugDiv.remove(), 500);
-		}, 10000);
-
-		// Fermer la notification au clic sur le bouton
-		debugDiv.querySelector('.close').addEventListener('click', () => {
-			debugDiv.classList.add('slideOut');
-			setTimeout(() => debugDiv.remove(), 500);
-		});
-	}
-
 	// Fonction pour afficher une notification
 	function showNotification(message, type) {
 		// Créer le conteneur s'il n'existe pas
@@ -265,6 +242,13 @@ ob_start();
 			container.className = 'notification-container';
 			document.body.appendChild(container);
 		}
+
+		// Supprimer les anciennes notifications du même type
+		const oldNotifications = container.querySelectorAll(`.notification.${type}`);
+		oldNotifications.forEach(notification => {
+			notification.classList.add('slideOut');
+			setTimeout(() => notification.remove(), 500);
+		});
 
 		const notification = document.createElement('div');
 		notification.className = `notification ${type}`;
@@ -302,11 +286,8 @@ ob_start();
 	// Fonction pour charger les matières
 	async function loadMatieres() {
 		try {
-			showDebug('Chargement des matières...');
 			const response = await fetch('api/matieres');
-			showDebug('Réponse reçue: ' + response.status);
 			const result = await response.json();
-			showDebug('Données reçues: ' + JSON.stringify(result));
 
 			if (!result.success) {
 				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
@@ -329,11 +310,8 @@ ob_start();
 	// Fonction pour charger les classes
 	async function loadClasses() {
 		try {
-			showDebug('Chargement des classes...');
 			const response = await fetch('api/classes');
-			showDebug('Réponse reçue: ' + response.status);
 			const result = await response.json();
-			showDebug('Données reçues: ' + JSON.stringify(result));
 
 			if (!result.success) {
 				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
@@ -356,11 +334,8 @@ ob_start();
 	// Fonction pour charger les examens
 	async function loadExams() {
 		try {
-			showDebug('Chargement des examens...');
 			const response = await fetch('api/examens');
-			showDebug('Réponse reçue: ' + response.status);
 			const result = await response.json();
-			showDebug('Données reçues: ' + JSON.stringify(result));
 
 			if (!result.success) {
 				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
@@ -395,26 +370,17 @@ ob_start();
 	// Fonction pour ajouter un examen
 	document.getElementById('addExamForm').addEventListener('submit', async function(e) {
 		e.preventDefault();
-		showDebug('Tentative d\'ajout d\'un examen...');
 
 		const titre = document.getElementById('titre').value;
 		const matiere = document.getElementById('matiere').value;
 		const classe = document.getElementById('classe').value;
 
-		showDebug('Données du formulaire: ' + JSON.stringify({
-			titre,
-			matiere,
-			classe
-		}));
-
 		if (!titre || !matiere || !classe) {
-			showDebug('Champs manquants');
 			showError(ErrorMessages.GENERAL.REQUIRED_FIELDS);
 			return;
 		}
 
 		try {
-			showDebug('Envoi de la requête...');
 			const response = await fetch('api/examens', {
 				method: 'POST',
 				headers: {
@@ -427,9 +393,7 @@ ob_start();
 				})
 			});
 
-			showDebug('Réponse reçue: ' + response.status);
 			const result = await response.json();
-			showDebug('Résultat: ' + JSON.stringify(result));
 
 			if (!response.ok) {
 				throw new Error(result.error || ErrorMessages.EXAMS.CREATE.ERROR);
@@ -439,16 +403,11 @@ ob_start();
 				throw new Error(result.error || ErrorMessages.EXAMS.CREATE.ERROR);
 			}
 
-			// Vérifier si l'examen a été créé avec succès
-			if (result.data && result.data.id_exam) {
-				document.getElementById('titre').value = '';
-				document.getElementById('matiere').value = '';
-				document.getElementById('classe').value = '';
-				showSuccess(ErrorMessages.EXAMS.CREATE.SUCCESS);
-				loadExams();
-			} else {
-				throw new Error(ErrorMessages.EXAMS.CREATE.ERROR);
-			}
+			document.getElementById('titre').value = '';
+			document.getElementById('matiere').value = '';
+			document.getElementById('classe').value = '';
+			showSuccess(ErrorMessages.EXAMS.CREATE.SUCCESS);
+			loadExams();
 		} catch (error) {
 			showError(error.message);
 		}
@@ -524,16 +483,8 @@ ob_start();
 		}
 	}
 
-	// Vérifier que le script d'erreurs est chargé
-	if (typeof ErrorMessages === 'undefined') {
-		showError('Le script error-messages.js n\'est pas chargé correctement');
-	} else {
-		showDebug('Script d\'erreurs chargé avec succès');
-	}
-
 	// Charger les données au chargement de la page
 	document.addEventListener('DOMContentLoaded', () => {
-		showDebug('Chargement de la page...');
 		loadMatieres();
 		loadClasses();
 		loadExams();
