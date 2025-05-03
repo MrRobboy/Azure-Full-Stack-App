@@ -10,6 +10,159 @@ $pageTitle = "Gestion des Examens";
 ob_start();
 ?>
 
+<style>
+	.container {
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 20px;
+	}
+
+	.main-content {
+		background: white;
+		padding: 20px;
+		border-radius: 8px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	}
+
+	h1 {
+		color: #333;
+		margin-bottom: 20px;
+	}
+
+	.form-container {
+		margin-bottom: 30px;
+		padding: 20px;
+		background: #f8f9fa;
+		border-radius: 8px;
+	}
+
+	.form-row {
+		margin-bottom: 15px;
+	}
+
+	label {
+		display: block;
+		margin-bottom: 5px;
+		color: #555;
+	}
+
+	input[type="text"],
+	select {
+		width: 100%;
+		padding: 8px;
+		border: 1px solid #ddd;
+		border-radius: 4px;
+		font-size: 14px;
+	}
+
+	.btn {
+		background: #007bff;
+		color: white;
+		padding: 10px 20px;
+		border: none;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 14px;
+		transition: background 0.3s;
+	}
+
+	.btn:hover {
+		background: #0056b3;
+	}
+
+	.table-responsive {
+		overflow-x: auto;
+	}
+
+	.table {
+		width: 100%;
+		border-collapse: collapse;
+		margin-top: 20px;
+	}
+
+	.table th,
+	.table td {
+		padding: 12px;
+		text-align: left;
+		border-bottom: 1px solid #ddd;
+	}
+
+	.table th {
+		background: #f8f9fa;
+		font-weight: 600;
+	}
+
+	.btn-edit {
+		background: #28a745;
+		margin-right: 5px;
+	}
+
+	.btn-edit:hover {
+		background: #218838;
+	}
+
+	.btn-danger {
+		background: #dc3545;
+	}
+
+	.btn-danger:hover {
+		background: #c82333;
+	}
+
+	.notification {
+		position: fixed;
+		top: 20px;
+		right: 20px;
+		padding: 15px;
+		border-radius: 4px;
+		color: white;
+		z-index: 1000;
+		animation: slideIn 0.3s ease-out;
+	}
+
+	.notification.error {
+		background: #dc3545;
+	}
+
+	.notification.success {
+		background: #28a745;
+	}
+
+	.notification .close {
+		float: right;
+		cursor: pointer;
+		margin-left: 10px;
+	}
+
+	@keyframes slideIn {
+		from {
+			transform: translateX(100%);
+			opacity: 0;
+		}
+
+		to {
+			transform: translateX(0);
+			opacity: 1;
+		}
+	}
+
+	.slideOut {
+		animation: slideOut 0.3s ease-in forwards;
+	}
+
+	@keyframes slideOut {
+		from {
+			transform: translateX(0);
+			opacity: 1;
+		}
+
+		to {
+			transform: translateX(100%);
+			opacity: 0;
+		}
+	}
+</style>
+
 <div class="container">
 	<div class="main-content">
 		<h1>Gestion des Examens</h1>
@@ -151,6 +304,11 @@ ob_start();
 		const matiere = document.getElementById('matiere').value;
 		const classe = document.getElementById('classe').value;
 
+		if (!titre || !matiere || !classe) {
+			showError('Veuillez remplir tous les champs');
+			return;
+		}
+
 		try {
 			const response = await fetch('api/examens', {
 				method: 'POST',
@@ -164,12 +322,11 @@ ob_start();
 				})
 			});
 
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || 'Erreur lors de l\'ajout de l\'examen');
-			}
-
 			const result = await response.json();
+
+			if (!response.ok) {
+				throw new Error(result.error || 'Erreur lors de l\'ajout de l\'examen');
+			}
 
 			if (!result.success) {
 				throw new Error(result.error || 'Erreur lors de l\'ajout de l\'examen');

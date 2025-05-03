@@ -362,25 +362,58 @@ try {
 				sendResponse($examenController->getAllExamens());
 			}
 		} elseif ($method === 'POST') {
-			$data = json_decode(file_get_contents('php://input'), true);
-			$result = $examenController->createExamen(
-				$data['titre'],
-				$data['matiere'],
-				$data['classe']
-			);
-			sendResponse($result);
+			try {
+				$data = json_decode(file_get_contents('php://input'), true);
+				if (!$data) {
+					throw new Exception("Données JSON invalides");
+				}
+				if (!isset($data['titre']) || !isset($data['matiere']) || !isset($data['classe'])) {
+					throw new Exception("Tous les champs sont obligatoires");
+				}
+				$result = $examenController->createExamen(
+					$data['titre'],
+					$data['matiere'],
+					$data['classe']
+				);
+				sendResponse($result);
+			} catch (Exception $e) {
+				sendResponse([
+					'success' => false,
+					'error' => $e->getMessage()
+				], 400);
+			}
 		} elseif ($method === 'PUT' && isset($segments[1])) {
-			$data = json_decode(file_get_contents('php://input'), true);
-			$result = $examenController->updateExamen(
-				$segments[1],
-				$data['titre'],
-				$data['matiere'],
-				$data['classe']
-			);
-			sendResponse($result);
+			try {
+				$data = json_decode(file_get_contents('php://input'), true);
+				if (!$data) {
+					throw new Exception("Données JSON invalides");
+				}
+				if (!isset($data['titre']) || !isset($data['matiere']) || !isset($data['classe'])) {
+					throw new Exception("Tous les champs sont obligatoires");
+				}
+				$result = $examenController->updateExamen(
+					$segments[1],
+					$data['titre'],
+					$data['matiere'],
+					$data['classe']
+				);
+				sendResponse($result);
+			} catch (Exception $e) {
+				sendResponse([
+					'success' => false,
+					'error' => $e->getMessage()
+				], 400);
+			}
 		} elseif ($method === 'DELETE' && isset($segments[1])) {
-			$result = $examenController->deleteExamen($segments[1]);
-			sendResponse($result);
+			try {
+				$result = $examenController->deleteExamen($segments[1]);
+				sendResponse($result);
+			} catch (Exception $e) {
+				sendResponse([
+					'success' => false,
+					'error' => $e->getMessage()
+				], 400);
+			}
 		}
 	}
 
