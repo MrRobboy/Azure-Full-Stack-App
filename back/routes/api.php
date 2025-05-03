@@ -58,35 +58,16 @@ function sendResponse($data, $status = 200)
 		$data = ['success' => false, 'message' => 'Données invalides'];
 	}
 
-	// Conversion des données en tableau si nécessaire
-	if (!is_array($data)) {
-		$data = ['success' => true, 'data' => $data];
+	// Assure que la réponse a toujours un format cohérent
+	if (!isset($data['success'])) {
+		$data = [
+			'success' => $status >= 200 && $status < 300,
+			'data' => $data
+		];
 	}
 
-	// Si c'est une réponse d'erreur, on s'assure qu'elle a le bon format
-	if ($status >= 400 || (isset($data['success']) && $data['success'] === false)) {
-		if (!isset($data['message'])) {
-			$data['message'] = $data['error'] ?? 'Une erreur est survenue';
-			unset($data['error']);
-		}
-		$data['success'] = false;
-	} else {
-		$data['success'] = true;
-	}
-
-	$json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-
-	if ($json === false) {
-		error_log("Erreur d'encodage JSON: " . json_last_error_msg());
-		error_log("Données à encoder: " . print_r($data, true));
-		$json = json_encode([
-			'success' => false,
-			'message' => 'Erreur d\'encodage JSON'
-		], JSON_UNESCAPED_UNICODE);
-	}
-
-	error_log("Réponse envoyée: " . $json);
-	echo $json;
+	// Envoi de la réponse
+	echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 	exit();
 }
 

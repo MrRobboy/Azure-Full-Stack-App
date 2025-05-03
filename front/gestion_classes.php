@@ -234,12 +234,22 @@ ob_start();
 	async function openEditModal(id) {
 		try {
 			const response = await fetch(getApiUrl(`classes/${id}`));
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
+			const responseText = await response.text();
+
+			// Vérifier si la réponse est vide
+			if (!responseText) {
+				throw new Error('Réponse vide du serveur');
 			}
 
-			const data = await response.json();
+			// Tenter de parser la réponse
+			let data;
+			try {
+				data = JSON.parse(responseText);
+			} catch (e) {
+				console.error('Réponse reçue:', responseText);
+				throw new Error('Format de réponse invalide');
+			}
+
 			if (!data.success) {
 				throw new Error(data.message || 'Erreur lors de la récupération de la classe');
 			}
