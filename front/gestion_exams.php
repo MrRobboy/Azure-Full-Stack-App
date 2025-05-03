@@ -119,7 +119,7 @@ ob_start();
 		position: fixed;
 		top: 20px;
 		right: 20px;
-		z-index: 1000;
+		z-index: 9999;
 		display: flex;
 		flex-direction: column;
 		align-items: flex-end;
@@ -134,6 +134,7 @@ ob_start();
 		width: 300px;
 		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 		animation: slideIn 0.3s ease-out;
+		z-index: 10000;
 	}
 
 	.notification.error {
@@ -560,26 +561,18 @@ ob_start();
 		}
 	}
 
-	// Fonction pour ajouter un examen
-	document.getElementById('addExamForm').addEventListener('submit', async function(e) {
-		e.preventDefault();
+	// Fonction pour créer un nouvel examen
+	async function createExam(event) {
+		event.preventDefault();
 		console.log('Tentative d\'ajout d\'un examen...');
 
-		const titre = document.getElementById('titre').value;
-		const matiere = document.getElementById('matiere').value;
-		const classe = document.getElementById('classe').value;
+		const formData = {
+			titre: document.getElementById('titre').value,
+			matiere: document.getElementById('matiere').value,
+			classe: document.getElementById('classe').value
+		};
 
-		console.log('Données du formulaire:', {
-			titre,
-			matiere,
-			classe
-		});
-
-		if (!titre || !matiere || !classe) {
-			console.log('Champs manquants, affichage de l\'erreur...');
-			showError(ErrorMessages.GENERAL.REQUIRED_FIELDS);
-			return;
-		}
+		console.log('Données du formulaire:', formData);
 
 		try {
 			console.log('Envoi de la requête...');
@@ -588,11 +581,7 @@ ob_start();
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({
-					titre,
-					matiere,
-					classe
-				})
+				body: JSON.stringify(formData)
 			});
 
 			const result = await response.json();
@@ -606,24 +595,28 @@ ob_start();
 				throw new Error(result.error || ErrorMessages.EXAMS.CREATE.ERROR);
 			}
 
-			document.getElementById('titre').value = '';
-			document.getElementById('matiere').value = '';
-			document.getElementById('classe').value = '';
 			console.log('Succès, affichage du message...');
 			showSuccess(ErrorMessages.EXAMS.CREATE.SUCCESS);
+			document.getElementById('examForm').reset();
+			console.log('Chargement des examens...');
 			loadExams();
 		} catch (error) {
-			console.error('Erreur lors de l\'ajout de l\'examen:', error);
+			console.error('Erreur lors de la création:', error);
 			showError(error.message);
 		}
-	});
+	}
 
 	// Charger les données au chargement de la page
-	document.addEventListener('DOMContentLoaded', () => {
-		console.log('Chargement de la page...');
+	document.addEventListener('DOMContentLoaded', function() {
+		loadExams();
 		loadMatieres();
 		loadClasses();
-		loadExams();
+
+		// Ajouter l'écouteur d'événements pour le formulaire de création
+		const examForm = document.getElementById('examForm');
+		if (examForm) {
+			examForm.addEventListener('submit', createExam);
+		}
 	});
 
 	// Ajouter les styles pour le modal et les notifications
