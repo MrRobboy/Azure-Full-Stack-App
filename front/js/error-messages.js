@@ -70,7 +70,7 @@ const ErrorMessages = {
 };
 
 // Fonction pour afficher une notification
-function showNotification(message, type = "error") {
+window.showNotification = function (message, type = "error") {
 	console.log(`Affichage d'une notification de type ${type}: ${message}`);
 
 	// Créer le conteneur s'il n'existe pas
@@ -111,16 +111,16 @@ function showNotification(message, type = "error") {
 		notification.classList.add("slideOut");
 		setTimeout(() => notification.remove(), 500);
 	});
-}
+};
 
 // Fonction pour afficher une erreur
-function showError(message) {
+window.showError = function (message) {
 	console.error("Erreur:", message);
 	showNotification(message, "error");
-}
+};
 
 // Fonction pour afficher un succès
-function showSuccess(message) {
+window.showSuccess = function (message) {
 	console.log("Succès:", message);
 	showNotification(message, "success");
-}
+};

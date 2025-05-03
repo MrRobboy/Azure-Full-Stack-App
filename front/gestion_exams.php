@@ -242,11 +242,6 @@ ob_start();
 		console.error('Le script error-messages.js n\'est pas chargé correctement');
 	}
 
-	// Supprimer les fonctions de notification dupliquées
-	delete window.showNotification;
-	delete window.showError;
-	delete window.showSuccess;
-
 	// Charger les données au chargement de la page
 	document.addEventListener('DOMContentLoaded', function() {
 		console.log('Chargement de la page...');
