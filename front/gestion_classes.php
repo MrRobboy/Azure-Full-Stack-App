@@ -10,6 +10,156 @@ $pageTitle = "Gestion des Classes";
 ob_start();
 ?>
 
+<head>
+	<title><?php echo $pageTitle; ?></title>
+	<link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
+	<link rel="stylesheet" href="css/styles.css">
+</head>
+
+<style>
+	.container {
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 20px;
+	}
+
+	.main-content {
+		background: white;
+		padding: 20px;
+		border-radius: 8px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	}
+
+	h1 {
+		color: #333;
+		margin-bottom: 20px;
+	}
+
+	.form-container {
+		margin-bottom: 30px;
+		padding: 20px;
+		background: #f8f9fa;
+		border-radius: 8px;
+	}
+
+	.form-row {
+		margin-bottom: 15px;
+	}
+
+	label {
+		display: block;
+		margin-bottom: 5px;
+		color: #555;
+	}
+
+	input[type="text"],
+	select {
+		width: 100%;
+		padding: 8px;
+		border: 1px solid #ddd;
+		border-radius: 4px;
+		font-size: 14px;
+	}
+
+	.btn {
+		background: #007bff;
+		color: white;
+		padding: 10px 20px;
+		border: none;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 14px;
+		transition: background 0.3s;
+	}
+
+	.btn:hover {
+		background: #0056b3;
+	}
+
+	.table-responsive {
+		overflow-x: auto;
+	}
+
+	.table {
+		width: 100%;
+		border-collapse: collapse;
+		margin-top: 20px;
+	}
+
+	.table th,
+	.table td {
+		padding: 12px;
+		text-align: left;
+		border-bottom: 1px solid #ddd;
+	}
+
+	.table th {
+		background: #f8f9fa;
+		font-weight: 600;
+	}
+
+	.btn-edit {
+		background: #28a745;
+		margin-right: 5px;
+	}
+
+	.btn-edit:hover {
+		background: #218838;
+	}
+
+	.btn-danger {
+		background: #dc3545;
+	}
+
+	.btn-danger:hover {
+		background: #c82333;
+	}
+
+	.modal {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+		z-index: 1000;
+	}
+
+	.modal-content {
+		background: white;
+		padding: 20px;
+		border-radius: 8px;
+		width: 90%;
+		max-width: 500px;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+	}
+
+	.modal-content h3 {
+		margin-top: 0;
+		color: #333;
+	}
+
+	.form-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 10px;
+		margin-top: 20px;
+	}
+
+	.btn-secondary {
+		background: #6c757d;
+		color: white;
+	}
+
+	.btn-secondary:hover {
+		background: #5a6268;
+	}
+</style>
+
 <div class="container">
 	<div class="main-content">
 		<h1>Gestion des Classes</h1>
@@ -68,248 +218,79 @@ ob_start();
 	</div>
 </div>
 
-<!-- Modal de modification -->
-<div id="editClasseModal" class="modal">
-	<div class="modal-content">
-		<span class="close">&times;</span>
-		<h2>Modifier la classe</h2>
-		<form id="editClasseForm">
-			<input type="hidden" id="edit_id_classe">
-			<div class="form-row">
-				<label for="edit_nom_classe">Nom de la classe :</label>
-				<input type="text" name="nom_classe" id="edit_nom_classe" required>
-			</div>
-			<div class="form-row">
-				<label for="edit_niveau">Niveau :</label>
-				<select name="niveau" id="edit_niveau" required>
-					<option value="">Sélectionnez un niveau</option>
-					<option value="1ère Année">1ère Année</option>
-					<option value="2ème Année">2ème Année</option>
-					<option value="3ème Année">3ème Année</option>
-					<option value="4ème Année">4ème Année</option>
-					<option value="5ème Année">5ème Année</option>
-				</select>
-			</div>
-			<div class="form-row">
-				<label for="edit_numero">Numéro :</label>
-				<input type="text" name="numero" id="edit_numero" required>
-			</div>
-			<div class="form-row">
-				<label for="edit_rythme">Rythme :</label>
-				<select name="rythme" id="edit_rythme" required>
-					<option value="">Sélectionnez un rythme</option>
-					<option value="Alternance">Alternance</option>
-					<option value="Inital">Initial</option>
-				</select>
-			</div>
-			<button type="submit" class="btn">Enregistrer les modifications</button>
-		</form>
-	</div>
-</div>
-
-<style>
-	/* Styles pour les messages de notification */
-	.notification {
-		position: fixed;
-		top: 20px;
-		right: 20px;
-		padding: 15px;
-		border-radius: 5px;
-		z-index: 1001;
-		max-width: 400px;
-		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-		animation: slideIn 0.3s ease-out;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	.notification.error {
-		background-color: #ff4444;
-		color: white;
-	}
-
-	.notification.success {
-		background-color: #4CAF50;
-		color: white;
-	}
-
-	.notification .content {
-		flex: 1;
-	}
-
-	.notification .title {
-		display: block;
-		margin-bottom: 5px;
-		font-weight: bold;
-	}
-
-	.notification .close-btn {
-		background: none;
-		border: none;
-		color: inherit;
-		cursor: pointer;
-		margin-left: 10px;
-		font-size: 20px;
-		padding: 0;
-	}
-
-	@keyframes slideIn {
-		from {
-			transform: translateX(100%);
-			opacity: 0;
-		}
-
-		to {
-			transform: translateX(0);
-			opacity: 1;
-		}
-	}
-
-	@keyframes slideOut {
-		from {
-			transform: translateX(0);
-			opacity: 1;
-		}
-
-		to {
-			transform: translateX(100%);
-			opacity: 0;
-		}
-	}
-
-	.modal {
-		display: none;
-		position: fixed;
-		z-index: 1000;
-		left: 0;
-		top: 0;
-		width: 100%;
-		height: 100%;
-		background-color: rgba(0, 0, 0, 0.4);
-	}
-
-	.modal-content {
-		background-color: #fefefe;
-		margin: 15% auto;
-		padding: 20px;
-		border: 1px solid #888;
-		width: 80%;
-		max-width: 500px;
-		border-radius: 8px;
-	}
-
-	.close {
-		color: #aaa;
-		float: right;
-		font-size: 28px;
-		font-weight: bold;
-		cursor: pointer;
-	}
-
-	.close:hover {
-		color: black;
-	}
-
-	.form-row {
-		margin-bottom: 15px;
-	}
-
-	.form-row label {
-		display: block;
-		margin-bottom: 5px;
-	}
-
-	.form-row input,
-	.form-row select {
-		width: 100%;
-		padding: 8px;
-		border: 1px solid #ddd;
-		border-radius: 4px;
-	}
-</style>
-
-<script src="js/config.js"></script>
-<script src="js/errorHandler.js"></script>
+<script src="js/notification-system.js"></script>
+<script src="js/error-messages.js"></script>
 <script>
+	// Vérifier que les scripts sont chargés
+	console.log('Vérification du chargement des scripts...');
+	console.log('NotificationSystem:', typeof NotificationSystem);
+	console.log('ErrorMessages:', typeof ErrorMessages);
+
+	if (typeof NotificationSystem === 'undefined') {
+		console.error('Le script notification-system.js n\'est pas chargé correctement');
+	}
+
+	if (typeof ErrorMessages === 'undefined') {
+		console.error('Le script error-messages.js n\'est pas chargé correctement');
+	}
+
 	// Fonction pour charger les classes
 	async function loadClasses() {
 		try {
-			const response = await fetch(getApiUrl('classes'));
-			if (!response.ok) {
-				throw new Error(`Erreur HTTP: ${response.status}`);
-			}
-			const data = await response.json();
+			console.log('Chargement des classes...');
+			const response = await fetch('api/classes');
+			const result = await response.json();
+			console.log('Résultat classes:', result);
 
-			if (!data.success) {
-				throw new Error(data.message || 'Erreur lors du chargement des classes');
+			if (!result.success) {
+				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
 			}
 
-			const classes = data.data;
 			const tbody = document.querySelector('#classesTable tbody');
 			tbody.innerHTML = '';
 
-			if (!Array.isArray(classes) || classes.length === 0) {
-				tbody.innerHTML = '<tr><td colspan="5" class="text-center">Aucune classe trouvée</td></tr>';
+			if (!result.data || result.data.length === 0) {
+				tbody.innerHTML = '<tr><td colspan="5">Aucune classe trouvée</td></tr>';
 				return;
 			}
 
-			classes.forEach(classe => {
+			result.data.forEach(classe => {
 				const tr = document.createElement('tr');
-				tr.setAttribute('data-id', classe.id_classe);
 				tr.innerHTML = `
-					<td>${classe.nom_classe || '-'}</td>
-					<td>${classe.niveau || '-'}</td>
-					<td>${classe.numero || '-'}</td>
-					<td>${classe.rythme || '-'}</td>
+					<td>${classe.nom_classe}</td>
+					<td>${classe.niveau}</td>
+					<td>${classe.numero}</td>
+					<td>${classe.rythme}</td>
 					<td>
-						<button onclick="openEditModal(${classe.id_classe})" class="btn btn-warning btn-sm">Modifier</button>
-						<button onclick="deleteClasse(${classe.id_classe})" class="btn btn-danger btn-sm">Supprimer</button>
+						<button class="btn btn-edit" onclick="editClasse(${classe.id_classe}, '${classe.nom_classe}', '${classe.niveau}', '${classe.numero}', '${classe.rythme}')">Modifier</button>
+						<button class="btn btn-danger" onclick="deleteClasse(${classe.id_classe})">Supprimer</button>
 					</td>
 				`;
 				tbody.appendChild(tr);
 			});
 		} catch (error) {
 			console.error('Erreur lors du chargement des classes:', error);
-			const tbody = document.querySelector('#classesTable tbody');
-			tbody.innerHTML = `<tr><td colspan="5" class="text-center error">Erreur lors du chargement des classes: ${error.message}</td></tr>`;
+			NotificationSystem.error(error.message);
 		}
 	}
 
 	// Fonction pour ajouter une classe
-	async function addClasse(event) {
-		event.preventDefault();
+	document.getElementById('addClasseForm').addEventListener('submit', async function(e) {
+		e.preventDefault();
+		const formData = {
+			nom_classe: document.getElementById('nom_classe').value,
+			niveau: document.getElementById('niveau').value,
+			numero: document.getElementById('numero').value,
+			rythme: document.getElementById('rythme').value
+		};
+
+		if (!formData.nom_classe || !formData.niveau || !formData.numero || !formData.rythme) {
+			NotificationSystem.warning('Veuillez remplir tous les champs du formulaire');
+			return;
+		}
 
 		try {
-			const formData = {
-				nom_classe: document.getElementById('nom_classe').value,
-				niveau: document.getElementById('niveau').value,
-				numero: document.getElementById('numero').value,
-				rythme: document.getElementById('rythme').value
-			};
-
-			// Vérifier que tous les champs sont remplis
-			if (!formData.nom_classe || !formData.niveau || !formData.numero || !formData.rythme) {
-				showError('Tous les champs sont obligatoires');
-				return;
-			}
-
-			// Vérifier les valeurs ENUM
-			const niveauxValides = ['1ère Année', '2ème Année', '3ème Année', '4ème Année', '5ème Année'];
-			const rythmesValides = ['Alternance', 'Inital'];
-
-			if (!niveauxValides.includes(formData.niveau)) {
-				showError('Niveau invalide. Les valeurs possibles sont : ' + niveauxValides.join(', '));
-				return;
-			}
-
-			if (!rythmesValides.includes(formData.rythme)) {
-				showError('Rythme invalide. Les valeurs possibles sont : ' + rythmesValides.join(', '));
-				return;
-			}
-
-			const apiUrl = `${window.location.origin}/api/classes`;
-			const response = await fetch(apiUrl, {
+			const response = await fetch('api/classes', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -317,122 +298,70 @@ ob_start();
 				body: JSON.stringify(formData)
 			});
 
-			if (!response.ok) {
-				const errorText = await response.text();
-				showError(`Erreur serveur (${response.status}): ${errorText}`);
-				return;
+			const result = await response.json();
+			console.log('Résultat de la création:', result);
+
+			if (!result.success) {
+				throw new Error(result.error || 'Erreur lors de l\'ajout de la classe');
 			}
 
-			const responseText = await response.text();
-			if (!responseText) {
-				showError('Le serveur n\'a pas renvoyé de réponse');
-				return;
-			}
-
-			let data;
-			try {
-				data = JSON.parse(responseText);
-			} catch (e) {
-				showError(`Erreur de format de réponse: ${responseText}`);
-				return;
-			}
-
-			if (!data.success) {
-				showError(data.message || 'Erreur lors de l\'ajout de la classe');
-				return;
-			}
-
-			// Réinitialiser le formulaire
 			document.getElementById('addClasseForm').reset();
-
-			// Recharger la liste des classes
-			await loadClasses();
-
-			// Afficher un message de succès
-			showSuccess('Classe ajoutée avec succès');
+			NotificationSystem.success('La classe a été ajoutée avec succès');
+			loadClasses();
 		} catch (error) {
-			showError(`Erreur: ${error.message}`);
+			console.error('Erreur lors de l\'ajout de la classe:', error);
+			NotificationSystem.error(error.message);
 		}
-	}
-
-	// Fonction pour ouvrir le modal de modification
-	async function openEditModal(id) {
-		try {
-			// Vérifier que l'ID est valide
-			if (!id) {
-				showError('ID de classe invalide');
-				return;
-			}
-
-			// Construire l'URL de l'API correctement
-			const apiUrl = `${window.location.origin}/api/classes/${id}`;
-			console.log('URL de l\'API:', apiUrl);
-
-			const response = await fetch(apiUrl);
-
-			if (!response.ok) {
-				const errorText = await response.text();
-				showError(`Erreur serveur (${response.status}): ${errorText}`);
-				return;
-			}
-
-			const responseText = await response.text();
-
-			// Vérifier si la réponse est vide
-			if (!responseText) {
-				showError('Le serveur n\'a pas renvoyé de réponse');
-				return;
-			}
-
-			// Tenter de parser la réponse
-			let data;
-			try {
-				data = JSON.parse(responseText);
-			} catch (e) {
-				showError(`Erreur de format de réponse: ${responseText}`);
-				return;
-			}
-
-			if (!data.success) {
-				showError(data.message || 'Erreur lors de la récupération de la classe');
-				return;
-			}
-
-			const classe = data.data;
-			if (!classe) {
-				showError('Aucune donnée de classe trouvée');
-				return;
-			}
-
-			document.getElementById('edit_id_classe').value = classe.id_classe;
-			document.getElementById('edit_nom_classe').value = classe.nom_classe;
-			document.getElementById('edit_niveau').value = classe.niveau;
-			document.getElementById('edit_numero').value = classe.numero;
-			document.getElementById('edit_rythme').value = classe.rythme;
-
-			// Afficher le modal
-			const modal = document.getElementById('editClasseModal');
-			if (!modal) {
-				showError('Le modal de modification n\'a pas été trouvé');
-				return;
-			}
-			modal.style.display = 'block';
-		} catch (error) {
-			showError(`Erreur: ${error.message}`);
-		}
-	}
+	});
 
 	// Fonction pour modifier une classe
-	async function editClasse(event) {
-		event.preventDefault();
+	async function editClasse(id, currentNom, currentNiveau, currentNumero, currentRythme) {
+		const modal = document.createElement('div');
+		modal.className = 'modal';
+		modal.innerHTML = `
+			<div class="modal-content">
+				<h3>Modifier la classe</h3>
+				<form id="editClasseForm">
+					<div class="form-row">
+						<label for="edit_nom_classe">Nom de la classe :</label>
+						<input type="text" id="edit_nom_classe" value="${currentNom}" required>
+					</div>
+					<div class="form-row">
+						<label for="edit_niveau">Niveau :</label>
+						<select id="edit_niveau" required>
+							<option value="">Sélectionnez un niveau</option>
+							<option value="1ère Année" ${currentNiveau === '1ère Année' ? 'selected' : ''}>1ère Année</option>
+							<option value="2ème Année" ${currentNiveau === '2ème Année' ? 'selected' : ''}>2ème Année</option>
+							<option value="3ème Année" ${currentNiveau === '3ème Année' ? 'selected' : ''}>3ème Année</option>
+							<option value="4ème Année" ${currentNiveau === '4ème Année' ? 'selected' : ''}>4ème Année</option>
+							<option value="5ème Année" ${currentNiveau === '5ème Année' ? 'selected' : ''}>5ème Année</option>
+						</select>
+					</div>
+					<div class="form-row">
+						<label for="edit_numero">Numéro :</label>
+						<input type="text" id="edit_numero" value="${currentNumero}" required>
+					</div>
+					<div class="form-row">
+						<label for="edit_rythme">Rythme :</label>
+						<select id="edit_rythme" required>
+							<option value="">Sélectionnez un rythme</option>
+							<option value="Alternance" ${currentRythme === 'Alternance' ? 'selected' : ''}>Alternance</option>
+							<option value="Inital" ${currentRythme === 'Inital' ? 'selected' : ''}>Initial</option>
+						</select>
+					</div>
+					<div class="form-actions">
+						<button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+						<button type="submit" class="btn">Enregistrer</button>
+					</div>
+				</form>
+			</div>
+		`;
 
-		try {
-			const id = document.getElementById('edit_id_classe').value;
-			if (!id) {
-				showError('ID de classe invalide');
-				return;
-			}
+		document.body.appendChild(modal);
 
+		// Gérer la soumission du formulaire
+		document.getElementById('editClasseForm').addEventListener('submit', async function(e) {
+			e.preventDefault();
 			const formData = {
 				nom_classe: document.getElementById('edit_nom_classe').value,
 				niveau: document.getElementById('edit_niveau').value,
@@ -440,70 +369,41 @@ ob_start();
 				rythme: document.getElementById('edit_rythme').value
 			};
 
-			// Vérifier que tous les champs sont remplis
 			if (!formData.nom_classe || !formData.niveau || !formData.numero || !formData.rythme) {
-				showError('Tous les champs sont obligatoires');
+				NotificationSystem.warning('Veuillez remplir tous les champs du formulaire');
 				return;
 			}
 
-			// Vérifier les valeurs ENUM
-			const niveauxValides = ['1ère Année', '2ème Année', '3ème Année', '4ème Année', '5ème Année'];
-			const rythmesValides = ['Alternance', 'Inital'];
-
-			if (!niveauxValides.includes(formData.niveau)) {
-				showError('Niveau invalide. Les valeurs possibles sont : ' + niveauxValides.join(', '));
-				return;
-			}
-
-			if (!rythmesValides.includes(formData.rythme)) {
-				showError('Rythme invalide. Les valeurs possibles sont : ' + rythmesValides.join(', '));
-				return;
-			}
-
-			const apiUrl = `${window.location.origin}/api/classes/${id}`;
-			const response = await fetch(apiUrl, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify(formData)
-			});
-
-			if (!response.ok) {
-				const errorText = await response.text();
-				showError(`Erreur serveur (${response.status}): ${errorText}`);
-				return;
-			}
-
-			const responseText = await response.text();
-			if (!responseText) {
-				showError('Le serveur n\'a pas renvoyé de réponse');
-				return;
-			}
-
-			let data;
 			try {
-				data = JSON.parse(responseText);
-			} catch (e) {
-				showError(`Erreur de format de réponse: ${responseText}`);
-				return;
+				const response = await fetch(`api/classes/${id}`, {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify(formData)
+				});
+
+				const result = await response.json();
+
+				if (!result.success) {
+					throw new Error(result.error || 'Erreur lors de la modification de la classe');
+				}
+
+				closeModal();
+				NotificationSystem.success('La classe a été modifiée avec succès');
+				loadClasses();
+			} catch (error) {
+				console.error('Erreur lors de la modification:', error);
+				NotificationSystem.error(error.message);
 			}
+		});
+	}
 
-			if (!data.success) {
-				showError(data.message || 'Erreur lors de la modification de la classe');
-				return;
-			}
-
-			// Fermer le modal
-			document.getElementById('editClasseModal').style.display = 'none';
-
-			// Recharger la liste des classes
-			await loadClasses();
-
-			// Afficher un message de succès
-			showSuccess('Classe modifiée avec succès');
-		} catch (error) {
-			showError(`Erreur: ${error.message}`);
+	// Fonction pour fermer le modal
+	function closeModal() {
+		const modal = document.querySelector('.modal');
+		if (modal) {
+			modal.remove();
 		}
 	}
 
@@ -514,104 +414,39 @@ ob_start();
 		}
 
 		try {
-			const response = await fetch(getApiUrl(`classes/${id}`), {
-				method: 'DELETE'
+			console.log('Tentative de suppression de la classe:', id);
+			const response = await fetch(`api/classes/${id}`, {
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json'
+				}
 			});
 
-			if (!response.ok) {
-				throw new Error(`Erreur HTTP: ${response.status}`);
+			const result = await response.json();
+			console.log('Résultat de la suppression:', result);
+
+			if (!result.success) {
+				throw new Error(result.error || 'Erreur lors de la suppression de la classe');
 			}
 
-			const data = await response.json();
-			if (!data.success) {
-				throw new Error(data.message || 'Erreur lors de la suppression de la classe');
-			}
-
+			NotificationSystem.success('La classe a été supprimée avec succès');
 			loadClasses();
-			showSuccess('Classe supprimée avec succès');
 		} catch (error) {
-			console.error('Erreur lors de la suppression de la classe:', error);
-			showError(`Erreur lors de la suppression de la classe: ${error.message}`);
+			console.error('Erreur lors de la suppression:', error);
+			NotificationSystem.error(error.message);
 		}
 	}
 
-	// Fonction pour afficher les erreurs
-	function showError(message) {
-		// Supprimer les messages d'erreur existants
-		const existingErrors = document.querySelectorAll('.notification.error');
-		existingErrors.forEach(error => error.remove());
+	// Charger les données au chargement de la page
+	document.addEventListener('DOMContentLoaded', function() {
+		console.log('Chargement de la page...');
 
-		// Créer le message d'erreur
-		const errorMessage = document.createElement('div');
-		errorMessage.className = 'notification error';
-		errorMessage.innerHTML = `
-			<div class="content">
-				<span class="title">Erreur</span>
-				${message}
-			</div>
-			<button class="close-btn" onclick="this.parentElement.remove()">×</button>
-		`;
+		// Tester le système de notification
+		console.log('Test du système de notification...');
+		NotificationSystem.info('Bienvenue sur la page de gestion des classes');
 
-		// Ajouter le message en haut de la page
-		const mainContent = document.querySelector('.main-content');
-		if (mainContent) {
-			mainContent.insertBefore(errorMessage, mainContent.firstChild);
-		} else {
-			document.body.insertBefore(errorMessage, document.body.firstChild);
-		}
-
-		// Supprimer le message après 5 secondes
-		setTimeout(() => {
-			if (errorMessage.parentNode) {
-				errorMessage.style.animation = 'slideOut 0.3s ease-in';
-				setTimeout(() => errorMessage.remove(), 300);
-			}
-		}, 5000);
-	}
-
-	// Fonction pour afficher les succès
-	function showSuccess(message) {
-		// Supprimer les messages de succès existants
-		const existingSuccess = document.querySelectorAll('.notification.success');
-		existingSuccess.forEach(success => success.remove());
-
-		// Créer le message de succès
-		const successMessage = document.createElement('div');
-		successMessage.className = 'notification success';
-		successMessage.innerHTML = `
-			<div class="content">
-				<span class="title">Succès</span>
-				${message}
-			</div>
-			<button class="close-btn" onclick="this.parentElement.remove()">×</button>
-		`;
-
-		// Ajouter le message en haut de la page
-		const mainContent = document.querySelector('.main-content');
-		if (mainContent) {
-			mainContent.insertBefore(successMessage, mainContent.firstChild);
-		} else {
-			document.body.insertBefore(successMessage, document.body.firstChild);
-		}
-
-		// Supprimer le message après 3 secondes
-		setTimeout(() => {
-			if (successMessage.parentNode) {
-				successMessage.style.animation = 'slideOut 0.3s ease-in';
-				setTimeout(() => successMessage.remove(), 300);
-			}
-		}, 3000);
-	}
-
-	// Gestionnaires d'événements
-	document.getElementById('addClasseForm').addEventListener('submit', addClasse);
-	document.getElementById('editClasseForm').addEventListener('submit', editClasse);
-	document.querySelector('.close').addEventListener('click', () => {
-		document.getElementById('editClasseModal').style.display = 'none';
+		loadClasses();
 	});
-
-	// Charger les classes au chargement de la page
-	document.addEventListener('DOMContentLoaded', loadClasses);
 </script>
 
 <?php
