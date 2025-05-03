@@ -318,30 +318,6 @@ ob_start();
 	</div>
 </div>
 
-<div class="card">
-	<div class="card-header">
-		<h2 class="card-title">
-			<i class="fas fa-calendar"></i> Calendrier des examens
-		</h2>
-	</div>
-	<div class="card-body">
-		<div class="calendar">
-			<div class="calendar-header">
-				<button id="prevMonth" class="btn btn-primary">
-					<i class="fas fa-chevron-left"></i>
-				</button>
-				<h3 id="currentMonth">Chargement...</h3>
-				<button id="nextMonth" class="btn btn-primary">
-					<i class="fas fa-chevron-right"></i>
-				</button>
-			</div>
-			<div class="calendar-grid" id="calendarGrid">
-				<!-- Le calendrier sera généré dynamiquement -->
-			</div>
-		</div>
-	</div>
-</div>
-
 <script src="js/error-messages.js"></script>
 <script src="js/notification-system.js"></script>
 <script>
@@ -428,7 +404,7 @@ ob_start();
 			tbody.innerHTML = '';
 
 			if (!result.data || result.data.length === 0) {
-				tbody.innerHTML = '<tr><td colspan="4">Aucun examen trouvé</td></tr>';
+				tbody.innerHTML = '<tr><td colspan="5">Aucun examen trouvé</td></tr>';
 				return;
 			}
 
@@ -446,71 +422,9 @@ ob_start();
 				`;
 				tbody.appendChild(tr);
 			});
-
-			// Mettre à jour le calendrier avec les examens
-			updateCalendar(result.data);
 		} catch (error) {
 			console.error('Erreur lors du chargement des examens:', error);
 			NotificationSystem.error(error.message);
-		}
-	}
-
-	// Fonction pour mettre à jour le calendrier
-	function updateCalendar(exams) {
-		const calendarGrid = document.getElementById('calendarGrid');
-		const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-
-		// Ajouter les en-têtes des jours
-		calendarGrid.innerHTML = '';
-		days.forEach(day => {
-			const dayHeader = document.createElement('div');
-			dayHeader.className = 'calendar-day';
-			dayHeader.textContent = day;
-			calendarGrid.appendChild(dayHeader);
-		});
-
-		// Ajouter les jours du mois
-		const today = new Date();
-		const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-		const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-
-		// Ajouter les jours vides au début
-		for (let i = 0; i < firstDay.getDay(); i++) {
-			const emptyDay = document.createElement('div');
-			emptyDay.className = 'calendar-day';
-			calendarGrid.appendChild(emptyDay);
-		}
-
-		// Ajouter les jours du mois
-		for (let day = 1; day <= lastDay.getDate(); day++) {
-			const dayElement = document.createElement('div');
-			dayElement.className = 'calendar-day';
-			dayElement.textContent = day;
-
-			// Vérifier si c'est aujourd'hui
-			if (day === today.getDate() && today.getMonth() === firstDay.getMonth()) {
-				dayElement.classList.add('today');
-			}
-
-			// Vérifier s'il y a des examens ce jour-là
-			const currentDate = new Date(today.getFullYear(), today.getMonth(), day);
-			const examsOnDay = exams.filter(exam => {
-				if (!exam.date) return false;
-				const examDate = new Date(exam.date);
-				return examDate.toDateString() === currentDate.toDateString();
-			});
-
-			if (examsOnDay.length > 0) {
-				dayElement.classList.add('has-exam');
-
-				// Ajouter le tooltip avec les examens
-				const tooltip = document.createElement('div');
-				tooltip.className = 'exam-tooltip';
-				tooltip.innerHTML = examsOnDay.map(exam => exam.titre).join('<br>');
-				dayElement.appendChild(tooltip);
-			}
-
-			calendarGrid.appendChild(dayElement);
 		}
 	}
 

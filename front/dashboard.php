@@ -111,7 +111,7 @@ ob_start();
                 fetch('api/notes'),
                 fetch('api/matieres'),
                 fetch('api/classes'),
-                fetch('api/examens'),
+                fetch('api/exams'),
                 fetch('api/profs'),
                 fetch('api/users')
             ]);
@@ -125,23 +125,23 @@ ob_start();
                 usersRes.json()
             ]);
 
-            // Ne mettre à jour que si des données sont trouvées
-            if (notes.data && notes.data.length > 0) {
+            // Mettre à jour les compteurs avec les données de l'API
+            if (notes.success && notes.data) {
                 document.getElementById('notesCount').textContent = notes.data.length;
             }
-            if (matieres.data && matieres.data.length > 0) {
+            if (matieres.success && matieres.data) {
                 document.getElementById('matieresCount').textContent = matieres.data.length;
             }
-            if (classes.data && classes.data.length > 0) {
+            if (classes.success && classes.data) {
                 document.getElementById('classesCount').textContent = classes.data.length;
             }
-            if (examens.data && examens.data.length > 0) {
+            if (examens.success && examens.data) {
                 document.getElementById('examensCount').textContent = examens.data.length;
             }
-            if (profs.data && profs.data.length > 0) {
+            if (profs.success && profs.data) {
                 document.getElementById('profsCount').textContent = profs.data.length;
             }
-            if (users.data && users.data.length > 0) {
+            if (users.success && users.data) {
                 document.getElementById('usersCount').textContent = users.data.length;
             }
         } catch (error) {
