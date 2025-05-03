@@ -235,7 +235,8 @@ ob_start();
 		try {
 			const response = await fetch(getApiUrl(`classes/${id}`));
 			if (!response.ok) {
-				throw new Error(`Erreur HTTP: ${response.status}`);
+				const errorData = await response.json();
+				throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
 			}
 
 			const data = await response.json();
@@ -244,16 +245,46 @@ ob_start();
 			}
 
 			const classe = data.data;
+			if (!classe) {
+				throw new Error('Données de la classe non trouvées');
+			}
+
 			document.getElementById('edit_id_classe').value = classe.id_classe;
 			document.getElementById('edit_nom_classe').value = classe.nom_classe;
 			document.getElementById('edit_niveau').value = classe.niveau;
 			document.getElementById('edit_numero').value = classe.numero;
 			document.getElementById('edit_rythme').value = classe.rythme;
 
+			// Afficher le modal
 			document.getElementById('editClasseModal').style.display = 'block';
 		} catch (error) {
-			console.error('Erreur lors de l\'ouverture du modal:', error);
-			showError(`Erreur lors de la récupération de la classe: ${error.message}`);
+			// Afficher l'erreur dans un message sur la page
+			const errorMessage = document.createElement('div');
+			errorMessage.className = 'error-message';
+			errorMessage.style.cssText = `
+				position: fixed;
+				top: 20px;
+				right: 20px;
+				padding: 15px;
+				background-color: #ff4444;
+				color: white;
+				border-radius: 5px;
+				z-index: 1001;
+				max-width: 400px;
+			`;
+			errorMessage.innerHTML = `
+				<strong>Erreur lors de l'ouverture du modal :</strong><br>
+				${error.message}<br>
+				<small>Veuillez réessayer ou contacter l'administrateur si le problème persiste.</small>
+			`;
+			document.body.appendChild(errorMessage);
+
+			// Supprimer le message après 5 secondes
+			setTimeout(() => {
+				errorMessage.remove();
+			}, 5000);
+
+			console.error('Erreur détaillée:', error);
 		}
 	}
 
