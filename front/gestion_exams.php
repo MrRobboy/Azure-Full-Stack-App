@@ -10,6 +10,12 @@ $pageTitle = "Gestion des Examens";
 ob_start();
 ?>
 
+<head>
+	<title><?php echo $pageTitle; ?></title>
+	<link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
+	<link rel="stylesheet" href="css/styles.css">
+</head>
+
 <style>
 	.container {
 		max-width: 1200px;
@@ -233,6 +239,55 @@ ob_start();
 
 	if (typeof ErrorMessages === 'undefined') {
 		console.error('Le script error-messages.js n\'est pas chargé correctement');
+	}
+
+	// Fonction pour afficher une notification
+	function showNotification(message, type = 'error') {
+		const container = document.querySelector('.notification-container') || createNotificationContainer();
+		const notification = document.createElement('div');
+		notification.className = `notification ${type}`;
+		notification.innerHTML = `
+			<span class="close">&times;</span>
+			${message}
+		`;
+
+		// Supprimer les anciennes notifications du même type
+		const oldNotifications = container.querySelectorAll(`.notification.${type}`);
+		oldNotifications.forEach(notif => notif.remove());
+
+		container.appendChild(notification);
+
+		// Fermer la notification après 5 secondes
+		setTimeout(() => {
+			notification.classList.add('slideOut');
+			setTimeout(() => notification.remove(), 300);
+		}, 5000);
+
+		// Fermer la notification au clic sur le bouton
+		notification.querySelector('.close').addEventListener('click', () => {
+			notification.classList.add('slideOut');
+			setTimeout(() => notification.remove(), 300);
+		});
+	}
+
+	// Fonction pour créer le conteneur de notifications s'il n'existe pas
+	function createNotificationContainer() {
+		const container = document.createElement('div');
+		container.className = 'notification-container';
+		document.body.appendChild(container);
+		return container;
+	}
+
+	// Fonction pour afficher une erreur
+	function showError(message) {
+		console.error('Erreur:', message);
+		showNotification(message, 'error');
+	}
+
+	// Fonction pour afficher un succès
+	function showSuccess(message) {
+		console.log('Succès:', message);
+		showNotification(message, 'success');
 	}
 
 	// Fonction pour charger les matières
