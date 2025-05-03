@@ -247,9 +247,17 @@ ob_start();
 			message,
 			type
 		});
-		const container = document.querySelector('.notification-container') || createNotificationContainer();
-		console.log('Conteneur de notification:', container);
 
+		// Créer le conteneur s'il n'existe pas
+		let container = document.querySelector('.notification-container');
+		if (!container) {
+			console.log('Création du conteneur de notifications');
+			container = document.createElement('div');
+			container.className = 'notification-container';
+			document.body.appendChild(container);
+		}
+
+		// Créer la notification
 		const notification = document.createElement('div');
 		notification.className = `notification ${type}`;
 		notification.innerHTML = `
@@ -262,6 +270,7 @@ ob_start();
 		const oldNotifications = container.querySelectorAll(`.notification.${type}`);
 		oldNotifications.forEach(notif => notif.remove());
 
+		// Ajouter la nouvelle notification
 		container.appendChild(notification);
 		console.log('Notification ajoutée au conteneur');
 
@@ -276,16 +285,6 @@ ob_start();
 			notification.classList.add('slideOut');
 			setTimeout(() => notification.remove(), 300);
 		});
-	}
-
-	// Fonction pour créer le conteneur de notifications s'il n'existe pas
-	function createNotificationContainer() {
-		console.log('Création d\'un nouveau conteneur de notifications');
-		const container = document.createElement('div');
-		container.className = 'notification-container';
-		document.body.appendChild(container);
-		console.log('Conteneur créé et ajouté au body:', container);
-		return container;
 	}
 
 	// Fonction pour afficher une erreur
@@ -551,6 +550,7 @@ ob_start();
 					throw new Error(result.error || ErrorMessages.EXAMS.DELETE.ERROR);
 				}
 
+				console.log('Suppression réussie, affichage du message de succès');
 				showSuccess(ErrorMessages.EXAMS.DELETE.SUCCESS);
 				loadExams();
 			} catch (error) {

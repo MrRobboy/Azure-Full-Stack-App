@@ -152,7 +152,7 @@ class Examen
 	public function delete($id)
 	{
 		try {
-			$stmt = $this->db->prepare("DELETE FROM EXAMEN WHERE id_examen = ?");
+			$stmt = $this->db->prepare("DELETE FROM EXAM WHERE id_exam = ?");
 
 			if (!$stmt) {
 				throw new Exception("Erreur de préparation de la requête");
