@@ -161,6 +161,14 @@ ob_start();
 			opacity: 0;
 		}
 	}
+
+	.notification.debug {
+		background: #6c757d;
+		position: fixed;
+		top: 20px;
+		left: 20px;
+		z-index: 1000;
+	}
 </style>
 
 <div class="container">
@@ -211,11 +219,37 @@ ob_start();
 
 <script src="js/error-messages.js"></script>
 <script>
+	// Fonction pour afficher un message de débogage
+	function showDebug(message) {
+		const debugDiv = document.createElement('div');
+		debugDiv.className = 'notification debug';
+		debugDiv.innerHTML = `
+			<span class="close">&times;</span>
+			<p>${message}</p>
+		`;
+		document.body.appendChild(debugDiv);
+
+		// Fermer la notification après 10 secondes
+		setTimeout(() => {
+			debugDiv.classList.add('slideOut');
+			setTimeout(() => debugDiv.remove(), 500);
+		}, 10000);
+
+		// Fermer la notification au clic sur le bouton
+		debugDiv.querySelector('.close').addEventListener('click', () => {
+			debugDiv.classList.add('slideOut');
+			setTimeout(() => debugDiv.remove(), 500);
+		});
+	}
+
 	// Fonction pour charger les matières
 	async function loadMatieres() {
 		try {
+			showDebug('Chargement des matières...');
 			const response = await fetch('api/matieres');
+			showDebug('Réponse reçue: ' + response.status);
 			const result = await response.json();
+			showDebug('Données reçues: ' + JSON.stringify(result));
 
 			if (!result.success) {
 				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
@@ -238,8 +272,11 @@ ob_start();
 	// Fonction pour charger les classes
 	async function loadClasses() {
 		try {
+			showDebug('Chargement des classes...');
 			const response = await fetch('api/classes');
+			showDebug('Réponse reçue: ' + response.status);
 			const result = await response.json();
+			showDebug('Données reçues: ' + JSON.stringify(result));
 
 			if (!result.success) {
 				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
@@ -262,8 +299,11 @@ ob_start();
 	// Fonction pour charger les examens
 	async function loadExams() {
 		try {
+			showDebug('Chargement des examens...');
 			const response = await fetch('api/examens');
+			showDebug('Réponse reçue: ' + response.status);
 			const result = await response.json();
+			showDebug('Données reçues: ' + JSON.stringify(result));
 
 			if (!result.success) {
 				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
@@ -298,16 +338,26 @@ ob_start();
 	// Fonction pour ajouter un examen
 	document.getElementById('addExamForm').addEventListener('submit', async function(e) {
 		e.preventDefault();
+		showDebug('Tentative d\'ajout d\'un examen...');
+
 		const titre = document.getElementById('titre').value;
 		const matiere = document.getElementById('matiere').value;
 		const classe = document.getElementById('classe').value;
 
+		showDebug('Données du formulaire: ' + JSON.stringify({
+			titre,
+			matiere,
+			classe
+		}));
+
 		if (!titre || !matiere || !classe) {
+			showDebug('Champs manquants');
 			showError(ErrorMessages.GENERAL.REQUIRED_FIELDS);
 			return;
 		}
 
 		try {
+			showDebug('Envoi de la requête...');
 			const response = await fetch('api/examens', {
 				method: 'POST',
 				headers: {
@@ -320,7 +370,9 @@ ob_start();
 				})
 			});
 
+			showDebug('Réponse reçue: ' + response.status);
 			const result = await response.json();
+			showDebug('Résultat: ' + JSON.stringify(result));
 
 			if (!response.ok) {
 				throw new Error(result.error || ErrorMessages.EXAMS.CREATE.ERROR);
@@ -346,6 +398,7 @@ ob_start();
 
 		if (newTitre && newTitre !== currentTitre) {
 			try {
+				console.log('Tentative de modification de l\'examen...');
 				const response = await fetch(`api/examens/${id}`, {
 					method: 'PUT',
 					headers: {
@@ -358,7 +411,9 @@ ob_start();
 					})
 				});
 
+				console.log('Réponse reçue:', response);
 				const result = await response.json();
+				console.log('Résultat:', result);
 
 				if (!response.ok) {
 					throw new Error(result.error || ErrorMessages.EXAMS.UPDATE.ERROR);
@@ -371,6 +426,7 @@ ob_start();
 				showSuccess(ErrorMessages.EXAMS.UPDATE.SUCCESS);
 				loadExams();
 			} catch (error) {
+				console.error('Erreur lors de la modification de l\'examen:', error);
 				showError(error.message);
 			}
 		}
@@ -380,11 +436,14 @@ ob_start();
 	async function deleteExam(id) {
 		if (confirm('Êtes-vous sûr de vouloir supprimer cet examen ?')) {
 			try {
+				console.log('Tentative de suppression de l\'examen...');
 				const response = await fetch(`api/examens/${id}`, {
 					method: 'DELETE'
 				});
 
+				console.log('Réponse reçue:', response);
 				const result = await response.json();
+				console.log('Résultat:', result);
 
 				if (!response.ok) {
 					throw new Error(result.error || ErrorMessages.EXAMS.DELETE.ERROR);
@@ -397,13 +456,22 @@ ob_start();
 				showSuccess(ErrorMessages.EXAMS.DELETE.SUCCESS);
 				loadExams();
 			} catch (error) {
+				console.error('Erreur lors de la suppression de l\'examen:', error);
 				showError(error.message);
 			}
 		}
 	}
 
+	// Vérifier que le script d'erreurs est chargé
+	if (typeof ErrorMessages === 'undefined') {
+		showError('Le script error-messages.js n\'est pas chargé correctement');
+	} else {
+		showDebug('Script d\'erreurs chargé avec succès');
+	}
+
 	// Charger les données au chargement de la page
 	document.addEventListener('DOMContentLoaded', () => {
+		showDebug('Chargement de la page...');
 		loadMatieres();
 		loadClasses();
 		loadExams();

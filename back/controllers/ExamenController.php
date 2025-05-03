@@ -66,36 +66,49 @@ class ExamenController
 	public function createExamen($titre, $matiere, $classe)
 	{
 		try {
+			error_log("Tentative de création d'un examen");
+			error_log("Titre: " . $titre);
+			error_log("Matière: " . $matiere);
+			error_log("Classe: " . $classe);
+
 			// Vérification de la validité des données
 			if (empty($titre) || empty($matiere) || empty($classe)) {
+				error_log("Données manquantes");
 				throw new Exception("Tous les champs sont obligatoires");
 			}
 
 			// Vérification de la longueur du titre
 			if (strlen($titre) > 255) {
+				error_log("Titre trop long");
 				throw new Exception("Le titre de l'examen est trop long");
 			}
 
 			// Vérification de l'existence de la matière
 			if (!$this->matiereModel->getById($matiere)) {
+				error_log("Matière non trouvée");
 				throw new Exception("La matière n'existe pas");
 			}
 
 			// Vérification de l'existence de la classe
 			if (!$this->classeModel->getById($classe)) {
+				error_log("Classe non trouvée");
 				throw new Exception("La classe n'existe pas");
 			}
 
 			$result = $this->examenModel->create($titre, $matiere, $classe);
 			if ($result === false) {
+				error_log("Erreur lors de la création de l'examen");
 				throw new Exception("Erreur lors de la création de l'examen");
 			}
+
+			error_log("Examen créé avec succès");
 			return [
 				'success' => true,
 				'data' => $result,
 				'message' => "Examen créé avec succès"
 			];
 		} catch (Exception $e) {
+			error_log("Erreur dans createExamen: " . $e->getMessage());
 			return [
 				'success' => false,
 				'error' => $e->getMessage()
