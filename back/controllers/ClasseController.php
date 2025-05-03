@@ -47,7 +47,42 @@ class ClasseController
 
 	public function getClasseById($id)
 	{
-		return $this->classeModel->getById($id);
+		try {
+			error_log("Tentative de récupération de la classe avec l'ID: " . $id);
+			$classe = $this->classeModel->getById($id);
+
+			if ($classe === false) {
+				error_log("Erreur lors de la récupération de la classe avec l'ID: " . $id);
+				return [
+					'success' => false,
+					'message' => 'Erreur lors de la récupération de la classe',
+					'data' => null
+				];
+			}
+
+			if (!$classe) {
+				error_log("Aucune classe trouvée avec l'ID: " . $id);
+				return [
+					'success' => false,
+					'message' => 'Classe non trouvée',
+					'data' => null
+				];
+			}
+
+			error_log("Classe récupérée avec succès: " . print_r($classe, true));
+			return [
+				'success' => true,
+				'message' => 'Classe récupérée avec succès',
+				'data' => $classe
+			];
+		} catch (Exception $e) {
+			error_log("Exception dans getClasseById: " . $e->getMessage());
+			return [
+				'success' => false,
+				'message' => 'Erreur serveur: ' . $e->getMessage(),
+				'data' => null
+			];
+		}
 	}
 
 	public function createClasse($nom_classe, $niveau, $numero, $rythme)

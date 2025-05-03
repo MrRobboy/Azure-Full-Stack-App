@@ -27,9 +27,23 @@ class Classe
 
 	public function getById($id)
 	{
-		$stmt = $this->db->prepare("SELECT * FROM CLASSE WHERE id_classe = ?");
-		$stmt->execute([$id]);
-		return $stmt->fetch();
+		try {
+			error_log("Tentative de récupération de la classe avec l'ID: " . $id);
+			$stmt = $this->db->prepare("SELECT * FROM CLASSE WHERE id_classe = ?");
+			$stmt->execute([$id]);
+			$result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+			if (!$result) {
+				error_log("Aucune classe trouvée avec l'ID: " . $id);
+				return false;
+			}
+
+			error_log("Classe trouvée: " . print_r($result, true));
+			return $result;
+		} catch (PDOException $e) {
+			error_log("Erreur PDO dans getById: " . $e->getMessage());
+			return false;
+		}
 	}
 
 	public function create($nom_classe, $niveau, $numero, $rythme)
