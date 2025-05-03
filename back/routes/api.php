@@ -94,8 +94,13 @@ function sendResponse($data, $status = 200)
 function checkAuth()
 {
 	global $authController;
-	if (!$authController->isLoggedIn()) {
-		sendResponse(['error' => 'Non authentifié'], 401);
+	try {
+		if (!$authController->isLoggedIn()) {
+			throw new Exception("Non authentifié", 401);
+		}
+		return true;
+	} catch (Exception $e) {
+		throw $e;
 	}
 }
 

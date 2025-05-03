@@ -8,6 +8,9 @@ class AuthController
 	public function __construct()
 	{
 		$this->prof = new Prof();
+		if (session_status() === PHP_SESSION_NONE) {
+			session_start();
+		}
 	}
 
 	public function login($email, $password)
@@ -44,6 +47,8 @@ class AuthController
 						'email' => $prof['email']
 					]
 				];
+			} else {
+				throw new Exception("Email ou mot de passe incorrect", 401);
 			}
 		} catch (Exception $e) {
 			error_log("Erreur dans AuthController::login: " . $e->getMessage());
@@ -54,28 +59,29 @@ class AuthController
 	public function logout()
 	{
 		try {
-			error_log("Début du processus de logout");
-
-			if (session_status() === PHP_SESSION_ACTIVE) {
-				session_destroy();
-				error_log("Session détruite avec succès");
-				return ['success' => true, 'message' => 'Déconnexion réussie'];
+			if (session_status() === PHP_SESSION_NONE) {
+				session_start();
 			}
-
-			error_log("Aucune session active à détruire");
-			return ['success' => false, 'message' => 'Aucune session active'];
+			session_destroy();
+			return [
+				'success' => true,
+				'message' => 'Déconnexion réussie'
+			];
 		} catch (Exception $e) {
-			error_log("Erreur lors de la déconnexion: " . $e->getMessage());
-			throw new Exception("Erreur lors de la déconnexion", 500);
+			error_log("Erreur dans AuthController::logout: " . $e->getMessage());
+			throw $e;
 		}
 	}
 
 	public function isLoggedIn()
 	{
 		try {
-			session_start();
+			if (session_status() === PHP_SESSION_NONE) {
+				session_start();
+			}
 			return isset($_SESSION['prof_id']);
 		} catch (Exception $e) {
+			error_log("Erreur dans AuthController::isLoggedIn: " . $e->getMessage());
 			return false;
 		}
 	}
@@ -89,21 +95,16 @@ class AuthController
 					'data' => [
 						'id' => $_SESSION['prof_id'],
 						'nom' => $_SESSION['prof_nom'],
-						'prenom' => $_SESSION['prof_prenom']
+						'prenom' => $_SESSION['prof_prenom'],
+						'email' => $_SESSION['prof_email']
 					]
 				];
+			} else {
+				throw new Exception("Non authentifié", 401);
 			}
-			return [
-				'success' => false,
-				'error' => 'Utilisateur non connecté',
-				'code' => 401
-			];
 		} catch (Exception $e) {
-			return [
-				'success' => false,
-				'error' => 'Erreur lors de la récupération des informations utilisateur',
-				'code' => 500
-			];
+			error_log("Erreur dans AuthController::getCurrentUser: " . $e->getMessage());
+			throw $e;
 		}
 	}
 }
