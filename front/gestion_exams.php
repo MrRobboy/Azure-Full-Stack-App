@@ -232,14 +232,17 @@ ob_start();
 	</div>
 </div>
 
+<script src="js/notification-system.js"></script>
 <script src="js/error-messages.js"></script>
 <script>
-	// Vérifier que le script d'erreurs est chargé
-	console.log('Vérification du chargement du script...');
+	// Vérifier que les scripts sont chargés
+	console.log('Vérification du chargement des scripts...');
+	console.log('NotificationSystem:', typeof NotificationSystem);
 	console.log('ErrorMessages:', typeof ErrorMessages);
-	console.log('showError:', typeof showError);
-	console.log('showSuccess:', typeof showSuccess);
-	console.log('showNotification:', typeof showNotification);
+
+	if (typeof NotificationSystem === 'undefined') {
+		console.error('Le script notification-system.js n\'est pas chargé correctement');
+	}
 
 	if (typeof ErrorMessages === 'undefined') {
 		console.error('Le script error-messages.js n\'est pas chargé correctement');
@@ -249,15 +252,9 @@ ob_start();
 	document.addEventListener('DOMContentLoaded', function() {
 		console.log('Chargement de la page...');
 
-		// Initialiser le système de notification
-		const notificationContainer = document.createElement('div');
-		notificationContainer.className = 'notification-container';
-		document.body.appendChild(notificationContainer);
-		console.log('Conteneur de notifications initialisé');
-
-		// Tester l'affichage d'une notification
-		console.log('Test d\'affichage d\'une notification...');
-		showSuccess('Test de notification');
+		// Tester le système de notification
+		console.log('Test du système de notification...');
+		NotificationSystem.success('Test de notification');
 
 		loadExams();
 		loadMatieres();
@@ -287,7 +284,7 @@ ob_start();
 		console.log('Données du formulaire:', formData);
 
 		if (!formData.titre || !formData.matiere || !formData.classe) {
-			showError(ErrorMessages.GENERAL.REQUIRED_FIELDS);
+			NotificationSystem.error(ErrorMessages.GENERAL.REQUIRED_FIELDS);
 			return;
 		}
 
@@ -313,13 +310,13 @@ ob_start();
 			}
 
 			console.log('Succès, affichage du message...');
-			showSuccess(ErrorMessages.EXAMS.CREATE.SUCCESS);
+			NotificationSystem.success(ErrorMessages.EXAMS.CREATE.SUCCESS);
 			document.getElementById('addExamForm').reset();
 			console.log('Chargement des examens...');
 			loadExams();
 		} catch (error) {
 			console.error('Erreur lors de la création:', error);
-			showError(error.message);
+			NotificationSystem.error(error.message);
 		}
 	}
 
@@ -346,7 +343,7 @@ ob_start();
 			});
 		} catch (error) {
 			console.error('Erreur lors du chargement des matières:', error);
-			showError(error.message);
+			NotificationSystem.error(error.message);
 		}
 	}
 
@@ -373,7 +370,7 @@ ob_start();
 			});
 		} catch (error) {
 			console.error('Erreur lors du chargement des classes:', error);
-			showError(error.message);
+			NotificationSystem.error(error.message);
 		}
 	}
 
@@ -412,7 +409,7 @@ ob_start();
 			});
 		} catch (error) {
 			console.error('Erreur lors du chargement des examens:', error);
-			showError(error.message);
+			NotificationSystem.error(error.message);
 		}
 	}
 
@@ -483,10 +480,10 @@ ob_start();
 				}
 
 				closeModal();
-				showSuccess(ErrorMessages.EXAMS.UPDATE.SUCCESS);
+				NotificationSystem.success(ErrorMessages.EXAMS.UPDATE.SUCCESS);
 				loadExams();
 			} catch (error) {
-				showError(error.message);
+				NotificationSystem.error(error.message);
 			}
 		});
 	}
@@ -512,7 +509,7 @@ ob_start();
 				select.appendChild(option);
 			});
 		} catch (error) {
-			showError(error.message);
+			NotificationSystem.error(error.message);
 		}
 	}
 
@@ -537,7 +534,7 @@ ob_start();
 				select.appendChild(option);
 			});
 		} catch (error) {
-			showError(error.message);
+			NotificationSystem.error(error.message);
 		}
 	}
 
@@ -575,11 +572,11 @@ ob_start();
 				}
 
 				console.log('Suppression réussie, affichage du message de succès');
-				showSuccess(ErrorMessages.EXAMS.DELETE.SUCCESS);
+				NotificationSystem.success(ErrorMessages.EXAMS.DELETE.SUCCESS);
 				loadExams();
 			} catch (error) {
 				console.error('Erreur lors de la suppression:', error);
-				showError(error.message);
+				NotificationSystem.error(error.message);
 			}
 		}
 	}
