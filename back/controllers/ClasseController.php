@@ -16,20 +16,27 @@ class ClasseController
 	public function getAllClasses()
 	{
 		try {
+			error_log("Tentative de récupération de toutes les classes");
 			$classes = $this->classeModel->getAll();
+			error_log("Résultat de getAll: " . print_r($classes, true));
+
 			if ($classes === false) {
+				error_log("Erreur lors de la récupération des classes");
 				return [
 					'success' => false,
 					'message' => 'Erreur lors de la récupération des classes',
 					'data' => []
 				];
 			}
+
+			error_log("Classes récupérées avec succès: " . count($classes) . " classes trouvées");
 			return [
 				'success' => true,
 				'message' => 'Classes récupérées avec succès',
 				'data' => $classes
 			];
 		} catch (Exception $e) {
+			error_log("Exception dans getAllClasses: " . $e->getMessage());
 			return [
 				'success' => false,
 				'message' => 'Erreur serveur: ' . $e->getMessage(),
@@ -46,7 +53,15 @@ class ClasseController
 	public function createClasse($nom_classe, $niveau, $numero, $rythme)
 	{
 		try {
+			error_log("Tentative de création d'une classe avec les données: " . print_r([
+				'nom_classe' => $nom_classe,
+				'niveau' => $niveau,
+				'numero' => $numero,
+				'rythme' => $rythme
+			], true));
+
 			if (empty($nom_classe) || empty($niveau) || empty($numero) || empty($rythme)) {
+				error_log("Erreur: Champs manquants");
 				return [
 					'success' => false,
 					'message' => 'Tous les champs sont obligatoires',
@@ -55,6 +70,7 @@ class ClasseController
 			}
 
 			if (!in_array($rythme, ['Alternance', 'Initial'])) {
+				error_log("Erreur: Rythme invalide: " . $rythme);
 				return [
 					'success' => false,
 					'message' => 'Le rythme doit être soit "Alternance" soit "Initial"',
@@ -63,7 +79,10 @@ class ClasseController
 			}
 
 			$result = $this->classeModel->create($nom_classe, $niveau, $numero, $rythme);
+			error_log("Résultat de la création: " . print_r($result, true));
+
 			if ($result === false) {
+				error_log("Erreur lors de la création de la classe");
 				return [
 					'success' => false,
 					'message' => 'Erreur lors de la création de la classe',
@@ -71,12 +90,14 @@ class ClasseController
 				];
 			}
 
+			error_log("Classe créée avec succès, ID: " . $result);
 			return [
 				'success' => true,
 				'message' => 'Classe créée avec succès',
 				'data' => $result
 			];
 		} catch (Exception $e) {
+			error_log("Exception dans createClasse: " . $e->getMessage());
 			return [
 				'success' => false,
 				'message' => 'Erreur serveur: ' . $e->getMessage(),

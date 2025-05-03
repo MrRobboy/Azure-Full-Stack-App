@@ -13,14 +13,23 @@ echo "Script Filename: " . $_SERVER['SCRIPT_FILENAME'] . "\n";
 echo "Request URI: " . $_SERVER['REQUEST_URI'] . "\n";
 echo "--------------------------------\n";
 
-// Test de la connexion à la base de données
+require_once __DIR__ . '/config/config.php';
+require_once __DIR__ . '/services/DatabaseService.php';
+
 try {
-	require_once __DIR__ . '/../config/config.php';
-	$dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME;
-	$pdo = new PDO($dsn, DB_USER, DB_PASS);
+	// Test de la connexion à la base de données
+	$db = DatabaseService::getInstance()->getConnection();
 	echo "Connexion à la base de données réussie\n";
-} catch (PDOException $e) {
-	echo "Erreur de connexion à la base de données: " . $e->getMessage() . "\n";
+
+	// Test de la table CLASSE
+	$stmt = $db->query("SELECT * FROM CLASSE");
+	$classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+	echo "Nombre de classes trouvées : " . count($classes) . "\n";
+	echo "Contenu de la table CLASSE :\n";
+	print_r($classes);
+} catch (Exception $e) {
+	echo "Erreur : " . $e->getMessage() . "\n";
+	echo "Trace : " . $e->getTraceAsString() . "\n";
 }
 
 // Test des modules Apache

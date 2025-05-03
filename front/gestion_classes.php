@@ -66,7 +66,7 @@ ob_start();
 	// Fonction pour charger les classes
 	async function loadClasses() {
 		try {
-			const response = await fetch('../back/routes/api.php/classes');
+			const response = await fetch('http://localhost:727/api/classes');
 			if (!response.ok) {
 				throw new Error(`Erreur HTTP: ${response.status}`);
 			}
@@ -102,30 +102,28 @@ ob_start();
 			});
 		} catch (error) {
 			console.error('Erreur lors du chargement des classes:', error);
-			ErrorHandler.handleClasseError(error, 'Chargement des classes');
 			const tbody = document.querySelector('#classesTable tbody');
-			tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur lors du chargement des classes</td></tr>';
+			tbody.innerHTML = `<tr><td colspan="5" class="text-center error">Erreur lors du chargement des classes: ${error.message}</td></tr>`;
 		}
 	}
 
 	// Fonction pour ajouter une classe
-	async function addClasse() {
-		const nom_classe = document.getElementById('nom_classe').value;
-		const niveau = document.getElementById('niveau').value;
-		const numero = document.getElementById('numero').value;
-		const rythme = document.getElementById('rythme').value;
+	async function addClasse(event) {
+		event.preventDefault();
+		const form = event.target;
+		const formData = new FormData(form);
 
 		try {
-			const response = await fetch('../back/routes/api.php/classes', {
+			const response = await fetch('http://localhost:727/api/classes', {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json',
+					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
-					nom_classe,
-					niveau,
-					numero,
-					rythme
+					nom_classe: formData.get('nom_classe'),
+					niveau: formData.get('niveau'),
+					numero: formData.get('numero'),
+					rythme: formData.get('rythme')
 				})
 			});
 
@@ -138,12 +136,11 @@ ob_start();
 				throw new Error(data.message || 'Erreur lors de l\'ajout de la classe');
 			}
 
-			ErrorHandler.showClasseSuccess('Classe ajoutée avec succès', 'Ajout');
-			document.getElementById('addClasseForm').reset();
+			form.reset();
 			loadClasses();
 		} catch (error) {
 			console.error('Erreur lors de l\'ajout de la classe:', error);
-			ErrorHandler.handleClasseError(error, 'Ajout de classe');
+			alert(`Erreur lors de l'ajout de la classe: ${error.message}`);
 		}
 	}
 
@@ -220,7 +217,10 @@ ob_start();
 	}
 
 	// Charger les classes au chargement de la page
-	document.addEventListener('DOMContentLoaded', loadClasses);
+	document.addEventListener('DOMContentLoaded', () => {
+		loadClasses();
+		document.getElementById('addClasseForm').addEventListener('submit', addClasse);
+	});
 </script>
 
 <?php

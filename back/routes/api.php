@@ -6,15 +6,15 @@ error_reporting(0);
 
 // Configuration des logs
 ini_set('log_errors', 1);
-ini_set('error_log', '/var/log/apache2/php_errors.log');
+ini_set('error_log', __DIR__ . '/../../logs/php_errors.log');
 
 // Inclusion des fichiers nécessaires
-require_once __DIR__ . '/../../back/controllers/AuthController.php';
-require_once __DIR__ . '/../../back/controllers/NoteController.php';
-require_once __DIR__ . '/../../back/controllers/MatiereController.php';
-require_once __DIR__ . '/../../back/controllers/ClasseController.php';
-require_once __DIR__ . '/../../back/controllers/ExamenController.php';
-require_once __DIR__ . '/../../back/services/ErrorService.php';
+require_once __DIR__ . '/../controllers/AuthController.php';
+require_once __DIR__ . '/../controllers/NoteController.php';
+require_once __DIR__ . '/../controllers/MatiereController.php';
+require_once __DIR__ . '/../controllers/ClasseController.php';
+require_once __DIR__ . '/../controllers/ExamenController.php';
+require_once __DIR__ . '/../services/ErrorService.php';
 
 // Configuration des headers pour les requêtes API
 header('Content-Type: application/json; charset=utf-8');
