@@ -14,42 +14,42 @@ ob_start();
     <div class="dashboard-card">
         <i class="fas fa-graduation-cap fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
         <h3>Notes</h3>
-        <p id="notesCount">0</p>
+        <p id="notesCount">-</p>
         <a href="gestion_notes.php" class="btn btn-primary">Gérer les notes</a>
     </div>
 
     <div class="dashboard-card">
         <i class="fas fa-book fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
         <h3>Matières</h3>
-        <p id="matieresCount">0</p>
+        <p id="matieresCount">-</p>
         <a href="gestion_matieres.php" class="btn btn-primary">Gérer les matières</a>
     </div>
 
     <div class="dashboard-card">
         <i class="fas fa-users fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
         <h3>Classes</h3>
-        <p id="classesCount">0</p>
+        <p id="classesCount">-</p>
         <a href="gestion_classes.php" class="btn btn-primary">Gérer les classes</a>
     </div>
 
     <div class="dashboard-card">
         <i class="fas fa-calendar-alt fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
         <h3>Examens</h3>
-        <p id="examensCount">0</p>
+        <p id="examensCount">-</p>
         <a href="gestion_exams.php" class="btn btn-primary">Gérer les examens</a>
     </div>
 
     <div class="dashboard-card">
         <i class="fas fa-chalkboard-teacher fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
         <h3>Professeurs</h3>
-        <p id="profsCount">0</p>
+        <p id="profsCount">-</p>
         <a href="gestion_profs.php" class="btn btn-primary">Gérer les professeurs</a>
     </div>
 
     <div class="dashboard-card">
         <i class="fas fa-users-cog fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
         <h3>Utilisateurs</h3>
-        <p id="usersCount">0</p>
+        <p id="usersCount">-</p>
         <a href="gestion_users.php" class="btn btn-primary">Gérer les utilisateurs</a>
     </div>
 </div>
@@ -125,12 +125,25 @@ ob_start();
                 usersRes.json()
             ]);
 
-            document.getElementById('notesCount').textContent = notes.length;
-            document.getElementById('matieresCount').textContent = matieres.length;
-            document.getElementById('classesCount').textContent = classes.length;
-            document.getElementById('examensCount').textContent = examens.length;
-            document.getElementById('profsCount').textContent = profs.length;
-            document.getElementById('usersCount').textContent = users.length;
+            // Ne mettre à jour que si des données sont trouvées
+            if (notes.data && notes.data.length > 0) {
+                document.getElementById('notesCount').textContent = notes.data.length;
+            }
+            if (matieres.data && matieres.data.length > 0) {
+                document.getElementById('matieresCount').textContent = matieres.data.length;
+            }
+            if (classes.data && classes.data.length > 0) {
+                document.getElementById('classesCount').textContent = classes.data.length;
+            }
+            if (examens.data && examens.data.length > 0) {
+                document.getElementById('examensCount').textContent = examens.data.length;
+            }
+            if (profs.data && profs.data.length > 0) {
+                document.getElementById('profsCount').textContent = profs.data.length;
+            }
+            if (users.data && users.data.length > 0) {
+                document.getElementById('usersCount').textContent = users.data.length;
+            }
         } catch (error) {
             console.error('Erreur lors du chargement des compteurs:', error);
         }

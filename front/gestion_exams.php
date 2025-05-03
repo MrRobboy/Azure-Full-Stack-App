@@ -184,6 +184,87 @@ ob_start();
 			opacity: 0;
 		}
 	}
+
+	.calendar {
+		display: grid;
+		grid-template-columns: repeat(7, 1fr);
+		gap: 5px;
+		margin-top: 20px;
+	}
+
+	.calendar-day {
+		aspect-ratio: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: 1px solid #ddd;
+		padding: 5px;
+		position: relative;
+	}
+
+	.calendar-day.has-exam {
+		background-color: #e3f2fd;
+	}
+
+	.calendar-day.has-exam::after {
+		content: '';
+		position: absolute;
+		bottom: 2px;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 6px;
+		height: 6px;
+		background-color: #2196f3;
+		border-radius: 50%;
+	}
+
+	.calendar-day.today {
+		background-color: #fff3e0;
+	}
+
+	.calendar-day.today.has-exam {
+		background-color: #e3f2fd;
+	}
+
+	.calendar-day.today.has-exam::after {
+		background-color: #f44336;
+	}
+
+	.calendar-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 10px;
+	}
+
+	.calendar-header button {
+		padding: 5px 10px;
+		background: #007bff;
+		color: white;
+		border: none;
+		border-radius: 4px;
+		cursor: pointer;
+	}
+
+	.calendar-header button:hover {
+		background: #0056b3;
+	}
+
+	.exam-tooltip {
+		position: absolute;
+		background: white;
+		border: 1px solid #ddd;
+		padding: 5px;
+		border-radius: 4px;
+		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+		z-index: 1000;
+		display: none;
+		white-space: nowrap;
+	}
+
+	.calendar-day:hover .exam-tooltip {
+		display: block;
+	}
 </style>
 
 <div class="container">
@@ -209,6 +290,10 @@ ob_start();
 						<option value="">Sélectionnez une classe</option>
 					</select>
 				</div>
+				<div class="form-row">
+					<label for="date">Date de l'examen :</label>
+					<input type="date" name="date" id="date" required>
+				</div>
 				<button type="submit" class="btn">Ajouter l'examen</button>
 			</form>
 		</div>
@@ -221,6 +306,7 @@ ob_start();
 						<th>Titre</th>
 						<th>Matière</th>
 						<th>Classe</th>
+						<th>Date</th>
 						<th>Actions</th>
 					</tr>
 				</thead>
@@ -228,6 +314,30 @@ ob_start();
 					<!-- Les examens seront chargés dynamiquement -->
 				</tbody>
 			</table>
+		</div>
+	</div>
+</div>
+
+<div class="card">
+	<div class="card-header">
+		<h2 class="card-title">
+			<i class="fas fa-calendar"></i> Calendrier des examens
+		</h2>
+	</div>
+	<div class="card-body">
+		<div class="calendar">
+			<div class="calendar-header">
+				<button id="prevMonth" class="btn btn-primary">
+					<i class="fas fa-chevron-left"></i>
+				</button>
+				<h3 id="currentMonth">Chargement...</h3>
+				<button id="nextMonth" class="btn btn-primary">
+					<i class="fas fa-chevron-right"></i>
+				</button>
+			</div>
+			<div class="calendar-grid" id="calendarGrid">
+				<!-- Le calendrier sera généré dynamiquement -->
+			</div>
 		</div>
 	</div>
 </div>
@@ -306,7 +416,7 @@ ob_start();
 	async function loadExams() {
 		try {
 			console.log('Chargement des examens...');
-			const response = await fetch('api/examens');
+			const response = await fetch('api/exams');
 			const result = await response.json();
 			console.log('Résultat examens:', result);
 
@@ -325,19 +435,82 @@ ob_start();
 			result.data.forEach(exam => {
 				const tr = document.createElement('tr');
 				tr.innerHTML = `
-					<td>${exam.titre || ''}</td>
-					<td>${exam.nom_matiere || ''}</td>
-					<td>${exam.nom_classe || ''}</td>
+					<td>${exam.titre}</td>
+					<td>${exam.nom_matiere}</td>
+					<td>${exam.nom_classe}</td>
+					<td>${exam.date ? new Date(exam.date).toLocaleDateString('fr-FR') : 'Non défini'}</td>
 					<td>
-						<button class="btn btn-edit" onclick="editExam(${exam.id_exam}, '${exam.titre || ''}', ${exam.matiere || ''}, ${exam.classe || ''})">Modifier</button>
+						<button class="btn btn-edit" onclick="editExam(${exam.id_exam}, '${exam.titre}', ${exam.matiere}, ${exam.classe}, '${exam.date}')">Modifier</button>
 						<button class="btn btn-danger" onclick="deleteExam(${exam.id_exam})">Supprimer</button>
 					</td>
 				`;
 				tbody.appendChild(tr);
 			});
+
+			// Mettre à jour le calendrier avec les examens
+			updateCalendar(result.data);
 		} catch (error) {
 			console.error('Erreur lors du chargement des examens:', error);
 			NotificationSystem.error(error.message);
+		}
+	}
+
+	// Fonction pour mettre à jour le calendrier
+	function updateCalendar(exams) {
+		const calendarGrid = document.getElementById('calendarGrid');
+		const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+
+		// Ajouter les en-têtes des jours
+		calendarGrid.innerHTML = '';
+		days.forEach(day => {
+			const dayHeader = document.createElement('div');
+			dayHeader.className = 'calendar-day';
+			dayHeader.textContent = day;
+			calendarGrid.appendChild(dayHeader);
+		});
+
+		// Ajouter les jours du mois
+		const today = new Date();
+		const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+		const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+		// Ajouter les jours vides au début
+		for (let i = 0; i < firstDay.getDay(); i++) {
+			const emptyDay = document.createElement('div');
+			emptyDay.className = 'calendar-day';
+			calendarGrid.appendChild(emptyDay);
+		}
+
+		// Ajouter les jours du mois
+		for (let day = 1; day <= lastDay.getDate(); day++) {
+			const dayElement = document.createElement('div');
+			dayElement.className = 'calendar-day';
+			dayElement.textContent = day;
+
+			// Vérifier si c'est aujourd'hui
+			if (day === today.getDate() && today.getMonth() === firstDay.getMonth()) {
+				dayElement.classList.add('today');
+			}
+
+			// Vérifier s'il y a des examens ce jour-là
+			const currentDate = new Date(today.getFullYear(), today.getMonth(), day);
+			const examsOnDay = exams.filter(exam => {
+				if (!exam.date) return false;
+				const examDate = new Date(exam.date);
+				return examDate.toDateString() === currentDate.toDateString();
+			});
+
+			if (examsOnDay.length > 0) {
+				dayElement.classList.add('has-exam');
+
+				// Ajouter le tooltip avec les examens
+				const tooltip = document.createElement('div');
+				tooltip.className = 'exam-tooltip';
+				tooltip.innerHTML = examsOnDay.map(exam => exam.titre).join('<br>');
+				dayElement.appendChild(tooltip);
+			}
+
+			calendarGrid.appendChild(dayElement);
 		}
 	}
 
@@ -349,9 +522,9 @@ ob_start();
 		console.log('Test du système de notification...');
 		NotificationSystem.info('Bienvenue sur la page de gestion des examens');
 
-		loadExams();
 		loadMatieres();
 		loadClasses();
+		loadExams();
 
 		// Ajouter l'écouteur d'événements pour le formulaire de création
 		const examForm = document.getElementById('addExamForm');
@@ -372,19 +545,20 @@ ob_start();
 		const formData = {
 			titre: document.getElementById('titre').value,
 			matiere: document.getElementById('matiere').value,
-			classe: document.getElementById('classe').value
+			classe: document.getElementById('classe').value,
+			date: document.getElementById('date').value
 		};
 
 		console.log('Données du formulaire:', formData);
 
-		if (!formData.titre || !formData.matiere || !formData.classe) {
+		if (!formData.titre || !formData.matiere || !formData.classe || !formData.date) {
 			NotificationSystem.warning('Veuillez remplir tous les champs du formulaire');
 			return;
 		}
 
 		try {
 			console.log('Envoi de la requête...');
-			const response = await fetch('api/examens', {
+			const response = await fetch('api/exams', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -415,7 +589,7 @@ ob_start();
 	}
 
 	// Fonction pour modifier un examen
-	async function editExam(id, currentTitre, currentMatiere, currentClasse) {
+	async function editExam(id, currentTitre, currentMatiere, currentClasse, currentDate) {
 		const modal = document.createElement('div');
 		modal.className = 'modal';
 		modal.innerHTML = `
@@ -423,20 +597,24 @@ ob_start();
 				<h3>Modifier l'examen</h3>
 				<form id="editExamForm">
 					<div class="form-row">
-						<label for="editTitre">Titre :</label>
-						<input type="text" id="editTitre" value="${currentTitre}" required>
+						<label for="edit_titre">Titre :</label>
+						<input type="text" id="edit_titre" value="${currentTitre}" required>
 					</div>
 					<div class="form-row">
-						<label for="editMatiere">Matière :</label>
-						<select id="editMatiere" required>
+						<label for="edit_matiere">Matière :</label>
+						<select id="edit_matiere" required>
 							<option value="">Sélectionnez une matière</option>
 						</select>
 					</div>
 					<div class="form-row">
-						<label for="editClasse">Classe :</label>
-						<select id="editClasse" required>
+						<label for="edit_classe">Classe :</label>
+						<select id="edit_classe" required>
 							<option value="">Sélectionnez une classe</option>
 						</select>
+					</div>
+					<div class="form-row">
+						<label for="edit_date">Date :</label>
+						<input type="date" id="edit_date" value="${currentDate || ''}" required>
 					</div>
 					<div class="form-actions">
 						<button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
@@ -448,7 +626,7 @@ ob_start();
 
 		document.body.appendChild(modal);
 
-		// Charger les matières et les classes
+		// Charger les matières et classes dans les select
 		await Promise.all([
 			loadMatieresForEdit(currentMatiere),
 			loadClassesForEdit(currentClasse)
@@ -457,33 +635,38 @@ ob_start();
 		// Gérer la soumission du formulaire
 		document.getElementById('editExamForm').addEventListener('submit', async function(e) {
 			e.preventDefault();
-			const newTitre = document.getElementById('editTitre').value;
-			const newMatiere = document.getElementById('editMatiere').value;
-			const newClasse = document.getElementById('editClasse').value;
+			const formData = {
+				titre: document.getElementById('edit_titre').value,
+				matiere: document.getElementById('edit_matiere').value,
+				classe: document.getElementById('edit_classe').value,
+				date: document.getElementById('edit_date').value
+			};
+
+			if (!formData.titre || !formData.matiere || !formData.classe || !formData.date) {
+				NotificationSystem.warning('Veuillez remplir tous les champs');
+				return;
+			}
 
 			try {
-				const response = await fetch(`api/examens/${id}`, {
+				const response = await fetch(`api/exams/${id}`, {
 					method: 'PUT',
 					headers: {
 						'Content-Type': 'application/json'
 					},
-					body: JSON.stringify({
-						titre: newTitre,
-						matiere: newMatiere,
-						classe: newClasse
-					})
+					body: JSON.stringify(formData)
 				});
 
 				const result = await response.json();
 
 				if (!result.success) {
-					throw new Error(result.error || ErrorMessages.EXAMS.UPDATE.ERROR);
+					throw new Error(result.error || 'Erreur lors de la modification de l\'examen');
 				}
 
 				closeModal();
-				NotificationSystem.success(ErrorMessages.EXAMS.UPDATE.SUCCESS);
+				NotificationSystem.success('L\'examen a été modifié avec succès');
 				loadExams();
 			} catch (error) {
+				console.error('Erreur lors de la modification:', error);
 				NotificationSystem.error(error.message);
 			}
 		});
@@ -499,7 +682,7 @@ ob_start();
 				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
 			}
 
-			const select = document.getElementById('editMatiere');
+			const select = document.getElementById('edit_matiere');
 			select.innerHTML = '<option value="">Sélectionnez une matière</option>';
 
 			result.data.forEach(matiere => {
@@ -524,7 +707,7 @@ ob_start();
 				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
 			}
 
-			const select = document.getElementById('editClasse');
+			const select = document.getElementById('edit_classe');
 			select.innerHTML = '<option value="">Sélectionnez une classe</option>';
 
 			result.data.forEach(classe => {
@@ -555,7 +738,7 @@ ob_start();
 
 		try {
 			console.log('Tentative de suppression de l\'examen:', id);
-			const response = await fetch(`api/examens/${id}`, {
+			const response = await fetch(`api/exams/${id}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json'
