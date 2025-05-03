@@ -14,29 +14,43 @@ ob_start();
     <div class="dashboard-card">
         <i class="fas fa-graduation-cap fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
         <h3>Notes</h3>
-        <p id="notesCount">Chargement...</p>
+        <p id="notesCount">0</p>
         <a href="gestion_notes.php" class="btn btn-primary">Gérer les notes</a>
     </div>
 
     <div class="dashboard-card">
         <i class="fas fa-book fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
         <h3>Matières</h3>
-        <p id="matieresCount">Chargement...</p>
+        <p id="matieresCount">0</p>
         <a href="gestion_matieres.php" class="btn btn-primary">Gérer les matières</a>
     </div>
 
     <div class="dashboard-card">
         <i class="fas fa-users fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
         <h3>Classes</h3>
-        <p id="classesCount">Chargement...</p>
+        <p id="classesCount">0</p>
         <a href="gestion_classes.php" class="btn btn-primary">Gérer les classes</a>
     </div>
 
     <div class="dashboard-card">
         <i class="fas fa-calendar-alt fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
         <h3>Examens</h3>
-        <p id="examensCount">Chargement...</p>
+        <p id="examensCount">0</p>
         <a href="gestion_exams.php" class="btn btn-primary">Gérer les examens</a>
+    </div>
+
+    <div class="dashboard-card">
+        <i class="fas fa-chalkboard-teacher fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
+        <h3>Professeurs</h3>
+        <p id="profsCount">0</p>
+        <a href="gestion_profs.php" class="btn btn-primary">Gérer les professeurs</a>
+    </div>
+
+    <div class="dashboard-card">
+        <i class="fas fa-users-cog fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
+        <h3>Utilisateurs</h3>
+        <p id="usersCount">0</p>
+        <a href="gestion_users.php" class="btn btn-primary">Gérer les utilisateurs</a>
     </div>
 </div>
 
@@ -93,24 +107,30 @@ ob_start();
     // Fonction pour charger les compteurs
     async function loadCounters() {
         try {
-            const [notesRes, matieresRes, classesRes, examensRes] = await Promise.all([
+            const [notesRes, matieresRes, classesRes, examensRes, profsRes, usersRes] = await Promise.all([
                 fetch('api/notes'),
                 fetch('api/matieres'),
                 fetch('api/classes'),
-                fetch('api/examens')
+                fetch('api/examens'),
+                fetch('api/profs'),
+                fetch('api/users')
             ]);
 
-            const [notes, matieres, classes, examens] = await Promise.all([
+            const [notes, matieres, classes, examens, profs, users] = await Promise.all([
                 notesRes.json(),
                 matieresRes.json(),
                 classesRes.json(),
-                examensRes.json()
+                examensRes.json(),
+                profsRes.json(),
+                usersRes.json()
             ]);
 
             document.getElementById('notesCount').textContent = notes.length;
             document.getElementById('matieresCount').textContent = matieres.length;
             document.getElementById('classesCount').textContent = classes.length;
             document.getElementById('examensCount').textContent = examens.length;
+            document.getElementById('profsCount').textContent = profs.length;
+            document.getElementById('usersCount').textContent = users.length;
         } catch (error) {
             console.error('Erreur lors du chargement des compteurs:', error);
         }

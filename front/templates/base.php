@@ -39,6 +39,20 @@
 			max-width: 80%;
 			text-align: center;
 		}
+
+		.logo {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			text-decoration: none;
+			color: inherit;
+		}
+
+		.school-badge {
+			height: 30px;
+			width: auto;
+			vertical-align: middle;
+		}
 	</style>
 </head>
 
@@ -65,6 +79,12 @@
 					</a>
 					<a href="/gestion_exams.php" class="nav-link">
 						<i class="fas fa-calendar-alt"></i> Examens
+					</a>
+					<a href="/gestion_profs.php" class="nav-link">
+						<i class="fas fa-chalkboard-teacher"></i> Professeurs
+					</a>
+					<a href="/gestion_users.php" class="nav-link">
+						<i class="fas fa-users-cog"></i> Utilisateurs
 					</a>
 					<a href="/logout.php" class="nav-link">
 						<i class="fas fa-sign-out-alt"></i> Déconnexion
