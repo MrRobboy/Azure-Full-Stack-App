@@ -232,92 +232,20 @@ ob_start();
 	</div>
 </div>
 
-<script src="js/notification-system.js"></script>
 <script src="js/error-messages.js"></script>
+<script src="js/notification-system.js"></script>
 <script>
 	// Vérifier que les scripts sont chargés
 	console.log('Vérification du chargement des scripts...');
-	console.log('NotificationSystem:', typeof NotificationSystem);
 	console.log('ErrorMessages:', typeof ErrorMessages);
-
-	if (typeof NotificationSystem === 'undefined') {
-		console.error('Le script notification-system.js n\'est pas chargé correctement');
-	}
+	console.log('NotificationSystem:', typeof NotificationSystem);
 
 	if (typeof ErrorMessages === 'undefined') {
 		console.error('Le script error-messages.js n\'est pas chargé correctement');
 	}
 
-	// Charger les données au chargement de la page
-	document.addEventListener('DOMContentLoaded', function() {
-		console.log('Chargement de la page...');
-
-		// Tester le système de notification
-		console.log('Test du système de notification...');
-		NotificationSystem.success('Test de notification');
-
-		loadExams();
-		loadMatieres();
-		loadClasses();
-
-		// Ajouter l'écouteur d'événements pour le formulaire de création
-		const examForm = document.getElementById('addExamForm');
-		if (examForm) {
-			console.log('Formulaire trouvé, ajout de l\'écouteur d\'événements');
-			examForm.addEventListener('submit', createExam);
-		} else {
-			console.error('Formulaire non trouvé');
-		}
-	});
-
-	// Fonction pour créer un nouvel examen
-	async function createExam(event) {
-		event.preventDefault();
-		console.log('Tentative d\'ajout d\'un examen...');
-
-		const formData = {
-			titre: document.getElementById('titre').value,
-			matiere: document.getElementById('matiere').value,
-			classe: document.getElementById('classe').value
-		};
-
-		console.log('Données du formulaire:', formData);
-
-		if (!formData.titre || !formData.matiere || !formData.classe) {
-			NotificationSystem.error(ErrorMessages.GENERAL.REQUIRED_FIELDS);
-			return;
-		}
-
-		try {
-			console.log('Envoi de la requête...');
-			const response = await fetch('api/examens', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify(formData)
-			});
-
-			const result = await response.json();
-			console.log('Résultat de la création:', result);
-
-			if (!response.ok) {
-				throw new Error(result.error || ErrorMessages.EXAMS.CREATE.ERROR);
-			}
-
-			if (!result.success) {
-				throw new Error(result.error || ErrorMessages.EXAMS.CREATE.ERROR);
-			}
-
-			console.log('Succès, affichage du message...');
-			NotificationSystem.success(ErrorMessages.EXAMS.CREATE.SUCCESS);
-			document.getElementById('addExamForm').reset();
-			console.log('Chargement des examens...');
-			loadExams();
-		} catch (error) {
-			console.error('Erreur lors de la création:', error);
-			NotificationSystem.error(error.message);
-		}
+	if (typeof NotificationSystem === 'undefined') {
+		console.error('Le script notification-system.js n\'est pas chargé correctement');
 	}
 
 	// Fonction pour charger les matières
@@ -409,6 +337,78 @@ ob_start();
 			});
 		} catch (error) {
 			console.error('Erreur lors du chargement des examens:', error);
+			NotificationSystem.error(error.message);
+		}
+	}
+
+	// Charger les données au chargement de la page
+	document.addEventListener('DOMContentLoaded', function() {
+		console.log('Chargement de la page...');
+
+		// Tester le système de notification
+		console.log('Test du système de notification...');
+		NotificationSystem.success('Test de notification');
+
+		loadExams();
+		loadMatieres();
+		loadClasses();
+
+		// Ajouter l'écouteur d'événements pour le formulaire de création
+		const examForm = document.getElementById('addExamForm');
+		if (examForm) {
+			console.log('Formulaire trouvé, ajout de l\'écouteur d\'événements');
+			examForm.addEventListener('submit', createExam);
+		} else {
+			console.error('Formulaire non trouvé');
+		}
+	});
+
+	// Fonction pour créer un nouvel examen
+	async function createExam(event) {
+		event.preventDefault();
+		console.log('Tentative d\'ajout d\'un examen...');
+
+		const formData = {
+			titre: document.getElementById('titre').value,
+			matiere: document.getElementById('matiere').value,
+			classe: document.getElementById('classe').value
+		};
+
+		console.log('Données du formulaire:', formData);
+
+		if (!formData.titre || !formData.matiere || !formData.classe) {
+			NotificationSystem.error(ErrorMessages.GENERAL.REQUIRED_FIELDS);
+			return;
+		}
+
+		try {
+			console.log('Envoi de la requête...');
+			const response = await fetch('api/examens', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(formData)
+			});
+
+			const result = await response.json();
+			console.log('Résultat de la création:', result);
+
+			if (!response.ok) {
+				throw new Error(result.error || ErrorMessages.EXAMS.CREATE.ERROR);
+			}
+
+			if (!result.success) {
+				throw new Error(result.error || ErrorMessages.EXAMS.CREATE.ERROR);
+			}
+
+			console.log('Succès, affichage du message...');
+			NotificationSystem.success(ErrorMessages.EXAMS.CREATE.SUCCESS);
+			document.getElementById('addExamForm').reset();
+			console.log('Chargement des examens...');
+			loadExams();
+		} catch (error) {
+			console.error('Erreur lors de la création:', error);
 			NotificationSystem.error(error.message);
 		}
 	}
