@@ -128,9 +128,9 @@ ob_start();
 	.notification {
 		position: relative;
 		padding: 15px;
+		margin-bottom: 10px;
 		border-radius: 4px;
 		color: white;
-		margin-bottom: 10px;
 		width: 300px;
 		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 		animation: slideIn 0.3s ease-out;
@@ -138,20 +138,23 @@ ob_start();
 	}
 
 	.notification.error {
-		background: #dc3545;
+		background-color: #dc3545;
 	}
 
 	.notification.success {
-		background: #28a745;
+		background-color: #28a745;
 	}
 
 	.notification .close {
 		position: absolute;
-		top: 5px;
 		right: 10px;
+		top: 10px;
 		cursor: pointer;
-		font-weight: bold;
 		font-size: 20px;
+		background: none;
+		border: none;
+		color: white;
+		padding: 0;
 	}
 
 	@keyframes slideIn {
@@ -251,6 +254,10 @@ ob_start();
 		notificationContainer.className = 'notification-container';
 		document.body.appendChild(notificationContainer);
 		console.log('Conteneur de notifications initialisé');
+
+		// Tester l'affichage d'une notification
+		console.log('Test d\'affichage d\'une notification...');
+		showSuccess('Test de notification');
 
 		loadExams();
 		loadMatieres();
