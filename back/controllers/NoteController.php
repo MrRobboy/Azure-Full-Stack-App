@@ -19,7 +19,7 @@ class NoteController
 		$this->eleveModel = new Eleve();
 		$this->matiereModel = new Matiere();
 		$this->examenModel = new Examen();
-		$this->errorService = new ErrorService();
+		$this->errorService = ErrorService::getInstance();
 	}
 
 	public function getAllNotes()
