@@ -54,33 +54,37 @@ ob_start();
 			if (!response.ok) {
 				const errorData = await response.json();
 				console.error('Erreur HTTP:', errorData);
-				throw new Error(`Erreur HTTP ${response.status}: ${errorData.message || 'Erreur inconnue'}`);
+				throw new Error(`Erreur HTTP ${response.status}: ${errorData.error || errorData.message || 'Erreur inconnue'}`);
 			}
 
 			const result = await response.json();
 			console.log('Données reçues:', result);
 
+			if (!result.success) {
+				throw new Error(result.error || 'Erreur inconnue');
+			}
+
 			const tbody = document.querySelector('#matieresTable tbody');
 			tbody.innerHTML = '';
 
-			// Vérification que result est un tableau
-			if (!Array.isArray(result)) {
+			// Vérification que result.data est un tableau
+			if (!Array.isArray(result.data)) {
 				console.error('Format de données invalide:', {
-					type: typeof result,
-					value: result,
+					type: typeof result.data,
+					value: result.data,
 					expected: 'array',
 					location: 'loadMatieres() - ligne 45'
 				});
-				throw new Error(`Format de données invalide : tableau attendu, reçu ${typeof result} (${JSON.stringify(result)})`);
+				throw new Error(`Format de données invalide : tableau attendu dans result.data, reçu ${typeof result.data}`);
 			}
 
-			if (result.length === 0) {
+			if (result.data.length === 0) {
 				console.log('Aucune matière trouvée');
 				tbody.innerHTML = '<tr><td colspan="2">Aucune matière trouvée</td></tr>';
 				return;
 			}
 
-			result.forEach((matiere, index) => {
+			result.data.forEach((matiere, index) => {
 				console.log(`Traitement de la matière ${index + 1}:`, matiere);
 				if (!matiere.id_matiere || !matiere.nom) {
 					console.error('Données de matière invalides:', matiere);
@@ -118,13 +122,15 @@ ob_start();
 				})
 			});
 
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.message || 'Erreur lors de l\'ajout de la matière');
+			const result = await response.json();
+			console.log('Résultat de la création:', result);
+
+			if (!result.success) {
+				throw new Error(result.error || 'Erreur lors de l\'ajout de la matière');
 			}
 
 			document.getElementById('nom').value = '';
-			showSuccess('Matière ajoutée avec succès');
+			showSuccess(result.message || 'Matière ajoutée avec succès');
 			loadMatieres();
 		} catch (error) {
 			handleApiError(error);
@@ -146,12 +152,14 @@ ob_start();
 					})
 				});
 
-				if (!response.ok) {
-					const errorData = await response.json();
-					throw new Error(errorData.message || 'Erreur lors de la modification de la matière');
+				const result = await response.json();
+				console.log('Résultat de la modification:', result);
+
+				if (!result.success) {
+					throw new Error(result.error || 'Erreur lors de la modification de la matière');
 				}
 
-				showSuccess('Matière modifiée avec succès');
+				showSuccess(result.message || 'Matière modifiée avec succès');
 				loadMatieres();
 			} catch (error) {
 				handleApiError(error);
@@ -167,12 +175,14 @@ ob_start();
 					method: 'DELETE'
 				});
 
-				if (!response.ok) {
-					const errorData = await response.json();
-					throw new Error(errorData.message || 'Erreur lors de la suppression de la matière');
+				const result = await response.json();
+				console.log('Résultat de la suppression:', result);
+
+				if (!result.success) {
+					throw new Error(result.error || 'Erreur lors de la suppression de la matière');
 				}
 
-				showSuccess('Matière supprimée avec succès');
+				showSuccess(result.message || 'Matière supprimée avec succès');
 				loadMatieres();
 			} catch (error) {
 				handleApiError(error);

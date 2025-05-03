@@ -23,10 +23,16 @@ class MatiereController
 			if (!is_array($result)) {
 				$result = [];
 			}
-			return $result;
+			return [
+				'success' => true,
+				'data' => $result
+			];
 		} catch (Exception $e) {
 			$this->errorService->logError($e->getMessage(), 'matiere');
-			throw $e;
+			return [
+				'success' => false,
+				'error' => $e->getMessage()
+			];
 		}
 	}
 
@@ -43,10 +49,16 @@ class MatiereController
 			if (!is_array($result)) {
 				$result = [];
 			}
-			return $result;
+			return [
+				'success' => true,
+				'data' => $result
+			];
 		} catch (Exception $e) {
 			$this->errorService->logError($e->getMessage(), 'matiere');
-			throw $e;
+			return [
+				'success' => false,
+				'error' => $e->getMessage()
+			];
 		}
 	}
 
@@ -60,13 +72,17 @@ class MatiereController
 			if ($result === false) {
 				throw new Exception("Erreur lors de la création de la matière");
 			}
-			if (!is_array($result)) {
-				$result = [];
-			}
-			return $result;
+			return [
+				'success' => true,
+				'data' => $result,
+				'message' => "Matière créée avec succès"
+			];
 		} catch (Exception $e) {
 			$this->errorService->logError($e->getMessage(), 'matiere');
-			throw $e;
+			return [
+				'success' => false,
+				'error' => $e->getMessage()
+			];
 		}
 	}
 
@@ -83,13 +99,17 @@ class MatiereController
 			if ($result === false) {
 				throw new Exception("Erreur lors de la mise à jour de la matière");
 			}
-			if (!is_array($result)) {
-				$result = [];
-			}
-			return $result;
+			return [
+				'success' => true,
+				'data' => $result,
+				'message' => "Matière mise à jour avec succès"
+			];
 		} catch (Exception $e) {
 			$this->errorService->logError($e->getMessage(), 'matiere');
-			throw $e;
+			return [
+				'success' => false,
+				'error' => $e->getMessage()
+			];
 		}
 	}
 
@@ -103,10 +123,16 @@ class MatiereController
 			if ($result === false) {
 				throw new Exception("Erreur lors de la suppression de la matière");
 			}
-			return true;
+			return [
+				'success' => true,
+				'message' => "Matière supprimée avec succès"
+			];
 		} catch (Exception $e) {
 			$this->errorService->logError($e->getMessage(), 'matiere');
-			throw $e;
+			return [
+				'success' => false,
+				'error' => $e->getMessage()
+			];
 		}
 	}
 }
