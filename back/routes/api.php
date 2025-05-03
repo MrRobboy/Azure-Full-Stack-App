@@ -209,7 +209,7 @@ try {
 
 	// Routes des matières
 	if ($segments[0] === 'matieres') {
-		error_log("Traitement de la route matieres");
+		error_log("Traitement de la route matieres - " . date('Y-m-d H:i:s'));
 
 		if ($method === 'GET') {
 			if (isset($segments[1])) {
@@ -219,7 +219,7 @@ try {
 
 				if (!$result['success']) {
 					error_log("Erreur lors de la récupération de la matière: " . $result['error']);
-					sendResponse(['message' => $result['error']], 404);
+					sendResponse(['message' => $result['error'], 'details' => $result], 404);
 				}
 				error_log("Données de la matière: " . print_r($result['data'], true));
 				sendResponse([$result['data']]);
@@ -230,8 +230,22 @@ try {
 
 				if (!$result['success']) {
 					error_log("Erreur lors de la récupération des matières: " . $result['error']);
-					sendResponse(['message' => $result['error']], 500);
+					sendResponse(['message' => $result['error'], 'details' => $result], 500);
 				}
+
+				// Vérification du format des données
+				if (!is_array($result['data'])) {
+					error_log("Format de données invalide: " . gettype($result['data']));
+					sendResponse([
+						'message' => 'Format de données invalide',
+						'details' => [
+							'type' => gettype($result['data']),
+							'value' => $result['data'],
+							'expected' => 'array'
+						]
+					], 500);
+				}
+
 				error_log("Données des matières: " . print_r($result['data'], true));
 				sendResponse($result['data']);
 			}

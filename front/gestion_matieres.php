@@ -54,7 +54,7 @@ ob_start();
 			if (!response.ok) {
 				const errorData = await response.json();
 				console.error('Erreur HTTP:', errorData);
-				throw new Error(errorData.message || `Erreur HTTP: ${response.status}`);
+				throw new Error(`Erreur HTTP ${response.status}: ${errorData.message || 'Erreur inconnue'}`);
 			}
 
 			const result = await response.json();
@@ -68,9 +68,10 @@ ob_start();
 				console.error('Format de données invalide:', {
 					type: typeof result,
 					value: result,
-					expected: 'array'
+					expected: 'array',
+					location: 'loadMatieres() - ligne 45'
 				});
-				throw new Error(`Format de données invalide : tableau attendu, reçu ${typeof result}`);
+				throw new Error(`Format de données invalide : tableau attendu, reçu ${typeof result} (${JSON.stringify(result)})`);
 			}
 
 			if (result.length === 0) {
@@ -79,8 +80,12 @@ ob_start();
 				return;
 			}
 
-			result.forEach(matiere => {
-				console.log('Traitement de la matière:', matiere);
+			result.forEach((matiere, index) => {
+				console.log(`Traitement de la matière ${index + 1}:`, matiere);
+				if (!matiere.id_matiere || !matiere.nom) {
+					console.error('Données de matière invalides:', matiere);
+					throw new Error(`Données de matière invalides à l'index ${index}: ${JSON.stringify(matiere)}`);
+				}
 				const tr = document.createElement('tr');
 				tr.innerHTML = `
 					<td>${matiere.nom}</td>
