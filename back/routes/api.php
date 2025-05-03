@@ -66,8 +66,27 @@ function sendResponse($data, $status = 200)
 		];
 	}
 
+	// Log de la réponse avant l'encodage
+	error_log("Données à encoder: " . print_r($data, true));
+
+	// Tentative d'encodage JSON
+	$json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+	// Vérification des erreurs d'encodage
+	if ($json === false) {
+		error_log("Erreur d'encodage JSON: " . json_last_error_msg());
+		$data = [
+			'success' => false,
+			'message' => 'Erreur d\'encodage JSON: ' . json_last_error_msg()
+		];
+		$json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	}
+
+	// Log de la réponse encodée
+	error_log("Réponse JSON: " . $json);
+
 	// Envoi de la réponse
-	echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	echo $json;
 	exit();
 }
 
@@ -267,16 +286,25 @@ try {
 	// Routes des classes
 	if ($segments[0] === 'classes') {
 		try {
+			error_log("Traitement de la route classes - " . date('Y-m-d H:i:s'));
+			error_log("Méthode: " . $method);
+			error_log("Segments: " . print_r($segments, true));
+
 			if ($method === 'GET') {
 				if (isset($segments[1])) {
 					if ($segments[1] === 'eleves' && isset($segments[2])) {
+						error_log("Récupération des élèves de la classe: " . $segments[2]);
 						$result = $classeController->getElevesByClasse($segments[2]);
 					} else {
+						error_log("Récupération de la classe avec l'ID: " . $segments[1]);
 						$result = $classeController->getClasseById($segments[1]);
+						error_log("Résultat de getClasseById: " . print_r($result, true));
 					}
 				} else {
+					error_log("Récupération de toutes les classes");
 					$result = $classeController->getAllClasses();
 				}
+				error_log("Envoi de la réponse: " . print_r($result, true));
 				sendResponse($result);
 			} elseif ($method === 'POST') {
 				$data = json_decode(file_get_contents('php://input'), true);
@@ -317,6 +345,7 @@ try {
 			}
 		} catch (Exception $e) {
 			error_log("Erreur dans la route classes: " . $e->getMessage());
+			error_log("Trace: " . $e->getTraceAsString());
 			sendResponse([
 				'success' => false,
 				'message' => $e->getMessage()
