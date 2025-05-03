@@ -574,6 +574,11 @@ ob_start();
 
 		console.log('Données du formulaire:', formData);
 
+		if (!formData.titre || !formData.matiere || !formData.classe) {
+			showError(ErrorMessages.GENERAL.REQUIRED_FIELDS);
+			return;
+		}
+
 		try {
 			console.log('Envoi de la requête...');
 			const response = await fetch('api/examens', {
@@ -597,7 +602,7 @@ ob_start();
 
 			console.log('Succès, affichage du message...');
 			showSuccess(ErrorMessages.EXAMS.CREATE.SUCCESS);
-			document.getElementById('examForm').reset();
+			document.getElementById('addExamForm').reset();
 			console.log('Chargement des examens...');
 			loadExams();
 		} catch (error) {
@@ -608,14 +613,25 @@ ob_start();
 
 	// Charger les données au chargement de la page
 	document.addEventListener('DOMContentLoaded', function() {
+		console.log('Chargement de la page...');
+
+		// Initialiser le système de notification
+		const notificationContainer = document.createElement('div');
+		notificationContainer.className = 'notification-container';
+		document.body.appendChild(notificationContainer);
+		console.log('Conteneur de notifications initialisé');
+
 		loadExams();
 		loadMatieres();
 		loadClasses();
 
 		// Ajouter l'écouteur d'événements pour le formulaire de création
-		const examForm = document.getElementById('examForm');
+		const examForm = document.getElementById('addExamForm');
 		if (examForm) {
+			console.log('Formulaire trouvé, ajout de l\'écouteur d\'événements');
 			examForm.addEventListener('submit', createExam);
+		} else {
+			console.error('Formulaire non trouvé');
 		}
 	});
 
