@@ -76,7 +76,13 @@ class Examen
 	{
 		try {
 			error_log("Tentative de création d'un examen");
-			error_log("Données: titre=$titre, matiere=$matiere, classe=$classe");
+			error_log("Données reçues: titre=$titre, matiere=$matiere, classe=$classe");
+
+			// Vérifier la connexion à la base de données
+			if (!$this->db) {
+				error_log("Erreur: Connexion à la base de données non établie");
+				throw new Exception("Erreur de connexion à la base de données");
+			}
 
 			$sql = "INSERT INTO examens (titre, matiere, classe) VALUES (?, ?, ?)";
 			error_log("Requête SQL: " . $sql);
@@ -84,17 +90,27 @@ class Examen
 			$stmt = $this->db->prepare($sql);
 
 			if ($stmt === false) {
-				error_log("Erreur de préparation de la requête: " . print_r($this->db->errorInfo(), true));
-				throw new Exception("Erreur lors de la préparation de la requête");
+				$error = $this->db->errorInfo();
+				error_log("Erreur de préparation de la requête: " . print_r($error, true));
+				throw new Exception("Erreur lors de la préparation de la requête: " . $error[2]);
 			}
 
+			error_log("Exécution de la requête avec les paramètres: " . print_r([$titre, $matiere, $classe], true));
+
 			if (!$stmt->execute([$titre, $matiere, $classe])) {
-				error_log("Erreur d'exécution de la requête: " . print_r($stmt->errorInfo(), true));
-				throw new Exception("Erreur lors de l'exécution de la requête");
+				$error = $stmt->errorInfo();
+				error_log("Erreur d'exécution de la requête: " . print_r($error, true));
+				throw new Exception("Erreur lors de l'exécution de la requête: " . $error[2]);
 			}
 
 			$id = $this->db->lastInsertId();
 			error_log("ID de l'examen créé: " . $id);
+
+			// Vérifier que l'insertion a réussi
+			if (!$id) {
+				error_log("Erreur: Aucun ID retourné après l'insertion");
+				throw new Exception("Erreur lors de la création de l'examen: aucun ID retourné");
+			}
 
 			return [
 				'id_exam' => $id,
@@ -104,6 +120,7 @@ class Examen
 			];
 		} catch (Exception $e) {
 			error_log("Erreur dans create: " . $e->getMessage());
+			error_log("Trace de l'erreur: " . $e->getTraceAsString());
 			return false;
 		}
 	}

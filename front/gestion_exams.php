@@ -118,6 +118,9 @@ ob_start();
 		color: white;
 		z-index: 1000;
 		animation: slideIn 0.3s ease-out;
+		margin-bottom: 10px;
+		width: 300px;
+		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 	}
 
 	.notification.error {
@@ -128,10 +131,29 @@ ob_start();
 		background: #28a745;
 	}
 
+	.notification.debug {
+		background: #6c757d;
+		position: fixed;
+		top: 20px;
+		left: 20px;
+		z-index: 1000;
+	}
+
+	.notification-container {
+		position: fixed;
+		top: 20px;
+		right: 20px;
+		z-index: 1000;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+	}
+
 	.notification .close {
 		float: right;
 		cursor: pointer;
 		margin-left: 10px;
+		font-weight: bold;
 	}
 
 	@keyframes slideIn {
@@ -160,14 +182,6 @@ ob_start();
 			transform: translateX(100%);
 			opacity: 0;
 		}
-	}
-
-	.notification.debug {
-		background: #6c757d;
-		position: fixed;
-		top: 20px;
-		left: 20px;
-		z-index: 1000;
 	}
 </style>
 
@@ -240,6 +254,49 @@ ob_start();
 			debugDiv.classList.add('slideOut');
 			setTimeout(() => debugDiv.remove(), 500);
 		});
+	}
+
+	// Fonction pour afficher une notification
+	function showNotification(message, type) {
+		// Créer le conteneur s'il n'existe pas
+		let container = document.querySelector('.notification-container');
+		if (!container) {
+			container = document.createElement('div');
+			container.className = 'notification-container';
+			document.body.appendChild(container);
+		}
+
+		const notification = document.createElement('div');
+		notification.className = `notification ${type}`;
+		notification.innerHTML = `
+			<span class="close">&times;</span>
+			<p>${message}</p>
+		`;
+
+		// Ajouter la notification au conteneur
+		container.appendChild(notification);
+
+		// Fermer la notification après 5 secondes
+		setTimeout(() => {
+			notification.classList.add('slideOut');
+			setTimeout(() => notification.remove(), 500);
+		}, 5000);
+
+		// Fermer la notification au clic sur le bouton
+		notification.querySelector('.close').addEventListener('click', () => {
+			notification.classList.add('slideOut');
+			setTimeout(() => notification.remove(), 500);
+		});
+	}
+
+	// Fonction pour afficher une erreur
+	function showError(message) {
+		showNotification(message, 'error');
+	}
+
+	// Fonction pour afficher un succès
+	function showSuccess(message) {
+		showNotification(message, 'success');
 	}
 
 	// Fonction pour charger les matières
