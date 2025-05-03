@@ -385,9 +385,51 @@ ob_start();
 
 	// Fonction pour modifier un examen
 	async function editExam(id, currentTitre, currentMatiere, currentClasse) {
-		const newTitre = prompt('Nouveau titre de l\'examen:', currentTitre);
+		const modal = document.createElement('div');
+		modal.className = 'modal';
+		modal.innerHTML = `
+			<div class="modal-content">
+				<h3>Modifier l'examen</h3>
+				<form id="editExamForm">
+					<div class="form-row">
+						<label for="editTitre">Titre :</label>
+						<input type="text" id="editTitre" value="${currentTitre}" required>
+					</div>
+					<div class="form-row">
+						<label for="editMatiere">Matière :</label>
+						<select id="editMatiere" required>
+							<option value="">Sélectionnez une matière</option>
+						</select>
+					</div>
+					<div class="form-row">
+						<label for="editClasse">Classe :</label>
+						<select id="editClasse" required>
+							<option value="">Sélectionnez une classe</option>
+						</select>
+					</div>
+					<div class="form-actions">
+						<button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+						<button type="submit" class="btn">Enregistrer</button>
+					</div>
+				</form>
+			</div>
+		`;
 
-		if (newTitre && newTitre !== currentTitre) {
+		document.body.appendChild(modal);
+
+		// Charger les matières et les classes
+		await Promise.all([
+			loadMatieresForEdit(currentMatiere),
+			loadClassesForEdit(currentClasse)
+		]);
+
+		// Gérer la soumission du formulaire
+		document.getElementById('editExamForm').addEventListener('submit', async function(e) {
+			e.preventDefault();
+			const newTitre = document.getElementById('editTitre').value;
+			const newMatiere = document.getElementById('editMatiere').value;
+			const newClasse = document.getElementById('editClasse').value;
+
 			try {
 				const response = await fetch(`api/examens/${id}`, {
 					method: 'PUT',
@@ -396,26 +438,81 @@ ob_start();
 					},
 					body: JSON.stringify({
 						titre: newTitre,
-						matiere: currentMatiere,
-						classe: currentClasse
+						matiere: newMatiere,
+						classe: newClasse
 					})
 				});
 
 				const result = await response.json();
 
-				if (!response.ok) {
-					throw new Error(result.error || ErrorMessages.EXAMS.UPDATE.ERROR);
-				}
-
 				if (!result.success) {
 					throw new Error(result.error || ErrorMessages.EXAMS.UPDATE.ERROR);
 				}
 
+				closeModal();
 				showSuccess(ErrorMessages.EXAMS.UPDATE.SUCCESS);
 				loadExams();
 			} catch (error) {
 				showError(error.message);
 			}
+		});
+	}
+
+	// Fonction pour charger les matières dans le modal d'édition
+	async function loadMatieresForEdit(selectedMatiere) {
+		try {
+			const response = await fetch('api/matieres');
+			const result = await response.json();
+
+			if (!result.success) {
+				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
+			}
+
+			const select = document.getElementById('editMatiere');
+			select.innerHTML = '<option value="">Sélectionnez une matière</option>';
+
+			result.data.forEach(matiere => {
+				const option = document.createElement('option');
+				option.value = matiere.id_matiere;
+				option.textContent = matiere.nom;
+				option.selected = matiere.id_matiere == selectedMatiere;
+				select.appendChild(option);
+			});
+		} catch (error) {
+			showError(error.message);
+		}
+	}
+
+	// Fonction pour charger les classes dans le modal d'édition
+	async function loadClassesForEdit(selectedClasse) {
+		try {
+			const response = await fetch('api/classes');
+			const result = await response.json();
+
+			if (!result.success) {
+				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
+			}
+
+			const select = document.getElementById('editClasse');
+			select.innerHTML = '<option value="">Sélectionnez une classe</option>';
+
+			result.data.forEach(classe => {
+				const option = document.createElement('option');
+				option.value = classe.id_classe;
+				option.textContent = `${classe.nom_classe} (${classe.niveau}${classe.numero})`;
+				option.selected = classe.id_classe == selectedClasse;
+				select.appendChild(option);
+			});
+		} catch (error) {
+			showError(error.message);
+		}
+	}
+
+	// Fonction pour fermer le modal
+	function closeModal() {
+		const modal = document.querySelector('.modal');
+		if (modal) {
+			modal.remove();
 		}
 	}
 
