@@ -23,16 +23,10 @@ class MatiereController
 			if (!is_array($result)) {
 				$result = [];
 			}
-			return [
-				'success' => true,
-				'data' => $result
-			];
+			return $result;
 		} catch (Exception $e) {
 			$this->errorService->logError($e->getMessage(), 'matiere');
-			return [
-				'success' => false,
-				'error' => $e->getMessage()
-			];
+			throw $e;
 		}
 	}
 
@@ -49,16 +43,10 @@ class MatiereController
 			if (!is_array($result)) {
 				$result = [];
 			}
-			return [
-				'success' => true,
-				'data' => $result
-			];
+			return $result;
 		} catch (Exception $e) {
 			$this->errorService->logError($e->getMessage(), 'matiere');
-			return [
-				'success' => false,
-				'error' => $e->getMessage()
-			];
+			throw $e;
 		}
 	}
 
@@ -75,16 +63,10 @@ class MatiereController
 			if (!is_array($result)) {
 				$result = [];
 			}
-			return [
-				'success' => true,
-				'data' => $result
-			];
+			return $result;
 		} catch (Exception $e) {
 			$this->errorService->logError($e->getMessage(), 'matiere');
-			return [
-				'success' => false,
-				'error' => $e->getMessage()
-			];
+			throw $e;
 		}
 	}
 
@@ -104,16 +86,10 @@ class MatiereController
 			if (!is_array($result)) {
 				$result = [];
 			}
-			return [
-				'success' => true,
-				'data' => $result
-			];
+			return $result;
 		} catch (Exception $e) {
 			$this->errorService->logError($e->getMessage(), 'matiere');
-			return [
-				'success' => false,
-				'error' => $e->getMessage()
-			];
+			throw $e;
 		}
 	}
 
@@ -127,16 +103,10 @@ class MatiereController
 			if ($result === false) {
 				throw new Exception("Erreur lors de la suppression de la matière");
 			}
-			return [
-				'success' => true,
-				'message' => "Matière supprimée avec succès"
-			];
+			return true;
 		} catch (Exception $e) {
 			$this->errorService->logError($e->getMessage(), 'matiere');
-			return [
-				'success' => false,
-				'error' => $e->getMessage()
-			];
+			throw $e;
 		}
 	}
 }

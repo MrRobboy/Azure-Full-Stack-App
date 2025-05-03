@@ -212,93 +212,66 @@ try {
 		error_log("Traitement de la route matieres - " . date('Y-m-d H:i:s'));
 
 		if ($method === 'GET') {
-			if (isset($segments[1])) {
-				error_log("Récupération de la matière avec l'ID: " . $segments[1]);
-				$result = $matiereController->getMatiereById($segments[1]);
-				error_log("Résultat brut: " . print_r($result, true));
-
-				if (!$result['success']) {
-					error_log("Erreur lors de la récupération de la matière: " . $result['error']);
-					sendResponse(['message' => $result['error'], 'details' => $result], 404);
+			try {
+				if (isset($segments[1])) {
+					error_log("Récupération de la matière avec l'ID: " . $segments[1]);
+					$result = $matiereController->getMatiereById($segments[1]);
+					error_log("Données de la matière: " . print_r($result, true));
+					sendResponse($result);
+				} else {
+					error_log("Récupération de toutes les matières");
+					$result = $matiereController->getAllMatieres();
+					error_log("Données des matières: " . print_r($result, true));
+					sendResponse($result);
 				}
-				error_log("Données de la matière: " . print_r($result['data'], true));
-				sendResponse($result['data']);
-			} else {
-				error_log("Récupération de toutes les matières");
-				$result = $matiereController->getAllMatieres();
-				error_log("Résultat brut: " . print_r($result, true));
-
-				if (!$result['success']) {
-					error_log("Erreur lors de la récupération des matières: " . $result['error']);
-					sendResponse(['message' => $result['error'], 'details' => $result], 500);
-				}
-
-				// Vérification du format des données
-				if (!is_array($result['data'])) {
-					error_log("Format de données invalide: " . gettype($result['data']));
-					sendResponse([
-						'message' => 'Format de données invalide',
-						'details' => [
-							'type' => gettype($result['data']),
-							'value' => $result['data'],
-							'expected' => 'array'
-						]
-					], 500);
-				}
-
-				error_log("Données des matières: " . print_r($result['data'], true));
-				// Envoyer directement le tableau de données
-				sendResponse($result['data']);
+			} catch (Exception $e) {
+				error_log("Erreur: " . $e->getMessage());
+				sendResponse(['message' => $e->getMessage()], 500);
 			}
 		} elseif ($method === 'POST') {
-			error_log("Création d'une nouvelle matière");
-			$data = json_decode(file_get_contents('php://input'), true);
-			error_log("Données reçues: " . print_r($data, true));
+			try {
+				error_log("Création d'une nouvelle matière");
+				$data = json_decode(file_get_contents('php://input'), true);
+				error_log("Données reçues: " . print_r($data, true));
 
-			if (!$data || !isset($data['nom'])) {
-				error_log("Données invalides pour la création de matière");
-				sendResponse(['message' => 'Le nom de la matière est requis'], 400);
+				if (!$data || !isset($data['nom'])) {
+					throw new Exception("Le nom de la matière est requis");
+				}
+
+				$result = $matiereController->createMatiere($data);
+				error_log("Matière créée avec succès: " . print_r($result, true));
+				sendResponse($result, 201);
+			} catch (Exception $e) {
+				error_log("Erreur: " . $e->getMessage());
+				sendResponse(['message' => $e->getMessage()], 400);
 			}
-
-			$result = $matiereController->createMatiere($data);
-			error_log("Résultat: " . print_r($result, true));
-
-			if (!$result['success']) {
-				error_log("Erreur lors de la création de la matière: " . $result['error']);
-				sendResponse(['message' => $result['error']], 400);
-			}
-			error_log("Matière créée avec succès: " . print_r($result['data'], true));
-			sendResponse($result['data'], 201);
 		} elseif ($method === 'PUT' && isset($segments[1])) {
-			error_log("Mise à jour de la matière avec l'ID: " . $segments[1]);
-			$data = json_decode(file_get_contents('php://input'), true);
-			error_log("Données reçues: " . print_r($data, true));
+			try {
+				error_log("Mise à jour de la matière avec l'ID: " . $segments[1]);
+				$data = json_decode(file_get_contents('php://input'), true);
+				error_log("Données reçues: " . print_r($data, true));
 
-			if (!$data || !isset($data['nom'])) {
-				error_log("Données invalides pour la mise à jour de matière");
-				sendResponse(['message' => 'Le nom de la matière est requis'], 400);
+				if (!$data || !isset($data['nom'])) {
+					throw new Exception("Le nom de la matière est requis");
+				}
+
+				$result = $matiereController->updateMatiere($segments[1], $data);
+				error_log("Matière mise à jour avec succès: " . print_r($result, true));
+				sendResponse($result);
+			} catch (Exception $e) {
+				error_log("Erreur: " . $e->getMessage());
+				sendResponse(['message' => $e->getMessage()], 400);
 			}
-
-			$result = $matiereController->updateMatiere($segments[1], $data);
-			error_log("Résultat: " . print_r($result, true));
-
-			if (!$result['success']) {
-				error_log("Erreur lors de la mise à jour de la matière: " . $result['error']);
-				sendResponse(['message' => $result['error']], 400);
-			}
-			error_log("Matière mise à jour avec succès: " . print_r($result['data'], true));
-			sendResponse($result['data']);
 		} elseif ($method === 'DELETE' && isset($segments[1])) {
-			error_log("Suppression de la matière avec l'ID: " . $segments[1]);
-			$result = $matiereController->deleteMatiere($segments[1]);
-			error_log("Résultat: " . print_r($result, true));
-
-			if (!$result['success']) {
-				error_log("Erreur lors de la suppression de la matière: " . $result['error']);
-				sendResponse(['message' => $result['error']], 400);
+			try {
+				error_log("Suppression de la matière avec l'ID: " . $segments[1]);
+				$result = $matiereController->deleteMatiere($segments[1]);
+				error_log("Matière supprimée avec succès");
+				sendResponse(['message' => 'Matière supprimée avec succès']);
+			} catch (Exception $e) {
+				error_log("Erreur: " . $e->getMessage());
+				sendResponse(['message' => $e->getMessage()], 400);
 			}
-			error_log("Matière supprimée avec succès");
-			sendResponse(['message' => 'Matière supprimée avec succès']);
 		} else {
 			error_log("Méthode non autorisée: " . $method);
 			sendResponse(['message' => 'Méthode non autorisée'], 405);
