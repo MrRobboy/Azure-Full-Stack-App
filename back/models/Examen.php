@@ -18,10 +18,10 @@ class Examen
 		try {
 			error_log("Tentative de récupération de tous les examens");
 			$sql = "SELECT e.*, m.nom as nom_matiere, c.nom_classe 
-					FROM EXAMEN e 
-					JOIN MATIERE m ON e.id_matiere = m.id_matiere 
-					JOIN CLASSE c ON e.id_classe = c.id_classe 
-					ORDER BY e.id_examen DESC";
+					FROM EXAM e 
+					JOIN MATIERE m ON e.matiere = m.id_matiere 
+					JOIN CLASSE c ON e.classe = c.id_classe 
+					ORDER BY e.id_exam DESC";
 
 			error_log("Requête SQL: " . $sql);
 			$stmt = $this->db->prepare($sql);
@@ -50,10 +50,10 @@ class Examen
 		try {
 			$stmt = $this->db->prepare("
 				SELECT e.*, m.nom as nom_matiere, c.nom_classe 
-				FROM EXAMEN e
-				JOIN MATIERE m ON e.id_matiere = m.id_matiere
-				JOIN CLASSE c ON e.id_classe = c.id_classe
-				WHERE e.id_examen = ?
+				FROM EXAM e
+				JOIN MATIERE m ON e.matiere = m.id_matiere
+				JOIN CLASSE c ON e.classe = c.id_classe
+				WHERE e.id_exam = ?
 			");
 
 			if (!$stmt->execute([$id])) {
@@ -84,7 +84,7 @@ class Examen
 				throw new Exception("Erreur de connexion à la base de données");
 			}
 
-			$sql = "INSERT INTO EXAMEN (titre, id_matiere, id_classe) VALUES (?, ?, ?)";
+			$sql = "INSERT INTO EXAM (titre, matiere, classe) VALUES (?, ?, ?)";
 			error_log("Requête SQL: " . $sql);
 
 			$stmt = $this->db->prepare($sql);
@@ -113,10 +113,10 @@ class Examen
 			}
 
 			return [
-				'id_examen' => $id,
+				'id_exam' => $id,
 				'titre' => $titre,
-				'id_matiere' => $matiere,
-				'id_classe' => $classe
+				'matiere' => $matiere,
+				'classe' => $classe
 			];
 		} catch (Exception $e) {
 			error_log("Erreur dans create: " . $e->getMessage());
