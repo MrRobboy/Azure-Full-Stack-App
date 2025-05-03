@@ -5,8 +5,9 @@
 	border-radius: 4px;
 	display: flex;
 	justify-content: space-between;
-	align-items: center;
+	align-items: flex-start;
 	animation: slideIn 0.3s ease-out;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .message-container.error {
@@ -32,6 +33,27 @@
 	margin-right: 10px;
 }
 
+.error-context {
+	font-weight: bold;
+	margin-bottom: 5px;
+	font-size: 0.9em;
+	text-transform: uppercase;
+}
+
+.error-message {
+	font-size: 1em;
+	margin-bottom: 5px;
+}
+
+.error-suggestion {
+	font-size: 0.9em;
+	font-style: italic;
+	margin-top: 5px;
+	padding-top: 5px;
+	border-top: 1px dashed currentColor;
+	opacity: 0.8;
+}
+
 .close-button {
 	background: none;
 	border: none;
@@ -39,10 +61,12 @@
 	cursor: pointer;
 	padding: 0 5px;
 	color: inherit;
+	opacity: 0.7;
+	transition: opacity 0.2s;
 }
 
 .close-button:hover {
-	opacity: 0.8;
+	opacity: 1;
 }
 
 @keyframes slideIn {

@@ -102,7 +102,7 @@ ob_start();
 			});
 		} catch (error) {
 			console.error('Erreur lors du chargement des classes:', error);
-			ErrorHandler.handleApiError(error);
+			ErrorHandler.handleClasseError(error, 'Chargement des classes');
 			const tbody = document.querySelector('#classesTable tbody');
 			tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur lors du chargement des classes</td></tr>';
 		}
@@ -138,12 +138,12 @@ ob_start();
 				throw new Error(data.message || 'Erreur lors de l\'ajout de la classe');
 			}
 
-			ErrorHandler.showSuccess('Classe ajoutée avec succès');
+			ErrorHandler.showClasseSuccess('Classe ajoutée avec succès', 'Ajout');
 			document.getElementById('addClasseForm').reset();
 			loadClasses();
 		} catch (error) {
 			console.error('Erreur lors de l\'ajout de la classe:', error);
-			ErrorHandler.handleApiError(error);
+			ErrorHandler.handleClasseError(error, 'Ajout de classe');
 		}
 	}
 
@@ -182,11 +182,11 @@ ob_start();
 					throw new Error(data.message || 'Erreur lors de la modification de la classe');
 				}
 
-				ErrorHandler.showSuccess('Classe modifiée avec succès');
+				ErrorHandler.showClasseSuccess('Classe modifiée avec succès', 'Modification');
 				loadClasses();
 			} catch (error) {
 				console.error('Erreur lors de la modification de la classe:', error);
-				ErrorHandler.handleApiError(error);
+				ErrorHandler.handleClasseError(error, 'Modification de classe');
 			}
 		}
 	}
@@ -211,11 +211,11 @@ ob_start();
 				throw new Error(data.message || 'Erreur lors de la suppression de la classe');
 			}
 
-			ErrorHandler.showSuccess('Classe supprimée avec succès');
+			ErrorHandler.showClasseSuccess('Classe supprimée avec succès', 'Suppression');
 			loadClasses();
 		} catch (error) {
 			console.error('Erreur lors de la suppression de la classe:', error);
-			ErrorHandler.handleApiError(error);
+			ErrorHandler.handleClasseError(error, 'Suppression de classe');
 		}
 	}
 
