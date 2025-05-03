@@ -164,6 +164,11 @@ ob_start();
 				})
 			});
 
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.error || 'Erreur lors de l\'ajout de l\'examen');
+			}
+
 			const result = await response.json();
 
 			if (!result.success) {
@@ -176,8 +181,7 @@ ob_start();
 			showSuccess(result.message || 'Examen ajouté avec succès');
 			loadExams();
 		} catch (error) {
-			console.error('Erreur:', error);
-			handleApiError(error);
+			showError(error.message);
 		}
 	});
 
@@ -199,6 +203,11 @@ ob_start();
 					})
 				});
 
+				if (!response.ok) {
+					const errorData = await response.json();
+					throw new Error(errorData.error || 'Erreur lors de la modification de l\'examen');
+				}
+
 				const result = await response.json();
 
 				if (!result.success) {
@@ -208,8 +217,7 @@ ob_start();
 				showSuccess(result.message || 'Examen modifié avec succès');
 				loadExams();
 			} catch (error) {
-				console.error('Erreur:', error);
-				handleApiError(error);
+				showError(error.message);
 			}
 		}
 	}
@@ -222,6 +230,11 @@ ob_start();
 					method: 'DELETE'
 				});
 
+				if (!response.ok) {
+					const errorData = await response.json();
+					throw new Error(errorData.error || 'Erreur lors de la suppression de l\'examen');
+				}
+
 				const result = await response.json();
 
 				if (!result.success) {
@@ -231,10 +244,71 @@ ob_start();
 				showSuccess(result.message || 'Examen supprimé avec succès');
 				loadExams();
 			} catch (error) {
-				console.error('Erreur:', error);
-				handleApiError(error);
+				showError(error.message);
 			}
 		}
+	}
+
+	// Fonction pour afficher une erreur
+	function showError(message) {
+		const notification = document.createElement('div');
+		notification.className = 'notification error';
+		notification.innerHTML = `
+			<span class="close">&times;</span>
+			<p>${message}</p>
+		`;
+		document.body.appendChild(notification);
+
+		// Supprimer les anciennes notifications
+		const oldNotifications = document.querySelectorAll('.notification.error');
+		oldNotifications.forEach((old, index) => {
+			if (index < oldNotifications.length - 1) {
+				old.remove();
+			}
+		});
+
+		// Fermer la notification après 5 secondes
+		setTimeout(() => {
+			notification.classList.add('slideOut');
+			setTimeout(() => notification.remove(), 500);
+		}, 5000);
+
+		// Fermer la notification au clic sur le bouton
+		notification.querySelector('.close').addEventListener('click', () => {
+			notification.classList.add('slideOut');
+			setTimeout(() => notification.remove(), 500);
+		});
+	}
+
+	// Fonction pour afficher un succès
+	function showSuccess(message) {
+		const notification = document.createElement('div');
+		notification.className = 'notification success';
+		notification.innerHTML = `
+			<span class="close">&times;</span>
+			<p>${message}</p>
+		`;
+		document.body.appendChild(notification);
+
+		// Supprimer les anciennes notifications
+		const oldNotifications = document.querySelectorAll('.notification.success');
+		oldNotifications.forEach((old, index) => {
+			if (index < oldNotifications.length - 1) {
+				old.remove();
+			}
+		});
+
+		// Fermer la notification après 5 secondes
+		setTimeout(() => {
+			notification.classList.add('slideOut');
+			setTimeout(() => notification.remove(), 500);
+		}, 5000);
+
+		// Fermer la notification au clic sur le bouton
+		notification.querySelector('.close').addEventListener('click', () => {
+			notification.classList.add('slideOut');
+			setTimeout(() => notification.remove(), 500);
+		});
 	}
 
 	// Charger les données au chargement de la page

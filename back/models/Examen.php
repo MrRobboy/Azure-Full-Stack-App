@@ -75,8 +75,12 @@ class Examen
 				VALUES (?, ?, ?)
 			");
 
+			if (!$stmt) {
+				throw new Exception("Erreur de préparation de la requête");
+			}
+
 			if (!$stmt->execute([$titre, $matiere, $classe])) {
-				throw new Exception("Erreur lors de l'insertion de l'examen");
+				throw new Exception("Erreur lors de l'insertion de l'examen: " . implode(", ", $stmt->errorInfo()));
 			}
 
 			$id = $this->db->lastInsertId();
@@ -96,8 +100,12 @@ class Examen
 				WHERE id_examen = ?
 			");
 
+			if (!$stmt) {
+				throw new Exception("Erreur de préparation de la requête");
+			}
+
 			if (!$stmt->execute([$titre, $matiere, $classe, $id])) {
-				throw new Exception("Erreur lors de la mise à jour de l'examen");
+				throw new Exception("Erreur lors de la mise à jour de l'examen: " . implode(", ", $stmt->errorInfo()));
 			}
 
 			return $this->getById($id);
@@ -112,8 +120,12 @@ class Examen
 		try {
 			$stmt = $this->db->prepare("DELETE FROM EXAMEN WHERE id_examen = ?");
 
+			if (!$stmt) {
+				throw new Exception("Erreur de préparation de la requête");
+			}
+
 			if (!$stmt->execute([$id])) {
-				throw new Exception("Erreur lors de la suppression de l'examen");
+				throw new Exception("Erreur lors de la suppression de l'examen: " . implode(", ", $stmt->errorInfo()));
 			}
 
 			return true;

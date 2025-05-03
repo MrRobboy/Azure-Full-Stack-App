@@ -364,23 +364,23 @@ try {
 		} elseif ($method === 'POST') {
 			$data = json_decode(file_get_contents('php://input'), true);
 			$result = $examenController->createExamen(
-				$data['nom_examen'],
-				$data['date_examen'],
-				$data['coefficient']
+				$data['titre'],
+				$data['matiere'],
+				$data['classe']
 			);
-			sendResponse(['id' => $result], 201);
+			sendResponse($result);
 		} elseif ($method === 'PUT' && isset($segments[1])) {
 			$data = json_decode(file_get_contents('php://input'), true);
-			$examenController->updateExamen(
+			$result = $examenController->updateExamen(
 				$segments[1],
-				$data['nom_examen'],
-				$data['date_examen'],
-				$data['coefficient']
+				$data['titre'],
+				$data['matiere'],
+				$data['classe']
 			);
-			sendResponse(['message' => 'Examen mis à jour']);
+			sendResponse($result);
 		} elseif ($method === 'DELETE' && isset($segments[1])) {
-			$examenController->deleteExamen($segments[1]);
-			sendResponse(['message' => 'Examen supprimé']);
+			$result = $examenController->deleteExamen($segments[1]);
+			sendResponse($result);
 		}
 	}
 

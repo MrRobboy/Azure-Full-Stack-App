@@ -63,30 +63,30 @@ class ExamenController
 		}
 	}
 
-	public function createExamen($nom_examen, $date_examen, $coefficient)
+	public function createExamen($titre, $matiere, $classe)
 	{
 		try {
 			// Vérification de la validité des données
-			if (empty($nom_examen) || empty($date_examen) || empty($coefficient)) {
+			if (empty($titre) || empty($matiere) || empty($classe)) {
 				throw new Exception("Tous les champs sont obligatoires");
 			}
 
-			// Vérification de la longueur du nom
-			if (strlen($nom_examen) > 255) {
-				throw new Exception("Le nom de l'examen est trop long");
+			// Vérification de la longueur du titre
+			if (strlen($titre) > 255) {
+				throw new Exception("Le titre de l'examen est trop long");
 			}
 
-			// Vérification du format de la date
-			if (!strtotime($date_examen)) {
-				throw new Exception("Format de date invalide");
+			// Vérification de l'existence de la matière
+			if (!$this->matiereModel->getById($matiere)) {
+				throw new Exception("La matière n'existe pas");
 			}
 
-			// Vérification du coefficient
-			if ($coefficient <= 0) {
-				throw new Exception("Le coefficient doit être positif");
+			// Vérification de l'existence de la classe
+			if (!$this->classeModel->getById($classe)) {
+				throw new Exception("La classe n'existe pas");
 			}
 
-			$result = $this->examenModel->create($nom_examen, $date_examen, $coefficient);
+			$result = $this->examenModel->create($titre, $matiere, $classe);
 			if ($result === false) {
 				throw new Exception("Erreur lors de la création de l'examen");
 			}
@@ -103,7 +103,7 @@ class ExamenController
 		}
 	}
 
-	public function updateExamen($id, $nom_examen, $date_examen, $coefficient)
+	public function updateExamen($id, $titre, $matiere, $classe)
 	{
 		try {
 			// Vérification de l'existence de l'examen
@@ -112,26 +112,26 @@ class ExamenController
 			}
 
 			// Vérification de la validité des données
-			if (empty($nom_examen) || empty($date_examen) || empty($coefficient)) {
+			if (empty($titre) || empty($matiere) || empty($classe)) {
 				throw new Exception("Tous les champs sont obligatoires");
 			}
 
-			// Vérification de la longueur du nom
-			if (strlen($nom_examen) > 255) {
-				throw new Exception("Le nom de l'examen est trop long");
+			// Vérification de la longueur du titre
+			if (strlen($titre) > 255) {
+				throw new Exception("Le titre de l'examen est trop long");
 			}
 
-			// Vérification du format de la date
-			if (!strtotime($date_examen)) {
-				throw new Exception("Format de date invalide");
+			// Vérification de l'existence de la matière
+			if (!$this->matiereModel->getById($matiere)) {
+				throw new Exception("La matière n'existe pas");
 			}
 
-			// Vérification du coefficient
-			if ($coefficient <= 0) {
-				throw new Exception("Le coefficient doit être positif");
+			// Vérification de l'existence de la classe
+			if (!$this->classeModel->getById($classe)) {
+				throw new Exception("La classe n'existe pas");
 			}
 
-			$result = $this->examenModel->update($id, $nom_examen, $date_examen, $coefficient);
+			$result = $this->examenModel->update($id, $titre, $matiere, $classe);
 			if ($result === false) {
 				throw new Exception("Erreur lors de la mise à jour de l'examen");
 			}
