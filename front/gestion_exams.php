@@ -220,6 +220,54 @@ ob_start();
 		console.error('Le script error-messages.js n\'est pas chargé correctement');
 	}
 
+	// Fonction pour charger les matières
+	async function loadMatieres() {
+		try {
+			const response = await fetch('api/matieres');
+			const result = await response.json();
+
+			if (!result.success) {
+				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
+			}
+
+			const select = document.getElementById('matiere');
+			select.innerHTML = '<option value="">Sélectionnez une matière</option>';
+
+			result.data.forEach(matiere => {
+				const option = document.createElement('option');
+				option.value = matiere.id_matiere;
+				option.textContent = matiere.nom;
+				select.appendChild(option);
+			});
+		} catch (error) {
+			showError(error.message);
+		}
+	}
+
+	// Fonction pour charger les classes
+	async function loadClasses() {
+		try {
+			const response = await fetch('api/classes');
+			const result = await response.json();
+
+			if (!result.success) {
+				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
+			}
+
+			const select = document.getElementById('classe');
+			select.innerHTML = '<option value="">Sélectionnez une classe</option>';
+
+			result.data.forEach(classe => {
+				const option = document.createElement('option');
+				option.value = classe.id_classe;
+				option.textContent = `${classe.nom_classe} (${classe.niveau}${classe.numero})`;
+				select.appendChild(option);
+			});
+		} catch (error) {
+			showError(error.message);
+		}
+	}
+
 	// Fonction pour charger les examens
 	async function loadExams() {
 		try {
@@ -253,6 +301,68 @@ ob_start();
 			});
 		} catch (error) {
 			showError(error.message);
+		}
+	}
+
+	// Fonction pour modifier un examen
+	async function editExam(id, currentTitre, currentMatiere, currentClasse) {
+		const newTitre = prompt('Nouveau titre de l\'examen:', currentTitre);
+
+		if (newTitre && newTitre !== currentTitre) {
+			try {
+				const response = await fetch(`api/examens/${id}`, {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						titre: newTitre,
+						matiere: currentMatiere,
+						classe: currentClasse
+					})
+				});
+
+				const result = await response.json();
+
+				if (!response.ok) {
+					throw new Error(result.error || ErrorMessages.EXAMS.UPDATE.ERROR);
+				}
+
+				if (!result.success) {
+					throw new Error(result.error || ErrorMessages.EXAMS.UPDATE.ERROR);
+				}
+
+				showSuccess(ErrorMessages.EXAMS.UPDATE.SUCCESS);
+				loadExams();
+			} catch (error) {
+				showError(error.message);
+			}
+		}
+	}
+
+	// Fonction pour supprimer un examen
+	async function deleteExam(id) {
+		if (confirm('Êtes-vous sûr de vouloir supprimer cet examen ?')) {
+			try {
+				const response = await fetch(`api/examens/${id}`, {
+					method: 'DELETE'
+				});
+
+				const result = await response.json();
+
+				if (!response.ok) {
+					throw new Error(result.error || ErrorMessages.EXAMS.DELETE.ERROR);
+				}
+
+				if (!result.success) {
+					throw new Error(result.error || ErrorMessages.EXAMS.DELETE.ERROR);
+				}
+
+				showSuccess(ErrorMessages.EXAMS.DELETE.SUCCESS);
+				loadExams();
+			} catch (error) {
+				showError(error.message);
+			}
 		}
 	}
 
