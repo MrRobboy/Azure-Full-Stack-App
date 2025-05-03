@@ -66,20 +66,36 @@ ob_start();
 	async function loadClasses() {
 		try {
 			const response = await fetch('api/classes');
+			if (!response.ok) {
+				throw new Error(`Erreur HTTP: ${response.status}`);
+			}
 			const classes = await response.json();
+
+			console.log('Classes reçues:', classes); // Pour le débogage
 
 			const tbody = document.querySelector('#classesTable tbody');
 			tbody.innerHTML = '';
 
+			if (!Array.isArray(classes)) {
+				console.error('Les données reçues ne sont pas un tableau:', classes);
+				tbody.innerHTML = '<tr><td colspan="5">Erreur: Format de données invalide</td></tr>';
+				return;
+			}
+
+			if (classes.length === 0) {
+				tbody.innerHTML = '<tr><td colspan="5">Aucune classe trouvée</td></tr>';
+				return;
+			}
+
 			classes.forEach(classe => {
 				const tr = document.createElement('tr');
 				tr.innerHTML = `
-					<td>${classe.nom_classe}</td>
-					<td>${classe.niveau}</td>
-					<td>${classe.numero}</td>
-					<td>${classe.rythme}</td>
+					<td>${classe.nom_classe || ''}</td>
+					<td>${classe.niveau || ''}</td>
+					<td>${classe.numero || ''}</td>
+					<td>${classe.rythme || ''}</td>
 					<td>
-						<button class="btn btn-edit" onclick="editClasse(${classe.id_classe}, '${classe.nom_classe}', '${classe.niveau}', '${classe.numero}', '${classe.rythme}')">Modifier</button>
+						<button class="btn btn-edit" onclick="editClasse(${classe.id_classe}, '${classe.nom_classe || ''}', '${classe.niveau || ''}', '${classe.numero || ''}', '${classe.rythme || ''}')">Modifier</button>
 						<button class="btn btn-danger" onclick="deleteClasse(${classe.id_classe})">Supprimer</button>
 					</td>
 				`;
@@ -87,6 +103,8 @@ ob_start();
 			});
 		} catch (error) {
 			console.error('Erreur lors du chargement des classes:', error);
+			const tbody = document.querySelector('#classesTable tbody');
+			tbody.innerHTML = `<tr><td colspan="5">Erreur lors du chargement des classes: ${error.message}</td></tr>`;
 		}
 	}
 

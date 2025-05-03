@@ -289,7 +289,12 @@ try {
 						sendResponse($classeController->getClasseById($segments[1]));
 					}
 				} else {
-					sendResponse($classeController->getAllClasses());
+					$result = $classeController->getAllClasses();
+					if ($result['success']) {
+						sendResponse($result['data']);
+					} else {
+						sendResponse(['message' => $result['error']], 400);
+					}
 				}
 			} catch (Exception $e) {
 				error_log("Erreur lors de la récupération des classes: " . $e->getMessage());

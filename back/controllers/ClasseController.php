@@ -15,7 +15,24 @@ class ClasseController
 
 	public function getAllClasses()
 	{
-		return $this->classeModel->getAll();
+		try {
+			$result = $this->classeModel->getAll();
+			if ($result === false) {
+				throw new Exception("Erreur lors de la récupération des classes");
+			}
+			if (!is_array($result)) {
+				$result = [];
+			}
+			return [
+				'success' => true,
+				'data' => $result
+			];
+		} catch (Exception $e) {
+			return [
+				'success' => false,
+				'error' => $e->getMessage()
+			];
+		}
 	}
 
 	public function getClasseById($id)
