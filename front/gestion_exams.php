@@ -243,19 +243,27 @@ ob_start();
 
 	// Fonction pour afficher une notification
 	function showNotification(message, type = 'error') {
+		console.log('Tentative d\'affichage d\'une notification:', {
+			message,
+			type
+		});
 		const container = document.querySelector('.notification-container') || createNotificationContainer();
+		console.log('Conteneur de notification:', container);
+
 		const notification = document.createElement('div');
 		notification.className = `notification ${type}`;
 		notification.innerHTML = `
 			<span class="close">&times;</span>
 			${message}
 		`;
+		console.log('Notification créée:', notification);
 
 		// Supprimer les anciennes notifications du même type
 		const oldNotifications = container.querySelectorAll(`.notification.${type}`);
 		oldNotifications.forEach(notif => notif.remove());
 
 		container.appendChild(notification);
+		console.log('Notification ajoutée au conteneur');
 
 		// Fermer la notification après 5 secondes
 		setTimeout(() => {
@@ -272,21 +280,23 @@ ob_start();
 
 	// Fonction pour créer le conteneur de notifications s'il n'existe pas
 	function createNotificationContainer() {
+		console.log('Création d\'un nouveau conteneur de notifications');
 		const container = document.createElement('div');
 		container.className = 'notification-container';
 		document.body.appendChild(container);
+		console.log('Conteneur créé et ajouté au body:', container);
 		return container;
 	}
 
 	// Fonction pour afficher une erreur
 	function showError(message) {
-		console.error('Erreur:', message);
+		console.error('Affichage d\'une erreur:', message);
 		showNotification(message, 'error');
 	}
 
 	// Fonction pour afficher un succès
 	function showSuccess(message) {
-		console.log('Succès:', message);
+		console.log('Affichage d\'un succès:', message);
 		showNotification(message, 'success');
 	}
 
@@ -608,7 +618,7 @@ ob_start();
 		loadExams();
 	});
 
-	// Ajouter les styles pour le modal
+	// Ajouter les styles pour le modal et les notifications
 	const style = document.createElement('style');
 	style.textContent = `
 		.modal {
@@ -618,9 +628,6 @@ ob_start();
 			width: 100%;
 			height: 100%;
 			background-color: rgba(0, 0, 0, 0.5);
-			display: flex;
-			justify-content: center;
-			align-items: center;
 			z-index: 1000;
 		}
 
@@ -631,7 +638,7 @@ ob_start();
 			width: 90%;
 			max-width: 500px;
 			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-			position: relative;
+			position: absolute;
 			top: 50%;
 			left: 50%;
 			transform: translate(-50%, -50%);
