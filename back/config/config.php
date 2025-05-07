@@ -20,7 +20,7 @@ define('DB_USER', getenv('DB_USER'));           // Ex: esgi
 define('DB_PASS', getenv('DB_PASS'));           // Mot de passe stocké dans App Service
 
 // URL de l’API pour communication front ↔ back
-define('API_BASE_URL', 'https://backend-votreapp.azurewebsites.net/api'); // Remplacer avec votre nom exact d’App Service
+define('API_BASE_URL', 'app-back-fullstack-prod-cxfgczgncsbzcxec.westeurope-01.azurewebsites.net/api'); // Remplacer avec votre nom exact d’App Service
 
 // Chemins d’accès (à ajuster selon votre structure)
 define('BASE_PATH', dirname(__DIR__));
