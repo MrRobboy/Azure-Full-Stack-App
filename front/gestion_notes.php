@@ -161,11 +161,11 @@ require_once 'templates/base.php';
 			console.log('Chargement des étudiants pour la classe:', classeId);
 			const {
 				data: classeResult
-			} = await fetchWithLogging(`api/classes/${classeId}/eleves`);
-			console.log('Informations de la classe reçues:', classeResult);
+			} = await fetchWithLogging(`api/users/classe/${classeId}`);
+			console.log('Informations des étudiants reçues:', classeResult);
 
 			if (!classeResult.success) {
-				throw new Error(classeResult.message || 'Erreur lors du chargement des informations de la classe');
+				throw new Error(classeResult.message || 'Erreur lors du chargement des étudiants');
 			}
 
 			const select = document.getElementById('etudiant');
