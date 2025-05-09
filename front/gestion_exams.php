@@ -318,8 +318,9 @@ ob_start();
 	</div>
 </div>
 
-<script src="js/error-messages.js"></script>
 <script src="js/notification-system.js"></script>
+<script src="js/error-messages.js"></script>
+<script src="js/config.js"></script>
 <script>
 	// Vérifier que les scripts sont chargés
 	console.log('Vérification du chargement des scripts...');
@@ -380,7 +381,7 @@ ob_start();
 			console.log('Chargement des matières...');
 			const {
 				data: result
-			} = await fetchWithLogging('api/matieres');
+			} = await fetchWithLogging(getApiUrl('matieres'));
 			console.log('Résultat matières:', result);
 
 			if (!result.success) {
@@ -408,7 +409,7 @@ ob_start();
 			console.log('Chargement des classes...');
 			const {
 				data: result
-			} = await fetchWithLogging('api/classes');
+			} = await fetchWithLogging(getApiUrl('classes'));
 			console.log('Résultat classes:', result);
 
 			if (!result.success) {
@@ -436,7 +437,7 @@ ob_start();
 			console.log('Chargement des examens...');
 			const {
 				data: result
-			} = await fetchWithLogging('api/exams');
+			} = await fetchWithLogging(getApiUrl('examens'));
 			console.log('Résultat examens:', result);
 
 			if (!result.success) {
@@ -518,7 +519,7 @@ ob_start();
 
 		try {
 			console.log('Envoi de la requête...');
-			const response = await fetch('api/exams', {
+			const response = await fetch(getApiUrl('examens'), {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -608,7 +609,7 @@ ob_start();
 			}
 
 			try {
-				const response = await fetch(`api/exams/${id_examen}`, {
+				const response = await fetch(`${getApiUrl('examens')}/${id_examen}`, {
 					method: 'PUT',
 					headers: {
 						'Content-Type': 'application/json'
@@ -635,7 +636,7 @@ ob_start();
 	// Fonction pour charger les matières dans le modal d'édition
 	async function loadMatieresForEdit(selectedMatiere) {
 		try {
-			const response = await fetch('api/matieres');
+			const response = await fetch(getApiUrl('matieres'));
 			const result = await response.json();
 
 			if (!result.success) {
@@ -660,7 +661,7 @@ ob_start();
 	// Fonction pour charger les classes dans le modal d'édition
 	async function loadClassesForEdit(selectedClasse) {
 		try {
-			const response = await fetch('api/classes');
+			const response = await fetch(getApiUrl('classes'));
 			const result = await response.json();
 
 			if (!result.success) {
@@ -698,7 +699,7 @@ ob_start();
 
 		try {
 			console.log('Tentative de suppression de l\'examen:', id_examen);
-			const response = await fetch(`api/exams/${id_examen}`, {
+			const response = await fetch(`${getApiUrl('examens')}/${id_examen}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json'

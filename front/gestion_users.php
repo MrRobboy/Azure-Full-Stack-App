@@ -245,12 +245,14 @@ ob_start();
 	</div>
 </div>
 
-<script src="/js/notification-system.js"></script>
+<script src="js/notification-system.js"></script>
+<script src="js/error-messages.js"></script>
+<script src="js/config.js"></script>
 <script>
 	// Fonction pour charger les classes
 	async function loadClasses() {
 		try {
-			const response = await fetch('/api/classes');
+			const response = await fetch(getApiUrl('classes'));
 			const data = await response.json();
 			if (data.success) {
 				const classes = data.data;
@@ -276,7 +278,7 @@ ob_start();
 	// Fonction pour charger les utilisateurs
 	async function loadUsers() {
 		try {
-			const response = await fetch('/api/users');
+			const response = await fetch(getApiUrl('users'));
 			const data = await response.json();
 			if (data.success) {
 				const tbody = document.getElementById('usersTableBody');
@@ -317,7 +319,7 @@ ob_start();
 		};
 
 		try {
-			const response = await fetch('/api/users', {
+			const response = await fetch(getApiUrl('users'), {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -373,7 +375,7 @@ ob_start();
 		}
 
 		try {
-			const response = await fetch(`/api/users/${userId}`, {
+			const response = await fetch(`${getApiUrl('users')}/${userId}`, {
 				method: 'PUT',
 				headers: {
 					'Content-Type': 'application/json'
@@ -402,7 +404,7 @@ ob_start();
 		}
 
 		try {
-			const response = await fetch(`/api/users/${userId}`, {
+			const response = await fetch(`${getApiUrl('users')}/${userId}`, {
 				method: 'DELETE'
 			});
 

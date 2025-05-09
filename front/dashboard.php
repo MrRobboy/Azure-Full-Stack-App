@@ -103,17 +103,20 @@ ob_start();
     </div>
 </div>
 
+<script src="js/notification-system.js"></script>
+<script src="js/error-messages.js"></script>
+<script src="js/config.js"></script>
 <script>
     // Fonction pour charger les compteurs
     async function loadCounters() {
         try {
             const [notesRes, matieresRes, classesRes, examensRes, profsRes, usersRes] = await Promise.all([
-                fetch('api/notes'),
-                fetch('api/matieres'),
-                fetch('api/classes'),
-                fetch('api/exams'),
-                fetch('api/profs'),
-                fetch('api/users')
+                fetch(getApiUrl('notes')),
+                fetch(getApiUrl('matieres')),
+                fetch(getApiUrl('classes')),
+                fetch(getApiUrl('examens')),
+                fetch(getApiUrl('profs')),
+                fetch(getApiUrl('users'))
             ]);
 
             const [notes, matieres, classes, examens, profs, users] = await Promise.all([
@@ -152,7 +155,7 @@ ob_start();
     // Fonction pour charger les statistiques
     async function loadStats() {
         try {
-            const response = await fetch('/api/notes');
+            const response = await fetch(getApiUrl('notes'));
             const notes = await response.json();
 
             // Regrouper les notes par matière

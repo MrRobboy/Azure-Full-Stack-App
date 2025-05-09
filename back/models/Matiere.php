@@ -9,40 +9,49 @@ class Matiere
 
 	public function __construct()
 	{
-		$this->db = DatabaseService::getInstance();
+		$this->db = DatabaseService::getInstance()->getConnection();
 		$this->errorService = ErrorService::getInstance();
 	}
 
-	public function getAllMatieres()
+	public function getAll()
 	{
 		try {
-			$conn = $this->db->getConnection();
-			$stmt = $conn->query("SELECT * FROM MATIERE ORDER BY nom");
-			$result = $stmt->fetchAll();
-
-			if ($result === false) {
-				throw new Exception("Erreur lors de la récupération des matières");
+			error_log("Tentative de récupération de toutes les matières");
+			$stmt = $this->db->prepare("SELECT * FROM MATIERE ORDER BY nom");
+			
+			if (!$stmt->execute()) {
+				error_log("Erreur lors de l'exécution de la requête");
+				return [];
 			}
 
+			$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+			error_log("Résultat de la requête: " . print_r($result, true));
 			return $result;
 		} catch (Exception $e) {
-			$this->errorService->logError("Erreur dans getAllMatieres: " . $e->getMessage(), 'database');
-			throw $e;
+			error_log("Erreur dans getAll: " . $e->getMessage());
+			$this->errorService->logError('Matiere::getAll', $e->getMessage());
+			return [];
 		}
 	}
 
-	public function getMatiereById($id)
+	public function getById($id)
 	{
 		try {
-			$conn = $this->db->getConnection();
-			$stmt = $conn->prepare("SELECT * FROM MATIERE WHERE id = ?");
-			$stmt->execute([$id]);
-			$result = $stmt->fetch();
-
-			if ($result === false) {
-				throw new Exception("Matière non trouvée");
+			error_log("Tentative de récupération de la matière avec l'ID: " . $id);
+			$stmt = $this->db->prepare("SELECT * FROM MATIERE WHERE id_matiere = ?");
+			
+			if (!$stmt->execute([$id])) {
+				error_log("Erreur lors de l'exécution de la requête");
+				return false;
 			}
 
+			$result = $stmt->fetch(PDO::FETCH_ASSOC);
+			if (!$result) {
+				error_log("Aucune matière trouvée avec l'ID: " . $id);
+				return false;
+			}
+
+			error_log("Matière trouvée: " . print_r($result, true));
 			return $result;
 		} catch (Exception $e) {
 			$this->errorService->logError("Erreur dans getMatiereById: " . $e->getMessage(), 'database');

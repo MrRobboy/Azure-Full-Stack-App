@@ -210,6 +210,7 @@ ob_start();
 
 <script src="js/notification-system.js"></script>
 <script src="js/error-messages.js"></script>
+<script src="js/config.js"></script>
 <script>
 	// Vérifier que les scripts sont chargés
 	console.log('Vérification du chargement des scripts...');
@@ -228,7 +229,7 @@ ob_start();
 	async function loadProfs() {
 		try {
 			console.log('Chargement des professeurs...');
-			const response = await fetch('api/profs');
+			const response = await fetch(getApiUrl('profs'));
 			const result = await response.json();
 			console.log('Résultat professeurs:', result);
 
@@ -279,7 +280,7 @@ ob_start();
 		}
 
 		try {
-			const response = await fetch('api/profs', {
+			const response = await fetch(getApiUrl('profs'), {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -357,7 +358,7 @@ ob_start();
 			}
 
 			try {
-				const response = await fetch(`api/profs/${id}`, {
+				const response = await fetch(`${getApiUrl('profs')}/${id}`, {
 					method: 'PUT',
 					headers: {
 						'Content-Type': 'application/json'
@@ -397,7 +398,7 @@ ob_start();
 
 		try {
 			console.log('Tentative de suppression du professeur:', id);
-			const response = await fetch(`api/profs/${id}`, {
+			const response = await fetch(`${getApiUrl('profs')}/${id}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json'

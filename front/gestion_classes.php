@@ -220,6 +220,7 @@ ob_start();
 
 <script src="js/notification-system.js"></script>
 <script src="js/error-messages.js"></script>
+<script src="js/config.js"></script>
 <script>
 	// Vérifier que les scripts sont chargés
 	console.log('Vérification du chargement des scripts...');
@@ -238,7 +239,7 @@ ob_start();
 	async function loadClasses() {
 		try {
 			console.log('Chargement des classes...');
-			const response = await fetch('api/classes');
+			const response = await fetch(getApiUrl('classes'));
 			const result = await response.json();
 			console.log('Résultat classes:', result);
 
@@ -290,7 +291,7 @@ ob_start();
 		}
 
 		try {
-			const response = await fetch('api/classes', {
+			const response = await fetch(getApiUrl('classes'), {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -375,7 +376,7 @@ ob_start();
 			}
 
 			try {
-				const response = await fetch(`api/classes/${id}`, {
+				const response = await fetch(`${getApiUrl('classes')}/${id}`, {
 					method: 'PUT',
 					headers: {
 						'Content-Type': 'application/json'
@@ -415,7 +416,7 @@ ob_start();
 
 		try {
 			console.log('Tentative de suppression de la classe:', id);
-			const response = await fetch(`api/classes/${id}`, {
+			const response = await fetch(`${getApiUrl('classes')}/${id}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json'
