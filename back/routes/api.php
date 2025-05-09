@@ -6,7 +6,7 @@ error_reporting(E_ALL);
 
 // Configuration des logs
 ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/../../logs/php_errors.log');
+ini_set('error_log', '/var/log/apache2/php_errors.log');
 
 // Inclusion des fichiers nécessaires
 require_once __DIR__ . '/../controllers/AuthController.php';
@@ -27,6 +27,9 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization, Accept');
 
 // Log des headers de la requête
 error_log("Headers de la requête: " . print_r(getallheaders(), true));
+error_log("Méthode HTTP: " . $_SERVER['REQUEST_METHOD']);
+error_log("URI: " . $_SERVER['REQUEST_URI']);
+error_log("Raw input: " . file_get_contents('php://input'));
 
 $errorService = ErrorService::getInstance();
 
