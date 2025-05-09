@@ -66,6 +66,9 @@ require_once 'templates/base.php';
 		console.group(`🌐 Requête API: ${url}`);
 		console.log('Options:', options);
 
+		// Ajouter les cookies de session aux options
+		options.credentials = 'include';
+
 		try {
 			const response = await fetch(url, options);
 			const data = await response.json();

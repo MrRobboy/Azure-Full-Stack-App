@@ -334,12 +334,41 @@ ob_start();
 		console.error('Le script notification-system.js n\'est pas chargé correctement');
 	}
 
+	// Fonction utilitaire pour logger les requêtes et réponses
+	async function fetchWithLogging(url, options = {}) {
+		console.group(`🌐 Requête API: ${url}`);
+		console.log('Options:', options);
+
+		// Ajouter les cookies de session aux options
+		options.credentials = 'include';
+
+		try {
+			const response = await fetch(url, options);
+			const data = await response.json();
+
+			console.log('Status:', response.status);
+			console.log('Headers:', Object.fromEntries(response.headers.entries()));
+			console.log('Réponse:', data);
+
+			console.groupEnd();
+			return {
+				response,
+				data
+			};
+		} catch (error) {
+			console.error('Erreur:', error);
+			console.groupEnd();
+			throw error;
+		}
+	}
+
 	// Fonction pour charger les matières
 	async function loadMatieres() {
 		try {
 			console.log('Chargement des matières...');
-			const response = await fetch('api/matieres');
-			const result = await response.json();
+			const {
+				data: result
+			} = await fetchWithLogging('api/matieres');
 			console.log('Résultat matières:', result);
 
 			if (!result.success) {
@@ -365,8 +394,9 @@ ob_start();
 	async function loadClasses() {
 		try {
 			console.log('Chargement des classes...');
-			const response = await fetch('api/classes');
-			const result = await response.json();
+			const {
+				data: result
+			} = await fetchWithLogging('api/classes');
 			console.log('Résultat classes:', result);
 
 			if (!result.success) {
@@ -392,8 +422,9 @@ ob_start();
 	async function loadExams() {
 		try {
 			console.log('Chargement des examens...');
-			const response = await fetch('api/exams');
-			const result = await response.json();
+			const {
+				data: result
+			} = await fetchWithLogging('api/exams');
 			console.log('Résultat examens:', result);
 
 			if (!result.success) {
@@ -767,6 +798,7 @@ ob_start();
 
 	// Ajouter la fonction manageNotes
 	function manageNotes(examId) {
+		console.log('Redirection vers la gestion des notes pour l\'examen:', examId);
 		window.location.href = `gestion_notes.php?exam_id=${examId}`;
 	}
 </script>
