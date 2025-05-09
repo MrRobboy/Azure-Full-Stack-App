@@ -55,8 +55,8 @@ class Eleve
 			$stmt = $this->db->prepare("
 				SELECT u.*, c.nom_classe 
 				FROM USER u
-				JOIN CLASSE c ON u.id_classe = c.id_classe
-				WHERE u.id_classe = ? AND u.type = 'eleve'
+				JOIN CLASSE c ON u.classe = c.id_classe
+				WHERE u.classe = ?
 				ORDER BY u.nom ASC, u.prenom ASC
 			");
 
