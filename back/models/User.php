@@ -38,7 +38,13 @@ class User
 	public function getByClasse($classeId)
 	{
 		try {
-			$stmt = $this->db->prepare("SELECT id_user, nom, prenom, email, id_classe FROM USER WHERE id_classe = ?");
+			$stmt = $this->db->prepare("
+				SELECT u.id_user, u.nom, u.prenom, u.email, u.id_classe, c.nom_classe 
+				FROM USER u 
+				JOIN CLASSE c ON u.id_classe = c.id_classe 
+				WHERE u.id_classe = ? AND u.type = 'eleve'
+				ORDER BY u.nom ASC, u.prenom ASC
+			");
 			if (!$stmt) {
 				throw new Exception('Erreur de préparation de la requête', 500);
 			}
@@ -46,7 +52,7 @@ class User
 			$stmt->execute([$classeId]);
 			return $stmt->fetchAll(PDO::FETCH_ASSOC);
 		} catch (PDOException $e) {
-			throw new Exception('Erreur lors de la récupération des utilisateurs', 500);
+			throw new Exception('Erreur lors de la récupération des utilisateurs: ' . $e->getMessage(), 500);
 		}
 	}
 

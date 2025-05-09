@@ -539,12 +539,19 @@ try {
 
 	// Routes pour les utilisateurs
 	if ($segments[0] === 'users') {
+		checkAuth();
+
 		if ($method === 'GET') {
-			try {
-				$result = $userController->getAllUsers();
-				sendResponse($result);
-			} catch (Exception $e) {
-				sendResponse(['success' => false, 'message' => $e->getMessage()], 500);
+			if (isset($segments[1]) && $segments[1] === 'classe' && isset($segments[2])) {
+				$classeId = $segments[2];
+				$users = $userController->getUsersByClasse($classeId);
+				sendResponse($users);
+			} else if (isset($segments[1])) {
+				$user = $userController->getUserById($segments[1]);
+				sendResponse($user);
+			} else {
+				$users = $userController->getAllUsers();
+				sendResponse($users);
 			}
 		} elseif ($method === 'POST') {
 			try {

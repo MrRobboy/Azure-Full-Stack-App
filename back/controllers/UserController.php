@@ -142,4 +142,18 @@ class UserController
 			throw new Exception($e->getMessage());
 		}
 	}
+
+	public function getUsersByClasse($classeId)
+	{
+		try {
+			$users = $this->userModel->getByClasse($classeId);
+			return [
+				'success' => true,
+				'data' => $users
+			];
+		} catch (Exception $e) {
+			$this->errorService->logError('user', $e->getMessage());
+			throw new Exception($e->getMessage());
+		}
+	}
 }
