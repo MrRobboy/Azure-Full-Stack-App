@@ -94,6 +94,32 @@ class NoteController
 		}
 	}
 
+	public function getNotesByExamen($id_examen)
+	{
+		try {
+			if (!is_numeric($id_examen)) {
+				throw new Exception("ID examen invalide");
+			}
+			$result = $this->noteModel->getByExamen($id_examen);
+			if ($result === false) {
+				throw new Exception("Erreur lors de la récupération des notes de l'examen");
+			}
+			if (!is_array($result)) {
+				$result = [];
+			}
+			return [
+				'success' => true,
+				'data' => $result
+			];
+		} catch (Exception $e) {
+			$this->errorService->logError('NoteController::getNotesByExamen', $e->getMessage());
+			return [
+				'success' => false,
+				'error' => $e->getMessage()
+			];
+		}
+	}
+
 	public function createNote($id_eleve, $id_matiere, $id_examen, $valeur)
 	{
 		try {

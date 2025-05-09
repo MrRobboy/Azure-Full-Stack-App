@@ -99,6 +99,33 @@ class Note
 		}
 	}
 
+	public function getByExamen($id_examen)
+	{
+		try {
+			$stmt = $this->db->prepare("
+				SELECT n.*, u.nom, u.prenom
+				FROM NOTE n
+				JOIN USER u ON n.id_eleve = u.id_user
+				WHERE n.id_examen = ?
+				ORDER BY u.nom ASC, u.prenom ASC
+			");
+
+			if (!$stmt->execute([$id_examen])) {
+				throw new Exception("Erreur lors de l'exécution de la requête");
+			}
+
+			$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+			if ($result === false) {
+				return [];
+			}
+
+			return $result;
+		} catch (Exception $e) {
+			$this->errorService->logError('Note::getByExamen', $e->getMessage());
+			return [];
+		}
+	}
+
 	public function create($id_eleve, $id_matiere, $id_examen, $valeur)
 	{
 		try {

@@ -185,6 +185,8 @@ try {
 			if (isset($segments[1])) {
 				if ($segments[1] === 'eleve' && isset($segments[2])) {
 					sendResponse($noteController->getNotesByEleve($segments[2]));
+				} else if ($segments[1] === 'exam' && isset($segments[2])) {
+					sendResponse($noteController->getNotesByExamen($segments[2]));
 				} else {
 					sendResponse($noteController->getNoteById($segments[1]));
 				}
