@@ -71,6 +71,7 @@ require_once 'templates/base.php';
 	}
 
 	const examId = <?php echo $examId; ?>;
+	let examInfo = null; // Variable globale pour stocker les informations de l'examen
 	console.log('🚀 Initialisation de la page de gestion des notes');
 	console.log('ID de l\'examen:', examId);
 
@@ -128,11 +129,11 @@ require_once 'templates/base.php';
 
 			console.log('Informations de l\'examen reçues:', result.data);
 
-			// Stocker les informations de l'examen pour une utilisation ultérieure
-			window.examInfo = result.data;
+			// Stocker les informations de l'examen dans la variable globale
+			examInfo = result.data;
 
-			const examInfo = document.getElementById('examInfo');
-			examInfo.innerHTML = `
+			const examInfoDiv = document.getElementById('examInfo');
+			examInfoDiv.innerHTML = `
 				<div class="card-body">
 					<h3>${result.data.titre}</h3>
 					<p>Matière : ${result.data.nom_matiere}</p>
@@ -254,6 +255,11 @@ require_once 'templates/base.php';
 		const form = event.target;
 		const formData = new FormData(form);
 
+		if (!examInfo) {
+			NotificationSystem.error('Les informations de l\'examen ne sont pas disponibles');
+			return;
+		}
+
 		try {
 			const {
 				data: result
@@ -278,6 +284,7 @@ require_once 'templates/base.php';
 			form.reset();
 			await loadNotes(examId);
 		} catch (error) {
+			console.error('Erreur lors de l\'ajout de la note:', error);
 			NotificationSystem.error(error.message);
 		}
 	}
