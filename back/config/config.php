@@ -22,7 +22,7 @@ define('DB_USER', 'root');
 define('DB_PASS', 'Respons11');
 
 // URL de l'API pour communication front ↔ back
-define('API_BASE_URL', 'http://192.168.7.137:727/api');
+define('API_BASE_URL', 'http://localhost:727/api');
 
 // Chemins d'accès
 define('BASE_PATH', dirname(__DIR__));

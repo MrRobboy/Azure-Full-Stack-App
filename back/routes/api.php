@@ -30,7 +30,7 @@ try {
 
 // Configuration des headers pour les requêtes API
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: http://192.168.7.137:727');
+header('Access-Control-Allow-Origin: http://localhost:727');
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, Accept');
