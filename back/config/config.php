@@ -1,6 +1,6 @@
 <?php
 // Environnement : 'development' ou 'production'
-define('ENVIRONMENT', 'production');
+define('ENVIRONMENT', 'development'); // Changé en development pour le debug
 
 // Gestion des erreurs
 if (ENVIRONMENT === 'development') {
@@ -13,16 +13,16 @@ if (ENVIRONMENT === 'development') {
     error_reporting(0);
 }
 
-// Configuration de la base de données Azure SQL
-define('DB_HOST', getenv('DB_HOST'));           // Ex: sql-srv-fullstack-prod.database.windows.net
-define('DB_NAME', getenv('DB_NAME'));           // Ex: sql-db-fullstack-prod
-define('DB_USER', getenv('DB_USER'));           // Ex: esgi
-define('DB_PASS', getenv('DB_PASS'));           // Mot de passe stocké dans App Service
+// Configuration de la base de données MariaDB
+define('DB_HOST', 'localhost');           // Hôte local de MariaDB
+define('DB_NAME', 'gestion_notes');           // Nom de votre base de données
+define('DB_USER', 'root');               // Utilisateur par défaut (à changer en production)
+define('DB_PASS', 'Respons11');                   // Mot de passe (à configurer en production)
 
-// URL de l’API pour communication front ↔ back
-define('API_BASE_URL', 'app-back-fullstack-prod-cxfgczgncsbzcxec.westeurope-01.azurewebsites.net/api'); // Remplacer avec votre nom exact d’App Service
+// URL de l'API pour communication front ↔ back
+define('API_BASE_URL', 'http://localhost:727/api');
 
-// Chemins d’accès (à ajuster selon votre structure)
+// Chemins d'accès (à ajuster selon votre structure)
 define('BASE_PATH', dirname(__DIR__));
 define('FRONT_PATH', dirname(BASE_PATH) . '/front');
 define('BACK_PATH', BASE_PATH);
@@ -32,7 +32,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Logs utiles pour debug (éviter en production)
+// Logs utiles pour debug
 if (ENVIRONMENT === 'development') {
     error_log("Configuration de la base de données :");
     error_log("DB_HOST = " . DB_HOST);

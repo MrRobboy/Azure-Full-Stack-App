@@ -1,4 +1,15 @@
 Je suis en train de coder sur un windows.
-Ce code ira dans un github depuis lequel l'utilisateur "user-00" sur un debian le récupérera l'affichera en localhost sur le port 727.
-Ce site web aura comme racine /var/www/azure et là où Azure-Full-Stack-App sera mis à jour à chaque git push/pull.
+Ce code ira dans un github depuis lequel l'utilisateur "user-00"
+sur un debian le récupérera l'affichera en localhost sur le port 727.
+Ce site web aura comme racine /var/www/azure et là où Azure-Full-Stack-App
+sera mis à jour à chaque git push/pull.
+Ma bdd est une MariaDB avec un phpmyadmin connecté pour mieux visualiser la chose.
+
 Dans apache2, la conf du site-enabled se nomme "azure-app.conf"
+L'objectif du site web est de mettre en place une interface où l'on peut mettre des notes à des élèves.
+Toute la structure de la base de donnée est dans le dossier BDD -> MCD_ddl.sql
+L'idée est que dès qu'il y a une erreur ou une notification basique, qu'il apparaisse dans une fenêtre
+qui disparait. Cette méthode a dans mes souvenirs déjà été créé et est fonctionnel.
+
+Il faut s'assurer que l'api soit correctement faite et soit cohérente, et ensuite s'assurer que toutes les autres pages
+communiquent proprement avec l'api.
