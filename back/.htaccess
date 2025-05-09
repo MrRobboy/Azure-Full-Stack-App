@@ -11,10 +11,10 @@ RewriteEngine On
 # Base pour les routes API
 RewriteBase /api/
 
-# Redirection des requêtes vers les fichiers API
+# Redirection de toutes les requêtes API vers api.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ api.php [QSA,L]
+RewriteRule ^(.*)$ routes/api.php [QSA,L]
 
 # Désactivation de l'affichage du contenu des répertoires
 Options -Indexes
