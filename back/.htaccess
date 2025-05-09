@@ -34,7 +34,4 @@ Options -Indexes
 <FilesMatch "^(config\.php|\.htaccess)$">
     Order allow,deny
     Deny from all
-</FilesMatch>
-
-# Activation des logs détaillés
-LogLevel debug rewrite:trace8 
+</FilesMatch> 
