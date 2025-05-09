@@ -212,17 +212,9 @@ ob_start();
 <script src="js/error-messages.js"></script>
 <script src="js/config.js"></script>
 <script>
-	// Vérifier que les scripts sont chargés
-	console.log('Vérification du chargement des scripts...');
-	console.log('NotificationSystem:', typeof NotificationSystem);
-	console.log('ErrorMessages:', typeof ErrorMessages);
-
-	if (typeof NotificationSystem === 'undefined') {
-		console.error('Le script notification-system.js n\'est pas chargé correctement');
-	}
-
-	if (typeof ErrorMessages === 'undefined') {
-		console.error('Le script error-messages.js n\'est pas chargé correctement');
+	// Fonction pour obtenir l'URL de l'API
+	function getApiUrl(endpoint) {
+		return `api/${endpoint}`;
 	}
 
 	// Fonction pour charger les professeurs
@@ -231,10 +223,9 @@ ob_start();
 			console.log('Chargement des professeurs...');
 			const response = await fetch(getApiUrl('profs'));
 			const result = await response.json();
-			console.log('Résultat professeurs:', result);
 
 			if (!result.success) {
-				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
+				throw new Error(result.message || 'Erreur lors du chargement des professeurs');
 			}
 
 			const tbody = document.querySelector('#profsTable tbody');

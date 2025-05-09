@@ -468,72 +468,42 @@ try {
 
 	// Routes des professeurs
 	if ($segments[0] === 'profs') {
-		error_log("Traitement de la route profs - " . date('Y-m-d H:i:s'));
-
-		if ($method === 'GET') {
-			try {
+		try {
+			if ($method === 'GET') {
 				if (isset($segments[1])) {
-					error_log("Récupération du professeur avec l'ID: " . $segments[1]);
+					error_log("Récupération du professeur: " . $segments[1]);
 					$result = $profController->getProfById($segments[1]);
-					error_log("Données du professeur: " . print_r($result, true));
+					error_log("Résultat: " . print_r($result, true));
 					sendResponse($result);
 				} else {
 					error_log("Récupération de tous les professeurs");
 					$result = $profController->getAllProfs();
-					error_log("Données des professeurs: " . print_r($result, true));
+					error_log("Résultat: " . print_r($result, true));
 					sendResponse($result);
 				}
-			} catch (Exception $e) {
-				error_log("Erreur: " . $e->getMessage());
-				sendResponse(['message' => $e->getMessage()], 500);
-			}
-		} elseif ($method === 'POST') {
-			try {
-				error_log("Création d'un nouveau professeur");
+			} elseif ($method === 'POST') {
 				$data = json_decode(file_get_contents('php://input'), true);
-				error_log("Données reçues: " . print_r($data, true));
-
 				if (!$data || !isset($data['nom']) || !isset($data['prenom']) || !isset($data['email']) || !isset($data['password'])) {
 					throw new Exception("Tous les champs sont obligatoires");
 				}
-
 				$result = $profController->createProf($data);
-				error_log("Professeur créé avec succès: " . print_r($result, true));
-				sendResponse($result, 201);
-			} catch (Exception $e) {
-				error_log("Erreur: " . $e->getMessage());
-				sendResponse(['message' => $e->getMessage()], 400);
-			}
-		} elseif ($method === 'PUT' && isset($segments[1])) {
-			try {
-				error_log("Mise à jour du professeur avec l'ID: " . $segments[1]);
+				sendResponse($result);
+			} elseif ($method === 'PUT' && isset($segments[1])) {
 				$data = json_decode(file_get_contents('php://input'), true);
-				error_log("Données reçues: " . print_r($data, true));
-
 				if (!$data || !isset($data['nom']) || !isset($data['prenom']) || !isset($data['email'])) {
 					throw new Exception("Tous les champs sont obligatoires");
 				}
-
 				$result = $profController->updateProf($segments[1], $data);
-				error_log("Professeur mis à jour avec succès: " . print_r($result, true));
 				sendResponse($result);
-			} catch (Exception $e) {
-				error_log("Erreur: " . $e->getMessage());
-				sendResponse(['message' => $e->getMessage()], 400);
-			}
-		} elseif ($method === 'DELETE' && isset($segments[1])) {
-			try {
-				error_log("Suppression du professeur avec l'ID: " . $segments[1]);
+			} elseif ($method === 'DELETE' && isset($segments[1])) {
 				$result = $profController->deleteProf($segments[1]);
-				error_log("Professeur supprimé avec succès");
-				sendResponse(['message' => 'Professeur supprimé avec succès']);
-			} catch (Exception $e) {
-				error_log("Erreur: " . $e->getMessage());
-				sendResponse(['message' => $e->getMessage()], 400);
+				sendResponse($result);
+			} else {
+				throw new Exception("Méthode non autorisée");
 			}
-		} else {
-			error_log("Méthode non autorisée: " . $method);
-			sendResponse(['message' => 'Méthode non autorisée'], 405);
+		} catch (Exception $e) {
+			error_log("Erreur dans la route profs: " . $e->getMessage());
+			sendResponse(['success' => false, 'message' => $e->getMessage()], 500);
 		}
 	}
 
