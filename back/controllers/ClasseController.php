@@ -214,19 +214,6 @@ class ClasseController
 		try {
 			error_log("Tentative de récupération des élèves de la classe: " . $id_classe);
 
-			// Vérifier d'abord si la classe existe
-			$classe = $this->classeModel->getById($id_classe);
-			if (!$classe) {
-				error_log("Classe non trouvée avec l'ID: " . $id_classe);
-				return [
-					'success' => false,
-					'message' => 'Classe non trouvée',
-					'data' => []
-				];
-			}
-
-			error_log("Classe trouvée: " . print_r($classe, true));
-
 			// Récupérer les élèves
 			$eleves = $this->eleveModel->getByClasse($id_classe);
 			error_log("Résultat de getByClasse: " . print_r($eleves, true));

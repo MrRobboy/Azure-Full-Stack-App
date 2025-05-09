@@ -52,6 +52,20 @@ class Eleve
 	{
 		try {
 			error_log("Tentative de récupération des élèves pour la classe: " . $id_classe);
+
+			// Vérifier d'abord si la classe existe
+			$stmt = $this->db->prepare("SELECT * FROM CLASSE WHERE id_classe = ?");
+			$stmt->execute([$id_classe]);
+			$classe = $stmt->fetch(PDO::FETCH_ASSOC);
+
+			if (!$classe) {
+				error_log("Classe non trouvée avec l'ID: " . $id_classe);
+				return [];
+			}
+
+			error_log("Classe trouvée: " . print_r($classe, true));
+
+			// Récupérer les élèves
 			$stmt = $this->db->prepare("
 				SELECT u.*, c.nom_classe 
 				FROM USER u
