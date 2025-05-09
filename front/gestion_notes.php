@@ -141,25 +141,40 @@ require_once 'templates/base.php';
 	async function loadStudents(classeId) {
 		try {
 			console.log('Chargement des étudiants pour la classe:', classeId);
+			// D'abord, obtenir les informations de la classe
 			const {
-				data: result
+				data: classeResult
 			} = await fetchWithLogging(`api/classes/${classeId}/eleves`);
+			console.log('Informations de la classe reçues:', classeResult);
 
-			if (!result.success) {
-				throw new Error(result.message || 'Erreur lors du chargement des étudiants');
+			if (!classeResult.success) {
+				throw new Error(classeResult.message || 'Erreur lors du chargement des informations de la classe');
 			}
 
-			console.log('Étudiants reçus:', result.data);
+			// Ensuite, obtenir les étudiants de la classe
+			const {
+				data: elevesResult
+			} = await fetchWithLogging(`api/classes/${classeId}/etudiants`);
+			console.log('Étudiants reçus:', elevesResult);
+
+			if (!elevesResult.success) {
+				throw new Error(elevesResult.message || 'Erreur lors du chargement des étudiants');
+			}
 
 			const select = document.getElementById('etudiant');
 			select.innerHTML = '<option value="">Sélectionnez un étudiant</option>';
 
-			result.data.forEach(student => {
-				const option = document.createElement('option');
-				option.value = student.id_user;
-				option.textContent = `${student.nom} ${student.prenom}`;
-				select.appendChild(option);
-			});
+			if (elevesResult.data && Array.isArray(elevesResult.data)) {
+				elevesResult.data.forEach(student => {
+					const option = document.createElement('option');
+					option.value = student.id_user;
+					option.textContent = `${student.nom} ${student.prenom}`;
+					select.appendChild(option);
+				});
+			} else {
+				console.warn('Aucun étudiant trouvé pour cette classe');
+				select.innerHTML = '<option value="">Aucun étudiant disponible</option>';
+			}
 		} catch (error) {
 			console.error('Erreur lors du chargement des étudiants:', error);
 			NotificationSystem.error(error.message);
@@ -188,8 +203,8 @@ require_once 'templates/base.php';
 				<div class="card-body">
 			`;
 
-			if (!result.data || result.data.length === 0) {
-				notesList.querySelector('.card-body').innerHTML = '<p>Aucune note disponible</p>';
+			if (!result.data || !Array.isArray(result.data) || result.data.length === 0) {
+				notesList.querySelector('.card-body').innerHTML = '<p>Aucune note disponible pour cet examen</p>';
 				return;
 			}
 
