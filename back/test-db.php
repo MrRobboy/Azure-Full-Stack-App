@@ -1,16 +1,36 @@
 <?php
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/config/config.php';
+require_once __DIR__ . '/services/DatabaseService.php';
 
 try {
-    $dsn = "sqlsrv:server=tcp:" . DB_HOST . ",1433;Database=" . DB_NAME;
-    $conn = new PDO($dsn, DB_USER, DB_PASS);
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $db = DatabaseService::getInstance();
+    $conn = $db->getConnection();
 
-    // Requête de test
-    $stmt = $conn->query("SELECT GETDATE() AS current_time");
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    echo "✅ Connexion réussie à Azure SQL Database.<br>";
-    echo "Heure actuelle du serveur SQL : " . $row['current_time'];
-} catch (PDOException $e) {
-    echo "❌ Erreur de connexion : " . $e->getMessage();
+    // Test basic connection
+    echo "Testing database connection...\n";
+    $result = $conn->query("SELECT 1");
+    echo "Basic query successful\n";
+
+    // Test tables
+    echo "\nTesting table access...\n";
+
+    // Test MATIERE table
+    $stmt = $conn->query("SELECT COUNT(*) FROM MATIERE");
+    $count = $stmt->fetchColumn();
+    echo "MATIERE table: $count records found\n";
+
+    // Test CLASSE table
+    $stmt = $conn->query("SELECT COUNT(*) FROM CLASSE");
+    $count = $stmt->fetchColumn();
+    echo "CLASSE table: $count records found\n";
+
+    // Test EXAM table
+    $stmt = $conn->query("SELECT COUNT(*) FROM EXAM");
+    $count = $stmt->fetchColumn();
+    echo "EXAM table: $count records found\n";
+
+    echo "\nAll tests completed successfully!\n";
+} catch (Exception $e) {
+    echo "Error: " . $e->getMessage() . "\n";
+    echo "Stack trace:\n" . $e->getTraceAsString() . "\n";
 }
