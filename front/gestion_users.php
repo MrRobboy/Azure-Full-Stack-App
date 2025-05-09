@@ -249,6 +249,11 @@ ob_start();
 <script src="js/error-messages.js"></script>
 <script src="js/config.js"></script>
 <script>
+	// Fonction pour obtenir l'URL de l'API
+	function getApiUrl(endpoint) {
+		return `api/${endpoint}`;
+	}
+
 	// Fonction pour charger les classes
 	async function loadClasses() {
 		try {
