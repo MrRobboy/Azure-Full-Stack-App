@@ -263,8 +263,9 @@ require_once 'templates/base.php';
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
-					exam_id: examId,
-					user_id: formData.get('etudiant'),
+					id_examen: examId,
+					id_eleve: formData.get('etudiant'),
+					id_matiere: examInfo.id_matiere,
 					valeur: formData.get('note')
 				})
 			});
