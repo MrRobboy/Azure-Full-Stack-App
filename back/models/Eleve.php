@@ -56,41 +56,45 @@ class Eleve
 			// Requête de débogage pour voir tous les utilisateurs
 			$debugStmt = $this->db->query("SELECT * FROM USER");
 			$allUsers = $debugStmt->fetchAll(PDO::FETCH_ASSOC);
-			error_log("Tous les utilisateurs dans la base de données: " . print_r($allUsers, true));
 
 			// Requête de débogage pour voir la classe
 			$debugStmt = $this->db->prepare("SELECT * FROM CLASSE WHERE id_classe = ?");
 			$debugStmt->execute([$id_classe]);
 			$classe = $debugStmt->fetch(PDO::FETCH_ASSOC);
-			error_log("Classe recherchée: " . print_r($classe, true));
 
 			// Récupérer les élèves
-			$stmt = $this->db->prepare("
+			$sql = "
 				SELECT u.*, c.nom_classe 
 				FROM USER u
 				JOIN CLASSE c ON u.classe = c.id_classe
 				WHERE u.classe = ?
 				ORDER BY u.nom ASC, u.prenom ASC
-			");
+			";
 
-			error_log("Requête SQL préparée");
+			$stmt = $this->db->prepare($sql);
 			$result = $stmt->execute([$id_classe]);
-			error_log("Exécution de la requête: " . ($result ? "succès" : "échec"));
-
-			if (!$result) {
-				error_log("Erreur lors de l'exécution de la requête: " . print_r($stmt->errorInfo(), true));
-				return [];
-			}
-
 			$eleves = $stmt->fetchAll(PDO::FETCH_ASSOC);
-			error_log("Nombre d'élèves trouvés: " . count($eleves));
-			error_log("Données des élèves: " . print_r($eleves, true));
 
-			return $eleves;
+			// Retourner les données de débogage avec les résultats
+			return [
+				'debug' => [
+					'sql' => $sql,
+					'params' => [$id_classe],
+					'all_users' => $allUsers,
+					'classe' => $classe,
+					'result_count' => count($eleves)
+				],
+				'data' => $eleves
+			];
 		} catch (Exception $e) {
 			error_log("Exception dans getByClasse: " . $e->getMessage());
 			$this->errorService->logError('Eleve::getByClasse', $e->getMessage());
-			return [];
+			return [
+				'debug' => [
+					'error' => $e->getMessage()
+				],
+				'data' => []
+			];
 		}
 	}
 
