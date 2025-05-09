@@ -199,27 +199,10 @@ require_once 'templates/base.php';
 				throw new Error(result.message || 'Erreur lors de la récupération de la note');
 			}
 
-			const note = prompt('Entrez la nouvelle note :', result.data.valeur);
-			if (note === null) return;
-
-			const updateResponse = await fetch(`/api/notes/${noteId}`, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					valeur: note
-				})
-			});
-
-			const updateResult = await updateResponse.json();
-
-			if (!updateResult.success) {
-				throw new Error(updateResult.message || 'Erreur lors de la modification de la note');
-			}
-
-			NotificationSystem.success('Note modifiée avec succès');
-			await loadNotes(examId);
+			const note = result.data;
+			const form = document.getElementById('noteForm');
+			form.querySelector('#etudiant').value = note.id_eleve;
+			form.querySelector('#note').value = note.valeur;
 		} catch (error) {
 			NotificationSystem.error(error.message);
 		}
@@ -227,11 +210,11 @@ require_once 'templates/base.php';
 
 	// Fonction pour supprimer une note
 	async function deleteNote(noteId) {
-		try {
-			if (!confirm('Êtes-vous sûr de vouloir supprimer cette note ?')) {
-				return;
-			}
+		if (!confirm('Êtes-vous sûr de vouloir supprimer cette note ?')) {
+			return;
+		}
 
+		try {
 			const response = await fetch(`/api/notes/${noteId}`, {
 				method: 'DELETE'
 			});
@@ -251,7 +234,10 @@ require_once 'templates/base.php';
 
 	// Initialisation
 	document.addEventListener('DOMContentLoaded', () => {
+		// Chargement des informations de l'examen
 		loadExamInfo();
+
+		// Gestion du formulaire d'ajout de note
 		document.getElementById('noteForm').addEventListener('submit', addNote);
 	});
 </script>
