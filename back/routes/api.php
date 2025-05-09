@@ -301,17 +301,19 @@ try {
 					if ($segments[1] === 'eleves' && isset($segments[2])) {
 						error_log("Récupération des élèves de la classe: " . $segments[2]);
 						$result = $classeController->getElevesByClasse($segments[2]);
+						error_log("Résultat de getElevesByClasse: " . print_r($result, true));
+						sendResponse($result);
 					} else {
 						error_log("Récupération de la classe avec l'ID: " . $segments[1]);
 						$result = $classeController->getClasseById($segments[1]);
 						error_log("Résultat de getClasseById: " . print_r($result, true));
+						sendResponse($result);
 					}
 				} else {
 					error_log("Récupération de toutes les classes");
 					$result = $classeController->getAllClasses();
+					sendResponse($result);
 				}
-				error_log("Envoi de la réponse: " . print_r($result, true));
-				sendResponse($result);
 			} elseif ($method === 'POST') {
 				$data = json_decode(file_get_contents('php://input'), true);
 				if (!$data) {
