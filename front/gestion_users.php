@@ -245,22 +245,9 @@ ob_start();
 	</div>
 </div>
 
-<script src="/assets/js/notification-system.js"></script>
-<script src="/assets/js/error-messages.js"></script>
+<script src="/js/notification-system.js"></script>
+<script src="/js/error-messages.js"></script>
 <script>
-	// Vérifier que les scripts sont chargés
-	console.log('Vérification du chargement des scripts...');
-	console.log('NotificationSystem:', typeof NotificationSystem);
-	console.log('ErrorMessages:', typeof ErrorMessages);
-
-	if (typeof NotificationSystem === 'undefined') {
-		console.error('Le script notification-system.js n\'est pas chargé correctement');
-	}
-
-	if (typeof ErrorMessages === 'undefined') {
-		console.error('Le script error-messages.js n\'est pas chargé correctement');
-	}
-
 	// Fonction pour charger les classes
 	async function loadClasses() {
 		try {
@@ -283,7 +270,7 @@ ob_start();
 			}
 		} catch (error) {
 			console.error('Erreur lors du chargement des classes:', error);
-			showNotification('Erreur lors du chargement des classes', 'error');
+			showError('Erreur lors du chargement des classes');
 		}
 	}
 
@@ -314,7 +301,7 @@ ob_start();
 			}
 		} catch (error) {
 			console.error('Erreur lors du chargement des utilisateurs:', error);
-			showNotification('Erreur lors du chargement des utilisateurs', 'error');
+			showError('Erreur lors du chargement des utilisateurs');
 		}
 	}
 
@@ -341,15 +328,15 @@ ob_start();
 
 			const data = await response.json();
 			if (data.success) {
-				showNotification('Utilisateur ajouté avec succès', 'success');
+				showSuccess('Utilisateur ajouté avec succès');
 				this.reset();
 				loadUsers();
 			} else {
-				showNotification(data.message || 'Erreur lors de l\'ajout de l\'utilisateur', 'error');
+				showError(data.message || 'Erreur lors de l\'ajout de l\'utilisateur');
 			}
 		} catch (error) {
 			console.error('Erreur lors de l\'ajout de l\'utilisateur:', error);
-			showNotification('Erreur lors de l\'ajout de l\'utilisateur', 'error');
+			showError('Erreur lors de l\'ajout de l\'utilisateur');
 		}
 	});
 
@@ -397,15 +384,15 @@ ob_start();
 
 			const data = await response.json();
 			if (data.success) {
-				showNotification('Utilisateur modifié avec succès', 'success');
+				showSuccess('Utilisateur modifié avec succès');
 				closeEditModal();
 				loadUsers();
 			} else {
-				showNotification(data.message || 'Erreur lors de la modification de l\'utilisateur', 'error');
+				showError(data.message || 'Erreur lors de la modification de l\'utilisateur');
 			}
 		} catch (error) {
 			console.error('Erreur lors de la modification de l\'utilisateur:', error);
-			showNotification('Erreur lors de la modification de l\'utilisateur', 'error');
+			showError('Erreur lors de la modification de l\'utilisateur');
 		}
 	});
 
@@ -422,25 +409,21 @@ ob_start();
 
 			const data = await response.json();
 			if (data.success) {
-				showNotification('Utilisateur supprimé avec succès', 'success');
+				showSuccess('Utilisateur supprimé avec succès');
 				loadUsers();
 			} else {
-				showNotification(data.message || 'Erreur lors de la suppression de l\'utilisateur', 'error');
+				showError(data.message || 'Erreur lors de la suppression de l\'utilisateur');
 			}
 		} catch (error) {
 			console.error('Erreur lors de la suppression de l\'utilisateur:', error);
-			showNotification('Erreur lors de la suppression de l\'utilisateur', 'error');
+			showError('Erreur lors de la suppression de l\'utilisateur');
 		}
 	}
 
 	// Charger les données au chargement de la page
 	document.addEventListener('DOMContentLoaded', function() {
 		console.log('Chargement de la page...');
-
-		// Tester le système de notification
-		console.log('Test du système de notification...');
-		NotificationSystem.info('Bienvenue sur la page de gestion des utilisateurs');
-
+		showSuccess('Bienvenue sur la page de gestion des utilisateurs');
 		loadClasses();
 		loadUsers();
 	});
