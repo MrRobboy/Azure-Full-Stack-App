@@ -141,7 +141,6 @@ require_once 'templates/base.php';
 	async function loadStudents(classeId) {
 		try {
 			console.log('Chargement des étudiants pour la classe:', classeId);
-			// D'abord, obtenir les informations de la classe
 			const {
 				data: classeResult
 			} = await fetchWithLogging(`api/classes/${classeId}/eleves`);
@@ -154,7 +153,7 @@ require_once 'templates/base.php';
 			const select = document.getElementById('etudiant');
 			select.innerHTML = '<option value="">Sélectionnez un étudiant</option>';
 
-			if (classeResult.data && Array.isArray(classeResult.data)) {
+			if (classeResult.data && Array.isArray(classeResult.data) && classeResult.data.length > 0) {
 				classeResult.data.forEach(student => {
 					const option = document.createElement('option');
 					option.value = student.id_user;

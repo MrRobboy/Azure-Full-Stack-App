@@ -243,7 +243,7 @@ class ClasseController
 			error_log("Élèves récupérés avec succès: " . count($eleves) . " élèves trouvés");
 			return [
 				'success' => true,
-				'message' => 'Élèves récupérés avec succès',
+				'message' => count($eleves) . ' élèves trouvés',
 				'data' => $eleves
 			];
 		} catch (Exception $e) {
