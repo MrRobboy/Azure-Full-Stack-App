@@ -17,7 +17,8 @@ class Examen
 	{
 		try {
 			error_log("Tentative de récupération de tous les examens");
-			$sql = "SELECT e.*, m.nom as nom_matiere, c.nom_classe 
+			$sql = "SELECT e.id_exam as id_examen, e.titre, e.matiere as id_matiere, e.classe as id_classe, e.date,
+					m.nom as nom_matiere, c.nom_classe 
 					FROM EXAM e 
 					JOIN MATIERE m ON e.matiere = m.id_matiere 
 					JOIN CLASSE c ON e.classe = c.id_classe 
@@ -49,7 +50,8 @@ class Examen
 	{
 		try {
 			$stmt = $this->db->prepare("
-				SELECT e.*, m.nom as nom_matiere, c.nom_classe 
+				SELECT e.id_exam as id_examen, e.titre, e.matiere as id_matiere, e.classe as id_classe, e.date,
+					m.nom as nom_matiere, c.nom_classe 
 				FROM EXAM e
 				JOIN MATIERE m ON e.matiere = m.id_matiere
 				JOIN CLASSE c ON e.classe = c.id_classe
@@ -113,10 +115,10 @@ class Examen
 			}
 
 			return [
-				'id_exam' => $id,
+				'id_examen' => $id,
 				'titre' => $titre,
-				'matiere' => $matiere,
-				'classe' => $classe,
+				'id_matiere' => $matiere,
+				'id_classe' => $classe,
 				'date' => $date
 			];
 		} catch (Exception $e) {
