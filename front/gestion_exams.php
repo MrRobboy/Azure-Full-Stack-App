@@ -767,7 +767,7 @@ ob_start();
 
 	// Ajouter la fonction manageNotes
 	function manageNotes(examId) {
-		window.location.href = `/gestion_notes.php?exam_id=${examId}`;
+		window.location.href = `gestion_notes.php?exam_id=${examId}`;
 	}
 </script>
 

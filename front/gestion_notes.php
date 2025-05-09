@@ -6,12 +6,12 @@ if (!isset($_SESSION['prof_id'])) {
 	exit();
 }
 
-if (!isset($_GET['exam_id'])) {
+if (!isset($_GET['exam_id']) || !is_numeric($_GET['exam_id'])) {
 	header('Location: gestion_exams.php');
 	exit();
 }
 
-$examId = $_GET['exam_id'];
+$examId = intval($_GET['exam_id']);
 $pageTitle = "Gestion des Notes";
 require_once 'templates/base.php';
 ?>
@@ -55,9 +55,11 @@ require_once 'templates/base.php';
 	</div>
 </div>
 
-<script src="/js/notification-system.js"></script>
+<script src="js/notification-system.js"></script>
 <script>
 	const examId = <?php echo $examId; ?>;
+	console.log('🚀 Initialisation de la page de gestion des notes');
+	console.log('ID de l\'examen:', examId);
 
 	// Fonction utilitaire pour logger les requêtes et réponses
 	async function fetchWithLogging(url, options = {}) {
@@ -89,7 +91,7 @@ require_once 'templates/base.php';
 		try {
 			const {
 				data: result
-			} = await fetchWithLogging(`/api/exams/${examId}`);
+			} = await fetchWithLogging(`api/exams/${examId}`);
 
 			if (!result.success) {
 				throw new Error(result.message || 'Erreur lors du chargement des informations de l\'examen');
@@ -120,7 +122,7 @@ require_once 'templates/base.php';
 		try {
 			const {
 				data: result
-			} = await fetchWithLogging(`/api/classes/eleves/${classeId}`);
+			} = await fetchWithLogging(`api/classes/eleves/${classeId}`);
 
 			if (!result.success) {
 				throw new Error(result.message || 'Erreur lors du chargement des étudiants');
@@ -145,7 +147,7 @@ require_once 'templates/base.php';
 		try {
 			const {
 				data: result
-			} = await fetchWithLogging(`/api/notes/exam/${examId}`);
+			} = await fetchWithLogging(`api/notes/exam/${examId}`);
 
 			if (!result.success) {
 				throw new Error(result.message || 'Erreur lors du chargement des notes');
@@ -199,23 +201,22 @@ require_once 'templates/base.php';
 	// Fonction pour ajouter une note
 	async function addNote(event) {
 		event.preventDefault();
-		try {
-			const formData = new FormData(event.target);
-			const data = {
-				id_eleve: formData.get('etudiant'),
-				id_examen: examId,
-				id_matiere: examInfo.id_matiere,
-				valeur: formData.get('note')
-			};
+		const form = event.target;
+		const formData = new FormData(form);
 
+		try {
 			const {
 				data: result
-			} = await fetchWithLogging('/api/notes', {
+			} = await fetchWithLogging(`api/notes`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify(data)
+				body: JSON.stringify({
+					exam_id: examId,
+					user_id: formData.get('etudiant'),
+					valeur: formData.get('note')
+				})
 			});
 
 			if (!result.success) {
@@ -223,7 +224,7 @@ require_once 'templates/base.php';
 			}
 
 			NotificationSystem.success('Note ajoutée avec succès');
-			event.target.reset();
+			form.reset();
 			await loadNotes(examId);
 		} catch (error) {
 			NotificationSystem.error(error.message);
@@ -232,19 +233,28 @@ require_once 'templates/base.php';
 
 	// Fonction pour modifier une note
 	async function editNote(noteId) {
+		const newNote = prompt('Entrez la nouvelle note :');
+		if (newNote === null) return;
+
 		try {
 			const {
 				data: result
-			} = await fetchWithLogging(`/api/notes/${noteId}`);
+			} = await fetchWithLogging(`api/notes/${noteId}`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					valeur: newNote
+				})
+			});
 
 			if (!result.success) {
-				throw new Error(result.message || 'Erreur lors de la récupération de la note');
+				throw new Error(result.message || 'Erreur lors de la modification de la note');
 			}
 
-			const note = result.data;
-			const form = document.getElementById('noteForm');
-			form.querySelector('#etudiant').value = note.id_eleve;
-			form.querySelector('#note').value = note.valeur;
+			NotificationSystem.success('Note modifiée avec succès');
+			await loadNotes(examId);
 		} catch (error) {
 			NotificationSystem.error(error.message);
 		}
@@ -252,14 +262,12 @@ require_once 'templates/base.php';
 
 	// Fonction pour supprimer une note
 	async function deleteNote(noteId) {
-		if (!confirm('Êtes-vous sûr de vouloir supprimer cette note ?')) {
-			return;
-		}
+		if (!confirm('Êtes-vous sûr de vouloir supprimer cette note ?')) return;
 
 		try {
 			const {
 				data: result
-			} = await fetchWithLogging(`/api/notes/${noteId}`, {
+			} = await fetchWithLogging(`api/notes/${noteId}`, {
 				method: 'DELETE'
 			});
 
@@ -275,14 +283,6 @@ require_once 'templates/base.php';
 	}
 
 	// Initialisation
-	document.addEventListener('DOMContentLoaded', () => {
-		console.log('🚀 Initialisation de la page de gestion des notes');
-		console.log('ID de l\'examen:', examId);
-
-		// Chargement des informations de l'examen
-		loadExamInfo();
-
-		// Gestion du formulaire d'ajout de note
-		document.getElementById('noteForm').addEventListener('submit', addNote);
-	});
+	document.getElementById('noteForm').addEventListener('submit', addNote);
+	loadExamInfo();
 </script>
