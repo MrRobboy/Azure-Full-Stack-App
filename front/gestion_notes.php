@@ -53,11 +53,37 @@ require_once 'templates/base.php';
 <script>
 	const examId = <?php echo $examId; ?>;
 
+	// Fonction utilitaire pour logger les requêtes et réponses
+	async function fetchWithLogging(url, options = {}) {
+		console.group(`🌐 Requête API: ${url}`);
+		console.log('Options:', options);
+
+		try {
+			const response = await fetch(url, options);
+			const data = await response.json();
+
+			console.log('Status:', response.status);
+			console.log('Headers:', Object.fromEntries(response.headers.entries()));
+			console.log('Réponse:', data);
+
+			console.groupEnd();
+			return {
+				response,
+				data
+			};
+		} catch (error) {
+			console.error('Erreur:', error);
+			console.groupEnd();
+			throw error;
+		}
+	}
+
 	// Fonction pour charger les informations de l'examen
 	async function loadExamInfo() {
 		try {
-			const response = await fetch(`/api/exams/${examId}`);
-			const result = await response.json();
+			const {
+				data: result
+			} = await fetchWithLogging(`/api/exams/${examId}`);
 
 			if (!result.success) {
 				throw new Error(result.message || 'Erreur lors du chargement des informations de l\'examen');
@@ -85,8 +111,9 @@ require_once 'templates/base.php';
 	// Fonction pour charger les étudiants d'une classe
 	async function loadStudents(classeId) {
 		try {
-			const response = await fetch(`/api/classes/eleves/${classeId}`);
-			const result = await response.json();
+			const {
+				data: result
+			} = await fetchWithLogging(`/api/classes/eleves/${classeId}`);
 
 			if (!result.success) {
 				throw new Error(result.message || 'Erreur lors du chargement des étudiants');
@@ -109,8 +136,9 @@ require_once 'templates/base.php';
 	// Fonction pour charger les notes d'un examen
 	async function loadNotes(examId) {
 		try {
-			const response = await fetch(`/api/notes/exam/${examId}`);
-			const result = await response.json();
+			const {
+				data: result
+			} = await fetchWithLogging(`/api/notes/exam/${examId}`);
 
 			if (!result.success) {
 				throw new Error(result.message || 'Erreur lors du chargement des notes');
@@ -167,15 +195,15 @@ require_once 'templates/base.php';
 				valeur: formData.get('note')
 			};
 
-			const response = await fetch('/api/notes', {
+			const {
+				data: result
+			} = await fetchWithLogging('/api/notes', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify(data)
 			});
-
-			const result = await response.json();
 
 			if (!result.success) {
 				throw new Error(result.message || 'Erreur lors de l\'ajout de la note');
@@ -192,8 +220,9 @@ require_once 'templates/base.php';
 	// Fonction pour modifier une note
 	async function editNote(noteId) {
 		try {
-			const response = await fetch(`/api/notes/${noteId}`);
-			const result = await response.json();
+			const {
+				data: result
+			} = await fetchWithLogging(`/api/notes/${noteId}`);
 
 			if (!result.success) {
 				throw new Error(result.message || 'Erreur lors de la récupération de la note');
@@ -215,11 +244,11 @@ require_once 'templates/base.php';
 		}
 
 		try {
-			const response = await fetch(`/api/notes/${noteId}`, {
+			const {
+				data: result
+			} = await fetchWithLogging(`/api/notes/${noteId}`, {
 				method: 'DELETE'
 			});
-
-			const result = await response.json();
 
 			if (!result.success) {
 				throw new Error(result.message || 'Erreur lors de la suppression de la note');
@@ -234,6 +263,9 @@ require_once 'templates/base.php';
 
 	// Initialisation
 	document.addEventListener('DOMContentLoaded', () => {
+		console.log('🚀 Initialisation de la page de gestion des notes');
+		console.log('ID de l\'examen:', examId);
+
 		// Chargement des informations de l'examen
 		loadExamInfo();
 
