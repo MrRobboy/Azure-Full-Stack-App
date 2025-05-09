@@ -47,8 +47,17 @@ class UserController
 	public function createUser($data)
 	{
 		try {
-			if (!isset($data['nom']) || !isset($data['prenom']) || !isset($data['email']) || !isset($data['password']) || !isset($data['classe'])) {
-				throw new Exception("Tous les champs sont requis");
+			// Vérification des champs requis
+			$requiredFields = ['nom', 'prenom', 'email', 'password', 'classe'];
+			foreach ($requiredFields as $field) {
+				if (!isset($data[$field]) || empty($data[$field])) {
+					throw new Exception("Le champ '$field' est requis");
+				}
+			}
+
+			// Validation de l'email
+			if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+				throw new Exception("L'adresse email n'est pas valide");
 			}
 
 			// Vérifier si l'email existe déjà
@@ -56,6 +65,7 @@ class UserController
 				throw new Exception("Cet email est déjà utilisé");
 			}
 
+			// Création de l'utilisateur
 			$id = $this->userModel->create([
 				'nom' => $data['nom'],
 				'prenom' => $data['prenom'],
@@ -80,6 +90,19 @@ class UserController
 		try {
 			if (!$this->userModel->getById($id)) {
 				throw new Exception("Utilisateur non trouvé");
+			}
+
+			// Validation des données
+			if (isset($data['email']) && !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+				throw new Exception("L'adresse email n'est pas valide");
+			}
+
+			// Vérifier si l'email existe déjà (sauf pour l'utilisateur actuel)
+			if (isset($data['email'])) {
+				$existingUser = $this->userModel->getByEmail($data['email']);
+				if ($existingUser && $existingUser['id_user'] != $id) {
+					throw new Exception("Cet email est déjà utilisé");
+				}
 			}
 
 			$updateData = [];
