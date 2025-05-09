@@ -18,33 +18,39 @@ require_once 'templates/base.php';
 
 <div class="container">
 	<div class="main-content">
-		<h1>Gestion des Notes</h1>
+		<div class="page-header">
+			<h1>Gestion des Notes</h1>
+		</div>
 
-		<div id="examInfo" class="mb-4">
+		<div id="examInfo" class="card mb-4">
 			<!-- Les informations de l'examen seront chargées ici -->
 		</div>
 
-		<div id="notesList" class="mb-4">
+		<div id="notesList" class="card mb-4">
 			<!-- Les notes seront chargées ici -->
 		</div>
 
-		<div id="addNoteForm" class="form-container">
-			<h3>Ajouter une note</h3>
-			<form id="noteForm">
-				<div class="form-row">
-					<label for="etudiant">Étudiant :</label>
-					<select name="etudiant" id="etudiant" required>
-						<option value="">Sélectionnez un étudiant</option>
-					</select>
-				</div>
+		<div id="addNoteForm" class="card">
+			<div class="card-header">
+				<h3>Ajouter une note</h3>
+			</div>
+			<div class="card-body">
+				<form id="noteForm">
+					<div class="form-group">
+						<label for="etudiant">Étudiant :</label>
+						<select name="etudiant" id="etudiant" class="form-control" required>
+							<option value="">Sélectionnez un étudiant</option>
+						</select>
+					</div>
 
-				<div class="form-row">
-					<label for="note">Note :</label>
-					<input type="number" name="note" id="note" min="0" max="20" step="0.5" required>
-				</div>
+					<div class="form-group">
+						<label for="note">Note :</label>
+						<input type="number" name="note" id="note" class="form-control" min="0" max="20" step="0.5" required>
+					</div>
 
-				<button type="submit" class="btn btn-primary">Ajouter la note</button>
-			</form>
+					<button type="submit" class="btn btn-primary">Ajouter la note</button>
+				</form>
+			</div>
 		</div>
 	</div>
 </div>
@@ -94,17 +100,15 @@ require_once 'templates/base.php';
 
 			const examInfo = document.getElementById('examInfo');
 			examInfo.innerHTML = `
-				<div class="card">
-					<div class="card-body">
-						<h3>${result.data.titre}</h3>
-						<p>Matière : ${result.data.nom_matiere}</p>
-						<p>Classe : ${result.data.nom_classe}</p>
-						<p>Date : ${result.data.date ? new Date(result.data.date).toLocaleDateString('fr-FR') : 'Non définie'}</p>
-					</div>
+				<div class="card-body">
+					<h3>${result.data.titre}</h3>
+					<p>Matière : ${result.data.nom_matiere}</p>
+					<p>Classe : ${result.data.nom_classe}</p>
+					<p>Date : ${result.data.date ? new Date(result.data.date).toLocaleDateString('fr-FR') : 'Non définie'}</p>
 				</div>
 			`;
 
-			await loadStudents(result.data.classe);
+			await loadStudents(result.data.id_classe);
 			await loadNotes(examId);
 		} catch (error) {
 			NotificationSystem.error(error.message);
@@ -148,15 +152,20 @@ require_once 'templates/base.php';
 			}
 
 			const notesList = document.getElementById('notesList');
-			notesList.innerHTML = '<h3>Notes de l\'examen</h3>';
+			notesList.innerHTML = `
+				<div class="card-header">
+					<h3>Notes de l'examen</h3>
+				</div>
+				<div class="card-body">
+			`;
 
 			if (result.data.length === 0) {
-				notesList.innerHTML += '<p>Aucune note disponible</p>';
+				notesList.querySelector('.card-body').innerHTML = '<p>Aucune note disponible</p>';
 				return;
 			}
 
 			const table = document.createElement('table');
-			table.className = 'table';
+			table.className = 'table table-striped';
 			table.innerHTML = `
 				<thead>
 					<tr>
@@ -174,14 +183,14 @@ require_once 'templates/base.php';
 					<td>${note.nom} ${note.prenom}</td>
 					<td>${note.valeur}</td>
 					<td>
-						<button class="btn btn-warning" onclick="editNote(${note.id_note})">Modifier</button>
-						<button class="btn btn-danger" onclick="deleteNote(${note.id_note})">Supprimer</button>
+						<button class="btn btn-warning btn-sm" onclick="editNote(${note.id_note})">Modifier</button>
+						<button class="btn btn-danger btn-sm" onclick="deleteNote(${note.id_note})">Supprimer</button>
 					</td>
 				`;
 				table.querySelector('tbody').appendChild(tr);
 			});
 
-			notesList.appendChild(table);
+			notesList.querySelector('.card-body').appendChild(table);
 		} catch (error) {
 			NotificationSystem.error(error.message);
 		}
@@ -195,7 +204,7 @@ require_once 'templates/base.php';
 			const data = {
 				id_eleve: formData.get('etudiant'),
 				id_examen: examId,
-				id_matiere: examInfo.matiere, // Nous utiliserons l'ID de la matière de l'examen
+				id_matiere: examInfo.id_matiere,
 				valeur: formData.get('note')
 			};
 
