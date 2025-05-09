@@ -51,6 +51,7 @@ class Eleve
 	public function getByClasse($id_classe)
 	{
 		try {
+			error_log("Tentative de récupération des élèves pour la classe: " . $id_classe);
 			$stmt = $this->db->prepare("
 				SELECT u.*, c.nom_classe 
 				FROM USER u
@@ -58,9 +59,23 @@ class Eleve
 				WHERE u.id_classe = ? AND u.type = 'eleve'
 				ORDER BY u.nom ASC, u.prenom ASC
 			");
-			$stmt->execute([$id_classe]);
-			return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+			error_log("Requête SQL préparée");
+			$result = $stmt->execute([$id_classe]);
+			error_log("Exécution de la requête: " . ($result ? "succès" : "échec"));
+
+			if (!$result) {
+				error_log("Erreur lors de l'exécution de la requête: " . print_r($stmt->errorInfo(), true));
+				return [];
+			}
+
+			$eleves = $stmt->fetchAll(PDO::FETCH_ASSOC);
+			error_log("Nombre d'élèves trouvés: " . count($eleves));
+			error_log("Données des élèves: " . print_r($eleves, true));
+
+			return $eleves;
 		} catch (Exception $e) {
+			error_log("Exception dans getByClasse: " . $e->getMessage());
 			$this->errorService->logError('Eleve::getByClasse', $e->getMessage());
 			return [];
 		}

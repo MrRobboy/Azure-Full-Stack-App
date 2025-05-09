@@ -312,6 +312,10 @@ try {
 					$result = $classeController->getElevesByClasse($segments[2]);
 					error_log("Résultat: " . print_r($result, true));
 					sendResponse($result);
+				} else if ($segments[1] === 'etudiants' && isset($segments[2])) {
+					error_log("Récupération des étudiants de la classe: " . $segments[2]);
+					$result = $classeController->getElevesByClasse($segments[2]);
+					error_log("Résultat: " . print_r($result, true));
 				} else {
 					error_log("Récupération de la classe: " . $segments[1]);
 					$result = $classeController->getClasseById($segments[1]);
