@@ -15,6 +15,7 @@ require_once __DIR__ . '/../controllers/MatiereController.php';
 require_once __DIR__ . '/../controllers/ClasseController.php';
 require_once __DIR__ . '/../controllers/ExamenController.php';
 require_once __DIR__ . '/../controllers/ProfController.php';
+require_once __DIR__ . '/../controllers/UserController.php';
 require_once __DIR__ . '/../services/ErrorService.php';
 
 // Configuration des headers pour les requêtes API
@@ -48,6 +49,7 @@ $matiereController = new MatiereController();
 $classeController = new ClasseController();
 $examenController = new ExamenController();
 $profController = new ProfController();
+$userController = new UserController();
 
 // Fonction pour envoyer une réponse JSON
 function sendResponse($data, $status = 200)
@@ -483,6 +485,41 @@ try {
 			} catch (Exception $e) {
 				error_log("Erreur: " . $e->getMessage());
 				sendResponse(['message' => $e->getMessage()], 500);
+			}
+		}
+	}
+
+	// Routes pour les utilisateurs
+	if ($segments[0] === 'users') {
+		if ($method === 'GET') {
+			try {
+				$result = $userController->getAllUsers();
+				sendResponse($result);
+			} catch (Exception $e) {
+				sendResponse(['success' => false, 'message' => $e->getMessage()], 500);
+			}
+		} elseif ($method === 'POST') {
+			try {
+				$data = json_decode(file_get_contents('php://input'), true);
+				$result = $userController->createUser($data);
+				sendResponse($result, 201);
+			} catch (Exception $e) {
+				sendResponse(['success' => false, 'message' => $e->getMessage()], 400);
+			}
+		} elseif ($method === 'PUT' && isset($segments[1])) {
+			try {
+				$data = json_decode(file_get_contents('php://input'), true);
+				$result = $userController->updateUser($segments[1], $data);
+				sendResponse($result);
+			} catch (Exception $e) {
+				sendResponse(['success' => false, 'message' => $e->getMessage()], 400);
+			}
+		} elseif ($method === 'DELETE' && isset($segments[1])) {
+			try {
+				$result = $userController->deleteUser($segments[1]);
+				sendResponse($result);
+			} catch (Exception $e) {
+				sendResponse(['success' => false, 'message' => $e->getMessage()], 400);
 			}
 		}
 	}
