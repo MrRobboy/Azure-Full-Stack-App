@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : localhost:3306
--- Généré le : ven. 09 mai 2025 à 08:58
+-- Généré le : ven. 09 mai 2025 à 12:41
 -- Version du serveur : 10.11.11-MariaDB-0+deb12u1
 -- Version de PHP : 8.2.28
 
@@ -67,7 +67,8 @@ CREATE TABLE `EXAM` (
 --
 
 INSERT INTO `EXAM` (`id_exam`, `titre`, `matiere`, `classe`, `date`) VALUES
-(1, 'Analyse de texte', 2, 3, NULL);
+(1, 'Analyse de texte', 2, 3, '2025-05-10'),
+(10, 'TEST POSITIONNEMENT', 1, 3, '2025-05-20');
 
 -- --------------------------------------------------------
 
@@ -100,6 +101,13 @@ CREATE TABLE `NOTES` (
   `user` int(11) NOT NULL,
   `exam` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Déchargement des données de la table `NOTES`
+--
+
+INSERT INTO `NOTES` (`id_note`, `note`, `user`, `exam`) VALUES
+(1, 18.00, 1, 10);
 
 -- --------------------------------------------------------
 
@@ -208,7 +216,7 @@ ALTER TABLE `CLASSE`
 -- AUTO_INCREMENT pour la table `EXAM`
 --
 ALTER TABLE `EXAM`
-  MODIFY `id_exam` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id_exam` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT pour la table `MATIERE`
@@ -220,7 +228,7 @@ ALTER TABLE `MATIERE`
 -- AUTO_INCREMENT pour la table `NOTES`
 --
 ALTER TABLE `NOTES`
-  MODIFY `id_note` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id_note` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT pour la table `PROF`
