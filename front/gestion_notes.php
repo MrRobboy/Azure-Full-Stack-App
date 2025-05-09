@@ -6,12 +6,19 @@ if (!isset($_SESSION['prof_id'])) {
 	exit();
 }
 
+// Ajouter des logs pour déboguer
+error_log('GET params: ' . print_r($_GET, true));
+error_log('exam_id: ' . (isset($_GET['exam_id']) ? $_GET['exam_id'] : 'non défini'));
+
 if (!isset($_GET['exam_id']) || !is_numeric($_GET['exam_id'])) {
+	error_log('Redirection vers gestion_exams.php car exam_id invalide');
 	header('Location: gestion_exams.php');
 	exit();
 }
 
 $examId = intval($_GET['exam_id']);
+error_log('examId après conversion: ' . $examId);
+
 $pageTitle = "Gestion des Notes";
 require_once 'templates/base.php';
 ?>

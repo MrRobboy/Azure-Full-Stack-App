@@ -439,7 +439,9 @@ ob_start();
 				return;
 			}
 
+			console.log('Données des examens reçues:', result.data);
 			result.data.forEach(exam => {
+				console.log('Traitement de l\'examen:', exam);
 				const tr = document.createElement('tr');
 				tr.innerHTML = `
 					<td>${exam.titre}</td>
@@ -799,6 +801,11 @@ ob_start();
 	// Ajouter la fonction manageNotes
 	function manageNotes(examId) {
 		console.log('Redirection vers la gestion des notes pour l\'examen:', examId);
+		if (!examId) {
+			console.error('ID de l\'examen manquant');
+			NotificationSystem.error('Erreur : ID de l\'examen manquant');
+			return;
+		}
 		window.location.href = `gestion_notes.php?exam_id=${examId}`;
 	}
 </script>
