@@ -6,17 +6,27 @@ error_reporting(E_ALL);
 
 // Configuration des logs
 ini_set('log_errors', 1);
-ini_set('error_log', '/var/log/apache2/php_errors.log');
+ini_set('error_log', __DIR__ . '/../../logs/php_errors.log');
+
+// Log de l'URL et de la méthode
+error_log("URL: " . $_SERVER['REQUEST_URI']);
+error_log("Méthode: " . $_SERVER['REQUEST_METHOD']);
 
 // Inclusion des fichiers nécessaires
-require_once __DIR__ . '/../controllers/AuthController.php';
-require_once __DIR__ . '/../controllers/NoteController.php';
-require_once __DIR__ . '/../controllers/MatiereController.php';
-require_once __DIR__ . '/../controllers/ClasseController.php';
-require_once __DIR__ . '/../controllers/ExamenController.php';
-require_once __DIR__ . '/../controllers/ProfController.php';
-require_once __DIR__ . '/../controllers/UserController.php';
-require_once __DIR__ . '/../services/ErrorService.php';
+try {
+	require_once __DIR__ . '/../controllers/AuthController.php';
+	require_once __DIR__ . '/../controllers/NoteController.php';
+	require_once __DIR__ . '/../controllers/MatiereController.php';
+	require_once __DIR__ . '/../controllers/ClasseController.php';
+	require_once __DIR__ . '/../controllers/ExamenController.php';
+	require_once __DIR__ . '/../controllers/ProfController.php';
+	require_once __DIR__ . '/../controllers/UserController.php';
+	require_once __DIR__ . '/../services/ErrorService.php';
+} catch (Exception $e) {
+	error_log("Erreur lors du chargement des fichiers: " . $e->getMessage());
+	sendResponse(['success' => false, 'message' => 'Erreur lors du chargement des fichiers'], 500);
+	exit();
+}
 
 // Configuration des headers pour les requêtes API
 header('Content-Type: application/json; charset=utf-8');
@@ -63,19 +73,6 @@ function sendResponse($data, $status = 200)
 {
 	http_response_code($status);
 	header('Content-Type: application/json; charset=utf-8');
-
-	// Vérification que les données sont valides
-	if ($data === null) {
-		$data = ['success' => false, 'message' => 'Données invalides'];
-	}
-
-	// Assure que la réponse a toujours un format cohérent
-	if (!isset($data['success'])) {
-		$data = [
-			'success' => $status >= 200 && $status < 300,
-			'data' => $data
-		];
-	}
 
 	// Log de la réponse avant l'encodage
 	error_log("Données à encoder: " . print_r($data, true));
@@ -290,8 +287,9 @@ try {
 					sendResponse($result);
 				}
 			} catch (Exception $e) {
-				error_log("Erreur: " . $e->getMessage());
-				sendResponse(['message' => $e->getMessage()], 500);
+				error_log("Erreur dans la route matieres: " . $e->getMessage());
+				error_log("Trace: " . $e->getTraceAsString());
+				sendResponse(['success' => false, 'message' => $e->getMessage()], 500);
 			}
 		} elseif ($method === 'POST') {
 			try {

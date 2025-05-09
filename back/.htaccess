@@ -21,6 +21,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ routes/api.php [QSA,L]
 
+# Gestion des erreurs
+ErrorDocument 500 "{\"success\":false,\"message\":\"Erreur serveur interne\"}"
+ErrorDocument 404 "{\"success\":false,\"message\":\"Route non trouvée\"}"
+ErrorDocument 403 "{\"success\":false,\"message\":\"Accès non autorisé\"}"
+
 # Désactivation de l'affichage du contenu des répertoires
 Options -Indexes
 

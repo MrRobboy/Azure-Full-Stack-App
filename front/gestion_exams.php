@@ -336,28 +336,40 @@ ob_start();
 
 	// Fonction utilitaire pour logger les requêtes et réponses
 	async function fetchWithLogging(url, options = {}) {
-		console.group(`🌐 Requête API: ${url}`);
+		console.log('🌐 Requête API:', url);
 		console.log('Options:', options);
 
-		// Ajouter les cookies de session aux options
-		options.credentials = 'include';
-
 		try {
-			const response = await fetch(url, options);
-			const data = await response.json();
+			const response = await fetch(url, {
+				...options,
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+					...options.headers
+				},
+				credentials: 'include'
+			});
 
 			console.log('Status:', response.status);
 			console.log('Headers:', Object.fromEntries(response.headers.entries()));
+
+			const contentType = response.headers.get('content-type');
+			if (!contentType || !contentType.includes('application/json')) {
+				throw new Error(`Réponse invalide: ${contentType}`);
+			}
+
+			const data = await response.json();
 			console.log('Réponse:', data);
 
-			console.groupEnd();
+			if (!response.ok) {
+				throw new Error(data.message || `Erreur ${response.status}`);
+			}
+
 			return {
-				response,
 				data
 			};
 		} catch (error) {
 			console.error('Erreur:', error);
-			console.groupEnd();
 			throw error;
 		}
 	}
