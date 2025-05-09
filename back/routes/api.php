@@ -20,7 +20,7 @@ require_once __DIR__ . '/../services/ErrorService.php';
 
 // Configuration des headers pour les requêtes API
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: http://localhost:80');
+header('Access-Control-Allow-Origin: http://localhost:727');
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, Accept');
@@ -136,9 +136,9 @@ function handleError($e)
 	}
 }
 
-// Capture de toutes les erreurs PHP
+// Gestion des erreurs PHP
 set_error_handler(function ($errno, $errstr, $errfile, $errline) {
-	error_log("Erreur PHP: [$errno] $errstr dans $errfile à la ligne $errline");
+	error_log("Erreur PHP [$errno]: $errstr dans $errfile à la ligne $errline");
 	sendResponse([
 		'success' => false,
 		'message' => "Erreur serveur: $errstr",
@@ -151,7 +151,7 @@ set_error_handler(function ($errno, $errstr, $errfile, $errline) {
 	return true;
 });
 
-// Capture de toutes les exceptions non gérées
+// Gestion des exceptions non capturées
 set_exception_handler(function ($e) {
 	error_log("Exception non gérée: " . $e->getMessage());
 	error_log("Trace: " . $e->getTraceAsString());
@@ -166,7 +166,7 @@ set_exception_handler(function ($e) {
 	], 500);
 });
 
-// Capture des erreurs fatales
+// Gestion des erreurs fatales
 register_shutdown_function(function () {
 	$error = error_get_last();
 	if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
