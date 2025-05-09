@@ -66,9 +66,6 @@
 			</a>
 			<nav class="nav-menu">
 				<?php if (isset($_SESSION['prof_id'])): ?>
-					<a href="/dashboard.php" class="nav-link">
-						<i class="fas fa-home"></i> Tableau de bord
-					</a>
 					<a href="/gestion_matieres.php" class="nav-link">
 						<i class="fas fa-book"></i> Matières
 					</a>
