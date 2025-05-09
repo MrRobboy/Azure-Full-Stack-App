@@ -71,102 +71,72 @@ class ExamenController
 		}
 	}
 
-	public function createExamen($titre, $matiere, $classe)
+	public function createExamen($titre, $matiere, $classe, $date)
 	{
 		try {
 			error_log("Tentative de création d'un examen");
-			error_log("Titre: " . $titre);
-			error_log("Matière: " . $matiere);
-			error_log("Classe: " . $classe);
+			error_log("Données reçues: titre=$titre, matiere=$matiere, classe=$classe, date=$date");
 
-			// Vérification de la validité des données
-			if (empty($titre) || empty($matiere) || empty($classe)) {
-				error_log("Données manquantes");
+			if (empty($titre) || empty($matiere) || empty($classe) || empty($date)) {
 				throw new Exception("Tous les champs sont obligatoires");
 			}
 
-			// Vérification de la longueur du titre
-			if (strlen($titre) > 255) {
-				error_log("Titre trop long");
-				throw new Exception("Le titre de l'examen est trop long");
+			// Vérifier le format de la date
+			$dateObj = DateTime::createFromFormat('Y-m-d', $date);
+			if (!$dateObj || $dateObj->format('Y-m-d') !== $date) {
+				throw new Exception("Format de date invalide. Utilisez le format YYYY-MM-DD");
 			}
 
-			// Vérification de l'existence de la matière
-			if (!$this->matiereModel->getById($matiere)) {
-				error_log("Matière non trouvée");
-				throw new Exception("La matière n'existe pas");
-			}
-
-			// Vérification de l'existence de la classe
-			if (!$this->classeModel->getById($classe)) {
-				error_log("Classe non trouvée");
-				throw new Exception("La classe n'existe pas");
-			}
-
-			$result = $this->examenModel->create($titre, $matiere, $classe);
-			error_log("Résultat de la création: " . print_r($result, true));
-
+			$result = $this->examenModel->create($titre, $matiere, $classe, $date);
 			if ($result === false) {
-				error_log("Erreur lors de la création de l'examen");
 				throw new Exception("Erreur lors de la création de l'examen");
 			}
 
-			error_log("Examen créé avec succès");
 			return [
 				'success' => true,
-				'data' => $result,
-				'message' => "Examen créé avec succès"
+				'message' => 'Examen créé avec succès',
+				'data' => $result
 			];
 		} catch (Exception $e) {
 			error_log("Erreur dans createExamen: " . $e->getMessage());
 			return [
 				'success' => false,
-				'error' => $e->getMessage()
+				'message' => $e->getMessage()
 			];
 		}
 	}
 
-	public function updateExamen($id, $titre, $matiere, $classe)
+	public function updateExamen($id, $titre, $matiere, $classe, $date)
 	{
 		try {
-			// Vérification de l'existence de l'examen
-			if (!$this->examenModel->getById($id)) {
-				throw new Exception("L'examen n'existe pas");
-			}
+			error_log("Tentative de mise à jour de l'examen ID: $id");
+			error_log("Données reçues: titre=$titre, matiere=$matiere, classe=$classe, date=$date");
 
-			// Vérification de la validité des données
-			if (empty($titre) || empty($matiere) || empty($classe)) {
+			if (empty($titre) || empty($matiere) || empty($classe) || empty($date)) {
 				throw new Exception("Tous les champs sont obligatoires");
 			}
 
-			// Vérification de la longueur du titre
-			if (strlen($titre) > 255) {
-				throw new Exception("Le titre de l'examen est trop long");
+			// Vérifier le format de la date
+			$dateObj = DateTime::createFromFormat('Y-m-d', $date);
+			if (!$dateObj || $dateObj->format('Y-m-d') !== $date) {
+				throw new Exception("Format de date invalide. Utilisez le format YYYY-MM-DD");
 			}
 
-			// Vérification de l'existence de la matière
-			if (!$this->matiereModel->getById($matiere)) {
-				throw new Exception("La matière n'existe pas");
-			}
-
-			// Vérification de l'existence de la classe
-			if (!$this->classeModel->getById($classe)) {
-				throw new Exception("La classe n'existe pas");
-			}
-
-			$result = $this->examenModel->update($id, $titre, $matiere, $classe);
+			$result = $this->examenModel->update($id, $titre, $matiere, $classe, $date);
 			if ($result === false) {
 				throw new Exception("Erreur lors de la mise à jour de l'examen");
 			}
+
 			return [
 				'success' => true,
-				'data' => $result,
-				'message' => "Examen mis à jour avec succès"
+				'message' => 'Examen mis à jour avec succès',
+				'data' => $result
 			];
 		} catch (Exception $e) {
+			error_log("Erreur dans updateExamen: " . $e->getMessage());
 			return [
 				'success' => false,
-				'error' => $e->getMessage()
+				'message' => $e->getMessage()
 			];
 		}
 	}

@@ -21,7 +21,7 @@ class Examen
 					FROM EXAM e 
 					JOIN MATIERE m ON e.matiere = m.id_matiere 
 					JOIN CLASSE c ON e.classe = c.id_classe 
-					ORDER BY e.id_exam DESC";
+					ORDER BY e.date DESC, e.id_exam DESC";
 
 			error_log("Requête SQL: " . $sql);
 			$stmt = $this->db->prepare($sql);
@@ -72,11 +72,11 @@ class Examen
 		}
 	}
 
-	public function create($titre, $matiere, $classe)
+	public function create($titre, $matiere, $classe, $date)
 	{
 		try {
 			error_log("Tentative de création d'un examen");
-			error_log("Données reçues: titre=$titre, matiere=$matiere, classe=$classe");
+			error_log("Données reçues: titre=$titre, matiere=$matiere, classe=$classe, date=$date");
 
 			// Vérifier la connexion à la base de données
 			if (!$this->db) {
@@ -84,7 +84,7 @@ class Examen
 				throw new Exception("Erreur de connexion à la base de données");
 			}
 
-			$sql = "INSERT INTO EXAM (titre, matiere, classe) VALUES (?, ?, ?)";
+			$sql = "INSERT INTO EXAM (titre, matiere, classe, date) VALUES (?, ?, ?, ?)";
 			error_log("Requête SQL: " . $sql);
 
 			$stmt = $this->db->prepare($sql);
@@ -95,9 +95,9 @@ class Examen
 				throw new Exception("Erreur lors de la préparation de la requête: " . $error[2]);
 			}
 
-			error_log("Exécution de la requête avec les paramètres: " . print_r([$titre, $matiere, $classe], true));
+			error_log("Exécution de la requête avec les paramètres: " . print_r([$titre, $matiere, $classe, $date], true));
 
-			if (!$stmt->execute([$titre, $matiere, $classe])) {
+			if (!$stmt->execute([$titre, $matiere, $classe, $date])) {
 				$error = $stmt->errorInfo();
 				error_log("Erreur d'exécution de la requête: " . print_r($error, true));
 				throw new Exception("Erreur lors de l'exécution de la requête: " . $error[2]);
@@ -116,7 +116,8 @@ class Examen
 				'id_exam' => $id,
 				'titre' => $titre,
 				'matiere' => $matiere,
-				'classe' => $classe
+				'classe' => $classe,
+				'date' => $date
 			];
 		} catch (Exception $e) {
 			error_log("Erreur dans create: " . $e->getMessage());
@@ -125,15 +126,15 @@ class Examen
 		}
 	}
 
-	public function update($id, $titre, $matiere, $classe)
+	public function update($id, $titre, $matiere, $classe, $date)
 	{
 		try {
 			error_log("Tentative de mise à jour de l'examen ID: $id");
-			error_log("Données reçues: titre=$titre, matiere=$matiere, classe=$classe");
+			error_log("Données reçues: titre=$titre, matiere=$matiere, classe=$classe, date=$date");
 
 			$stmt = $this->db->prepare("
 				UPDATE EXAM 
-				SET titre = ?, matiere = ?, classe = ?
+				SET titre = ?, matiere = ?, classe = ?, date = ?
 				WHERE id_exam = ?
 			");
 
@@ -143,7 +144,7 @@ class Examen
 				throw new Exception("Erreur lors de la préparation de la requête: " . $error[2]);
 			}
 
-			if (!$stmt->execute([$titre, $matiere, $classe, $id])) {
+			if (!$stmt->execute([$titre, $matiere, $classe, $date, $id])) {
 				$error = $stmt->errorInfo();
 				error_log("Erreur d'exécution de la requête: " . print_r($error, true));
 				throw new Exception("Erreur lors de la mise à jour de l'examen: " . $error[2]);

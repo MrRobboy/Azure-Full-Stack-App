@@ -368,19 +368,27 @@ try {
 			}
 		} elseif ($method === 'POST') {
 			$data = json_decode(file_get_contents('php://input'), true);
+			if (!$data || !isset($data['titre']) || !isset($data['matiere']) || !isset($data['classe']) || !isset($data['date'])) {
+				throw new Exception("Tous les champs sont obligatoires (titre, matiere, classe, date)");
+			}
 			$result = $examenController->createExamen(
 				$data['titre'],
 				$data['matiere'],
-				$data['classe']
+				$data['classe'],
+				$data['date']
 			);
 			sendResponse($result);
 		} elseif ($method === 'PUT' && isset($segments[1])) {
 			$data = json_decode(file_get_contents('php://input'), true);
+			if (!$data || !isset($data['titre']) || !isset($data['matiere']) || !isset($data['classe']) || !isset($data['date'])) {
+				throw new Exception("Tous les champs sont obligatoires (titre, matiere, classe, date)");
+			}
 			$result = $examenController->updateExamen(
 				$segments[1],
 				$data['titre'],
 				$data['matiere'],
-				$data['classe']
+				$data['classe'],
+				$data['date']
 			);
 			sendResponse($result);
 		} elseif ($method === 'DELETE' && isset($segments[1])) {
