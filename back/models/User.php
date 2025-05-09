@@ -42,7 +42,7 @@ class User
 				SELECT u.id_user, u.nom, u.prenom, u.email, u.classe, c.nom_classe 
 				FROM USER u 
 				JOIN CLASSE c ON u.classe = c.id_classe 
-				WHERE u.classe = ? AND u.type = 'eleve'
+				WHERE u.classe = ?
 				ORDER BY u.nom ASC, u.prenom ASC
 			");
 			if (!$stmt) {
