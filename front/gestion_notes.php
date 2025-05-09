@@ -120,7 +120,7 @@ require_once 'templates/base.php';
 			console.log('Chargement des informations de l\'examen:', examId);
 			const {
 				data: result
-			} = await fetchWithLogging(`api/exams/${examId}`);
+			} = await fetchWithLogging(`api/examens/${examId}`);
 
 			if (!result.success) {
 				throw new Error(result.message || 'Erreur lors du chargement des informations de l\'examen');
