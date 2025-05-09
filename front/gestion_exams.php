@@ -449,9 +449,9 @@ ob_start();
 					<td>${exam.nom_classe}</td>
 					<td>${exam.date ? new Date(exam.date).toLocaleDateString('fr-FR') : 'Non défini'}</td>
 					<td>
-						<button class="btn btn-primary" onclick="editExam(${exam.id_exam})">Modifier</button>
-						<button class="btn btn-danger" onclick="deleteExam(${exam.id_exam})">Supprimer</button>
-						<button class="btn btn-info" onclick="manageNotes(${exam.id_exam})">Gérer les notes</button>
+						<button class="btn btn-primary" onclick="editExam(${exam.id_examen})">Modifier</button>
+						<button class="btn btn-danger" onclick="deleteExam(${exam.id_examen})">Supprimer</button>
+						<button class="btn btn-info" onclick="manageNotes(${exam.id_examen})">Gérer les notes</button>
 					</td>
 				`;
 				tbody.appendChild(tr);
@@ -537,7 +537,7 @@ ob_start();
 	}
 
 	// Fonction pour modifier un examen
-	async function editExam(id, currentTitre, currentMatiere, currentClasse, currentDate) {
+	async function editExam(id_examen, currentTitre, currentMatiere, currentClasse, currentDate) {
 		const modal = document.createElement('div');
 		modal.className = 'modal';
 		modal.innerHTML = `
@@ -596,7 +596,7 @@ ob_start();
 			}
 
 			try {
-				const response = await fetch(`api/exams/${id}`, {
+				const response = await fetch(`api/exams/${id_examen}`, {
 					method: 'PUT',
 					headers: {
 						'Content-Type': 'application/json'
@@ -679,14 +679,14 @@ ob_start();
 	}
 
 	// Fonction pour supprimer un examen
-	async function deleteExam(id) {
+	async function deleteExam(id_examen) {
 		if (!confirm('Êtes-vous sûr de vouloir supprimer cet examen ?')) {
 			return;
 		}
 
 		try {
-			console.log('Tentative de suppression de l\'examen:', id);
-			const response = await fetch(`api/exams/${id}`, {
+			console.log('Tentative de suppression de l\'examen:', id_examen);
+			const response = await fetch(`api/exams/${id_examen}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json'
