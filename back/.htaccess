@@ -9,6 +9,7 @@ php_value error_reporting E_ALL
 # Forcer le type de contenu JSON pour l'API
 <FilesMatch "api\.php$">
     ForceType application/json
+    Header set Content-Type "application/json"
 </FilesMatch>
 
 RewriteEngine On
