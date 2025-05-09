@@ -19,8 +19,7 @@ class Eleve
 			$stmt = $this->db->prepare("
 				SELECT u.*, c.nom_classe 
 				FROM USER u
-				JOIN CLASSE c ON u.id_classe = c.id_classe
-				WHERE u.type = 'eleve'
+				JOIN CLASSE c ON u.classe = c.id_classe
 				ORDER BY u.nom ASC, u.prenom ASC
 			");
 			$stmt->execute();
@@ -37,8 +36,8 @@ class Eleve
 			$stmt = $this->db->prepare("
 				SELECT u.*, c.nom_classe 
 				FROM USER u
-				JOIN CLASSE c ON u.id_classe = c.id_classe
-				WHERE u.id_user = ? AND u.type = 'eleve'
+				JOIN CLASSE c ON u.classe = c.id_classe
+				WHERE u.id_user = ?
 			");
 			$stmt->execute([$id]);
 			return $stmt->fetch(PDO::FETCH_ASSOC);
@@ -66,8 +65,8 @@ class Eleve
 			$sql = "
 				SELECT u.*, c.nom_classe 
 				FROM USER u
-				JOIN CLASSE c ON u.id_classe = c.id_classe
-				WHERE u.id_classe = ?
+				JOIN CLASSE c ON u.classe = c.id_classe
+				WHERE u.classe = ?
 				ORDER BY u.nom ASC, u.prenom ASC
 			";
 
@@ -102,8 +101,8 @@ class Eleve
 	{
 		try {
 			$stmt = $this->db->prepare("
-				INSERT INTO USER (nom, prenom, email, password, type, id_classe) 
-				VALUES (?, ?, ?, ?, 'eleve', ?)
+				INSERT INTO USER (nom, prenom, email, password, classe) 
+				VALUES (?, ?, ?, ?, ?)
 			");
 			$stmt->execute([$nom, $prenom, $email, password_hash($password, PASSWORD_DEFAULT), $id_classe]);
 			return $this->db->lastInsertId();
@@ -118,8 +117,8 @@ class Eleve
 		try {
 			$stmt = $this->db->prepare("
 				UPDATE USER 
-				SET nom = ?, prenom = ?, email = ?, id_classe = ? 
-				WHERE id_user = ? AND type = 'eleve'
+				SET nom = ?, prenom = ?, email = ?, classe = ? 
+				WHERE id_user = ?
 			");
 			return $stmt->execute([$nom, $prenom, $email, $id_classe, $id]);
 		} catch (Exception $e) {
@@ -131,7 +130,7 @@ class Eleve
 	public function delete($id)
 	{
 		try {
-			$stmt = $this->db->prepare("DELETE FROM USER WHERE id_user = ? AND type = 'eleve'");
+			$stmt = $this->db->prepare("DELETE FROM USER WHERE id_user = ?");
 			return $stmt->execute([$id]);
 		} catch (Exception $e) {
 			$this->errorService->logError('Eleve::delete', $e->getMessage());
