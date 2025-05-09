@@ -64,6 +64,12 @@ require_once 'templates/base.php';
 
 <script src="js/notification-system.js"></script>
 <script>
+	// Vérifier que le système de notification est bien chargé
+	console.log('Système de notification disponible:', typeof NotificationSystem !== 'undefined');
+	if (typeof NotificationSystem === 'undefined') {
+		console.error('Le système de notification n\'est pas chargé !');
+	}
+
 	const examId = <?php echo $examId; ?>;
 	console.log('🚀 Initialisation de la page de gestion des notes');
 	console.log('ID de l\'examen:', examId);
@@ -75,14 +81,26 @@ require_once 'templates/base.php';
 
 		// Ajouter les cookies de session aux options
 		options.credentials = 'include';
+		options.headers = {
+			...options.headers,
+			'Accept': 'application/json',
+			'Content-Type': 'application/json'
+		};
 
 		try {
+			console.log('Envoi de la requête...');
 			const response = await fetch(url, options);
-			const data = await response.json();
+			console.log('Réponse reçue, status:', response.status);
 
-			console.log('Status:', response.status);
-			console.log('Headers:', Object.fromEntries(response.headers.entries()));
-			console.log('Réponse:', data);
+			const contentType = response.headers.get('content-type');
+			console.log('Content-Type:', contentType);
+
+			if (!contentType || !contentType.includes('application/json')) {
+				throw new Error(`Réponse non-JSON reçue: ${contentType}`);
+			}
+
+			const data = await response.json();
+			console.log('Données reçues:', data);
 
 			console.groupEnd();
 			return {
@@ -90,7 +108,7 @@ require_once 'templates/base.php';
 				data
 			};
 		} catch (error) {
-			console.error('Erreur:', error);
+			console.error('Erreur lors de la requête:', error);
 			console.groupEnd();
 			throw error;
 		}
