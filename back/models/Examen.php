@@ -49,28 +49,47 @@ class Examen
 	public function getById($id)
 	{
 		try {
-			$stmt = $this->db->prepare("
+			error_log("Tentative de récupération de l'examen ID: " . $id);
+
+			$sql = "
 				SELECT e.id_exam as id_examen, e.titre, e.matiere as id_matiere, e.classe as id_classe, e.date,
 					m.nom as nom_matiere, c.nom_classe 
 				FROM EXAM e
 				JOIN MATIERE m ON e.matiere = m.id_matiere
 				JOIN CLASSE c ON e.classe = c.id_classe
 				WHERE e.id_exam = ?
-			");
+			";
+
+			error_log("Requête SQL: " . $sql);
+			error_log("Paramètres: " . print_r([$id], true));
+
+			$stmt = $this->db->prepare($sql);
+			if ($stmt === false) {
+				$error = $this->db->errorInfo();
+				error_log("Erreur de préparation de la requête: " . print_r($error, true));
+				throw new Exception("Erreur lors de la préparation de la requête: " . $error[2]);
+			}
 
 			if (!$stmt->execute([$id])) {
-				throw new Exception("Erreur lors de l'exécution de la requête");
+				$error = $stmt->errorInfo();
+				error_log("Erreur d'exécution de la requête: " . print_r($error, true));
+				throw new Exception("Erreur lors de l'exécution de la requête: " . $error[2]);
 			}
 
 			$result = $stmt->fetch(PDO::FETCH_ASSOC);
+			error_log("Résultat de la requête: " . print_r($result, true));
+
 			if ($result === false) {
-				return null;
+				error_log("Aucun examen trouvé avec l'ID: " . $id);
+				return false;
 			}
 
 			return $result;
 		} catch (Exception $e) {
+			error_log("Erreur dans getById: " . $e->getMessage());
+			error_log("Trace de l'erreur: " . $e->getTraceAsString());
 			$this->errorService->logError('Examen::getById', $e->getMessage());
-			return null;
+			throw $e; // Propager l'erreur au contrôleur
 		}
 	}
 

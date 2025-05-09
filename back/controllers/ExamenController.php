@@ -49,23 +49,30 @@ class ExamenController
 	public function getExamenById($id)
 	{
 		try {
+			error_log("Tentative de récupération de l'examen ID: " . $id);
+
 			if (!is_numeric($id)) {
 				throw new Exception("ID invalide");
 			}
+
 			$result = $this->examenModel->getById($id);
+			error_log("Résultat de getById: " . print_r($result, true));
+
 			if ($result === false) {
 				throw new Exception("Examen non trouvé");
 			}
-			if (!is_array($result)) {
-				$result = [];
-			}
+
 			return [
 				'success' => true,
-				'data' => $result
+				'data' => $result,
+				'message' => "Examen récupéré avec succès"
 			];
 		} catch (Exception $e) {
+			error_log("Erreur dans getExamenById: " . $e->getMessage());
+			error_log("Trace de l'erreur: " . $e->getTraceAsString());
 			return [
 				'success' => false,
+				'message' => $e->getMessage(),
 				'error' => $e->getMessage()
 			];
 		}
