@@ -10,12 +10,6 @@ $pageTitle = "Gestion des Utilisateurs";
 ob_start();
 ?>
 
-<head>
-	<title><?php echo $pageTitle; ?></title>
-	<link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico">
-	<link rel="stylesheet" href="css/styles.css">
-</head>
-
 <style>
 	.container {
 		max-width: 1200px;
@@ -251,8 +245,8 @@ ob_start();
 	</div>
 </div>
 
-<script src="js/notification-system.js"></script>
-<script src="js/error-messages.js"></script>
+<script src="/assets/js/notification-system.js"></script>
+<script src="/assets/js/error-messages.js"></script>
 <script>
 	// Vérifier que les scripts sont chargés
 	console.log('Vérification du chargement des scripts...');
@@ -454,5 +448,5 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
-require_once 'templates/layout.php';
+require_once 'templates/base.php';
 ?>
