@@ -416,8 +416,9 @@ ob_start();
 					<td>${exam.nom_classe}</td>
 					<td>${exam.date ? new Date(exam.date).toLocaleDateString('fr-FR') : 'Non défini'}</td>
 					<td>
-						<button class="btn btn-edit" onclick="editExam(${exam.id_exam}, '${exam.titre}', ${exam.matiere}, ${exam.classe}, '${exam.date}')">Modifier</button>
+						<button class="btn btn-primary" onclick="editExam(${exam.id_exam})">Modifier</button>
 						<button class="btn btn-danger" onclick="deleteExam(${exam.id_exam})">Supprimer</button>
+						<button class="btn btn-info" onclick="manageNotes(${exam.id_exam})">Gérer les notes</button>
 					</td>
 				`;
 				tbody.appendChild(tr);
@@ -763,6 +764,11 @@ ob_start();
 		}
 	`;
 	document.head.appendChild(modalStyle);
+
+	// Ajouter la fonction manageNotes
+	function manageNotes(examId) {
+		window.location.href = `/gestion_notes.php?exam_id=${examId}`;
+	}
 </script>
 
 <?php

@@ -6,6 +6,12 @@ if (!isset($_SESSION['prof_id'])) {
 	exit();
 }
 
+if (!isset($_GET['exam_id'])) {
+	header('Location: gestion_exams.php');
+	exit();
+}
+
+$examId = $_GET['exam_id'];
 $pageTitle = "Gestion des Notes";
 require_once 'templates/base.php';
 ?>
@@ -14,15 +20,15 @@ require_once 'templates/base.php';
 	<div class="main-content">
 		<h1>Gestion des Notes</h1>
 
-		<div id="examsList" class="mb-4">
-			<!-- La liste des examens sera chargée ici -->
+		<div id="examInfo" class="mb-4">
+			<!-- Les informations de l'examen seront chargées ici -->
 		</div>
 
 		<div id="notesList" class="mb-4">
 			<!-- Les notes seront chargées ici -->
 		</div>
 
-		<div id="addNoteForm" class="form-container" style="display: none;">
+		<div id="addNoteForm" class="form-container">
 			<h3>Ajouter une note</h3>
 			<form id="noteForm">
 				<div class="form-row">
@@ -45,56 +51,32 @@ require_once 'templates/base.php';
 
 <script src="/js/notification-system.js"></script>
 <script>
-	let currentExamId = null;
+	const examId = <?php echo $examId; ?>;
 
-	// Fonction pour charger la liste des examens
-	async function loadExams() {
+	// Fonction pour charger les informations de l'examen
+	async function loadExamInfo() {
 		try {
-			const response = await fetch('/api/exams');
+			const response = await fetch(`/api/exams/${examId}`);
 			const result = await response.json();
 
 			if (!result.success) {
-				throw new Error(result.message || 'Erreur lors du chargement des examens');
+				throw new Error(result.message || 'Erreur lors du chargement des informations de l\'examen');
 			}
 
-			const examsList = document.getElementById('examsList');
-			examsList.innerHTML = '<h3>Sélectionnez un examen</h3>';
-
-			if (result.data.length === 0) {
-				examsList.innerHTML += '<p>Aucun examen disponible</p>';
-				return;
-			}
-
-			const table = document.createElement('table');
-			table.className = 'table';
-			table.innerHTML = `
-				<thead>
-					<tr>
-						<th>Titre</th>
-						<th>Matière</th>
-						<th>Classe</th>
-						<th>Date</th>
-						<th>Action</th>
-					</tr>
-				</thead>
-				<tbody></tbody>
+			const examInfo = document.getElementById('examInfo');
+			examInfo.innerHTML = `
+				<div class="card">
+					<div class="card-body">
+						<h3>${result.data.titre}</h3>
+						<p>Matière : ${result.data.nom_matiere}</p>
+						<p>Classe : ${result.data.nom_classe}</p>
+						<p>Date : ${result.data.date ? new Date(result.data.date).toLocaleDateString('fr-FR') : 'Non définie'}</p>
+					</div>
+				</div>
 			`;
 
-			result.data.forEach(exam => {
-				const tr = document.createElement('tr');
-				tr.innerHTML = `
-					<td>${exam.titre}</td>
-					<td>${exam.nom_matiere}</td>
-					<td>${exam.nom_classe}</td>
-					<td>${exam.date}</td>
-					<td>
-						<button class="btn btn-primary" onclick="selectExam(${exam.id_exam})">Gérer les notes</button>
-					</td>
-				`;
-				table.querySelector('tbody').appendChild(tr);
-			});
-
-			examsList.appendChild(table);
+			await loadStudents(result.data.classe);
+			await loadNotes(examId);
 		} catch (error) {
 			NotificationSystem.error(error.message);
 		}
@@ -174,25 +156,6 @@ require_once 'templates/base.php';
 		}
 	}
 
-	// Fonction pour sélectionner un examen
-	async function selectExam(examId) {
-		try {
-			currentExamId = examId;
-			const response = await fetch(`/api/exams/${examId}`);
-			const result = await response.json();
-
-			if (!result.success) {
-				throw new Error(result.message || 'Erreur lors de la récupération de l\'examen');
-			}
-
-			await loadStudents(result.data.classe);
-			await loadNotes(examId);
-			document.getElementById('addNoteForm').style.display = 'block';
-		} catch (error) {
-			NotificationSystem.error(error.message);
-		}
-	}
-
 	// Fonction pour ajouter une note
 	async function addNote(event) {
 		event.preventDefault();
@@ -200,7 +163,7 @@ require_once 'templates/base.php';
 			const formData = new FormData(event.target);
 			const data = {
 				id_eleve: formData.get('etudiant'),
-				id_examen: currentExamId,
+				id_examen: examId,
 				valeur: formData.get('note')
 			};
 
@@ -220,7 +183,7 @@ require_once 'templates/base.php';
 
 			NotificationSystem.success('Note ajoutée avec succès');
 			event.target.reset();
-			await loadNotes(currentExamId);
+			await loadNotes(examId);
 		} catch (error) {
 			NotificationSystem.error(error.message);
 		}
@@ -256,7 +219,7 @@ require_once 'templates/base.php';
 			}
 
 			NotificationSystem.success('Note modifiée avec succès');
-			await loadNotes(currentExamId);
+			await loadNotes(examId);
 		} catch (error) {
 			NotificationSystem.error(error.message);
 		}
@@ -280,7 +243,7 @@ require_once 'templates/base.php';
 			}
 
 			NotificationSystem.success('Note supprimée avec succès');
-			await loadNotes(currentExamId);
+			await loadNotes(examId);
 		} catch (error) {
 			NotificationSystem.error(error.message);
 		}
@@ -288,7 +251,7 @@ require_once 'templates/base.php';
 
 	// Initialisation
 	document.addEventListener('DOMContentLoaded', () => {
-		loadExams();
+		loadExamInfo();
 		document.getElementById('noteForm').addEventListener('submit', addNote);
 	});
 </script>
