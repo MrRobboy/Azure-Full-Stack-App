@@ -136,7 +136,9 @@ function handleError($e)
 // Gestion des erreurs PHP
 set_error_handler(function ($errno, $errstr, $errfile, $errline) {
 	error_log("Erreur PHP [$errno]: $errstr dans $errfile à la ligne $errline");
-	sendResponse([
+	header('Content-Type: application/json; charset=utf-8');
+	http_response_code(500);
+	echo json_encode([
 		'success' => false,
 		'message' => "Erreur serveur: $errstr",
 		'debug' => [
@@ -144,15 +146,17 @@ set_error_handler(function ($errno, $errstr, $errfile, $errline) {
 			'line' => $errline,
 			'type' => $errno
 		]
-	], 500);
-	return true;
+	], JSON_UNESCAPED_UNICODE);
+	exit();
 });
 
 // Gestion des exceptions non capturées
 set_exception_handler(function ($e) {
 	error_log("Exception non gérée: " . $e->getMessage());
 	error_log("Trace: " . $e->getTraceAsString());
-	sendResponse([
+	header('Content-Type: application/json; charset=utf-8');
+	http_response_code(500);
+	echo json_encode([
 		'success' => false,
 		'message' => $e->getMessage(),
 		'debug' => [
@@ -160,7 +164,8 @@ set_exception_handler(function ($e) {
 			'line' => $e->getLine(),
 			'trace' => $e->getTraceAsString()
 		]
-	], 500);
+	], JSON_UNESCAPED_UNICODE);
+	exit();
 });
 
 // Gestion des erreurs fatales
@@ -168,11 +173,14 @@ register_shutdown_function(function () {
 	$error = error_get_last();
 	if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
 		error_log("Erreur fatale: " . print_r($error, true));
-		sendResponse([
+		header('Content-Type: application/json; charset=utf-8');
+		http_response_code(500);
+		echo json_encode([
 			'success' => false,
 			'message' => "Erreur fatale: " . $error['message'],
 			'debug' => $error
-		], 500);
+		], JSON_UNESCAPED_UNICODE);
+		exit();
 	}
 });
 
