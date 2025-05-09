@@ -6,10 +6,6 @@ php_value error_log "/var/log/apache2/php_errors.log"
 php_flag display_errors on
 php_value error_reporting E_ALL
 
-# Log de débogage
-RewriteLog "/var/log/apache2/rewrite.log"
-RewriteLogLevel 3
-
 RewriteEngine On
 
 # Base pour les routes API
@@ -18,7 +14,7 @@ RewriteBase /api/
 # Redirection des requêtes vers les fichiers API
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^([^/]+)/?$ api/$1.php [QSA,L]
+RewriteRule ^(.*)$ api.php [QSA,L]
 
 # Désactivation de l'affichage du contenu des répertoires
 Options -Indexes
@@ -32,8 +28,4 @@ Options -Indexes
 # Configuration CORS
 Header set Access-Control-Allow-Origin "*"
 Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-Header set Access-Control-Allow-Headers "Content-Type, Authorization"
-
-# Log de la requête finale
-RewriteCond %{ENV:API_FILE} !^$
-RewriteRule .* - [E=REQUEST_URI:%{REQUEST_URI},E=API_FILE:%{ENV:API_FILE},L] 
+Header set Access-Control-Allow-Headers "Content-Type, Authorization" 

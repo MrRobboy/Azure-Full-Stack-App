@@ -7,7 +7,7 @@ RewriteBase /
 # Redirection des requêtes vers les fichiers PHP
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ $1.php [QSA,L]
+RewriteRule ^([^/]+)/?$ $1.php [QSA,L]
 
 # Protection des fichiers sensibles
 <FilesMatch "^(config\.php|\.htaccess)$">
