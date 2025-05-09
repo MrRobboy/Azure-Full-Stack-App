@@ -151,21 +151,11 @@ require_once 'templates/base.php';
 				throw new Error(classeResult.message || 'Erreur lors du chargement des informations de la classe');
 			}
 
-			// Ensuite, obtenir les étudiants de la classe
-			const {
-				data: elevesResult
-			} = await fetchWithLogging(`api/classes/${classeId}/etudiants`);
-			console.log('Étudiants reçus:', elevesResult);
-
-			if (!elevesResult.success) {
-				throw new Error(elevesResult.message || 'Erreur lors du chargement des étudiants');
-			}
-
 			const select = document.getElementById('etudiant');
 			select.innerHTML = '<option value="">Sélectionnez un étudiant</option>';
 
-			if (elevesResult.data && Array.isArray(elevesResult.data)) {
-				elevesResult.data.forEach(student => {
+			if (classeResult.data && Array.isArray(classeResult.data)) {
+				classeResult.data.forEach(student => {
 					const option = document.createElement('option');
 					option.value = student.id_user;
 					option.textContent = `${student.nom} ${student.prenom}`;
