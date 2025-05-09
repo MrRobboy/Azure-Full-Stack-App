@@ -19,9 +19,12 @@ class DatabaseService
 				PDO::ATTR_EMULATE_PREPARES => false
 			];
 			$this->connection = new PDO($dsn, DB_USER, DB_PASS, $options);
+
+			// Test de la connexion
+			$this->testConnection();
 		} catch (PDOException $e) {
 			$this->errorService->logError("Erreur de connexion à la base de données: " . $e->getMessage(), 'database');
-			throw new Exception("Impossible de se connecter à la base de données");
+			throw new Exception("Impossible de se connecter à la base de données: " . $e->getMessage());
 		}
 	}
 
@@ -38,6 +41,26 @@ class DatabaseService
 		if ($this->connection === null) {
 			throw new Exception("La connexion à la base de données n'est pas initialisée");
 		}
+
+		// Vérifier si la connexion est toujours active
+		try {
+			$this->testConnection();
+		} catch (Exception $e) {
+			// Tenter de reconnecter
+			try {
+				$dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
+				$options = [
+					PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+					PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+					PDO::ATTR_EMULATE_PREPARES => false
+				];
+				$this->connection = new PDO($dsn, DB_USER, DB_PASS, $options);
+			} catch (PDOException $e) {
+				$this->errorService->logError("Erreur de reconnexion à la base de données: " . $e->getMessage(), 'database');
+				throw new Exception("Impossible de se reconnecter à la base de données");
+			}
+		}
+
 		return $this->connection;
 	}
 
@@ -48,7 +71,7 @@ class DatabaseService
 			return true;
 		} catch (PDOException $e) {
 			$this->errorService->logError("Erreur lors du test de connexion: " . $e->getMessage(), 'database');
-			return false;
+			throw new Exception("La connexion à la base de données a été perdue");
 		}
 	}
 }

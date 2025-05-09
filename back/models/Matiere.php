@@ -9,108 +9,98 @@ class Matiere
 
 	public function __construct()
 	{
-		$this->db = DatabaseService::getInstance()->getConnection();
+		$this->db = DatabaseService::getInstance();
 		$this->errorService = ErrorService::getInstance();
 	}
 
-	public function getAll()
+	public function getAllMatieres()
 	{
 		try {
-			$stmt = $this->db->prepare("SELECT * FROM MATIERE ORDER BY nom ASC");
+			$conn = $this->db->getConnection();
+			$stmt = $conn->query("SELECT * FROM MATIERE ORDER BY nom");
+			$result = $stmt->fetchAll();
 
-			if (!$stmt->execute()) {
-				throw new Exception("Erreur lors de l'exécution de la requête");
-			}
-
-			$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 			if ($result === false) {
-				return [];
+				throw new Exception("Erreur lors de la récupération des matières");
 			}
 
 			return $result;
 		} catch (Exception $e) {
-			$this->errorService->logError('Matiere::getAll', $e->getMessage());
-			return [];
+			$this->errorService->logError("Erreur dans getAllMatieres: " . $e->getMessage(), 'database');
+			throw $e;
 		}
 	}
 
-	public function getById($id)
+	public function getMatiereById($id)
 	{
 		try {
-			$stmt = $this->db->prepare("SELECT * FROM MATIERE WHERE id_matiere = ?");
-			if ($stmt === false) {
-				throw new Exception("Erreur lors de la préparation de la requête SQL");
-			}
+			$conn = $this->db->getConnection();
+			$stmt = $conn->prepare("SELECT * FROM MATIERE WHERE id = ?");
 			$stmt->execute([$id]);
-			$result = $stmt->fetch(PDO::FETCH_ASSOC);
-			if (!is_array($result)) {
-				$result = [];
+			$result = $stmt->fetch();
+
+			if ($result === false) {
+				throw new Exception("Matière non trouvée");
 			}
+
 			return $result;
 		} catch (Exception $e) {
-			$this->errorService->logError($e->getMessage(), 'matiere');
-			return [];
+			$this->errorService->logError("Erreur dans getMatiereById: " . $e->getMessage(), 'database');
+			throw $e;
 		}
 	}
 
-	public function create($data)
+	public function createMatiere($data)
 	{
 		try {
-			$stmt = $this->db->prepare("INSERT INTO MATIERE (nom) VALUES (?)");
-			if ($stmt === false) {
-				throw new Exception("Erreur lors de la préparation de la requête SQL");
+			$conn = $this->db->getConnection();
+			$stmt = $conn->prepare("INSERT INTO MATIERE (nom, coefficient) VALUES (?, ?)");
+			$result = $stmt->execute([$data['nom'], $data['coefficient']]);
+
+			if (!$result) {
+				throw new Exception("Erreur lors de la création de la matière");
 			}
-			$result = $stmt->execute([$data['nom']]);
-			if ($result === false) {
-				throw new Exception("Erreur lors de l'exécution de la requête SQL");
-			}
-			$id = $this->db->lastInsertId();
-			return [
-				'id_matiere' => $id,
-				'nom' => $data['nom']
-			];
+
+			return $conn->lastInsertId();
 		} catch (Exception $e) {
-			$this->errorService->logError($e->getMessage(), 'matiere');
-			return [];
+			$this->errorService->logError("Erreur dans createMatiere: " . $e->getMessage(), 'database');
+			throw $e;
 		}
 	}
 
-	public function update($id, $data)
+	public function updateMatiere($id, $data)
 	{
 		try {
-			$stmt = $this->db->prepare("UPDATE MATIERE SET nom = ? WHERE id_matiere = ?");
-			if ($stmt === false) {
-				throw new Exception("Erreur lors de la préparation de la requête SQL");
-			}
-			$result = $stmt->execute([$data['nom'], $id]);
-			if ($result === false) {
-				throw new Exception("Erreur lors de l'exécution de la requête SQL");
-			}
-			return [
-				'id_matiere' => $id,
-				'nom' => $data['nom']
-			];
-		} catch (Exception $e) {
-			$this->errorService->logError($e->getMessage(), 'matiere');
-			return [];
-		}
-	}
+			$conn = $this->db->getConnection();
+			$stmt = $conn->prepare("UPDATE MATIERE SET nom = ?, coefficient = ? WHERE id = ?");
+			$result = $stmt->execute([$data['nom'], $data['coefficient'], $id]);
 
-	public function delete($id)
-	{
-		try {
-			$stmt = $this->db->prepare("DELETE FROM MATIERE WHERE id_matiere = ?");
-			if ($stmt === false) {
-				throw new Exception("Erreur lors de la préparation de la requête SQL");
+			if (!$result) {
+				throw new Exception("Erreur lors de la mise à jour de la matière");
 			}
-			$result = $stmt->execute([$id]);
-			if ($result === false) {
-				throw new Exception("Erreur lors de l'exécution de la requête SQL");
-			}
+
 			return true;
 		} catch (Exception $e) {
-			$this->errorService->logError($e->getMessage(), 'matiere');
-			return false;
+			$this->errorService->logError("Erreur dans updateMatiere: " . $e->getMessage(), 'database');
+			throw $e;
+		}
+	}
+
+	public function deleteMatiere($id)
+	{
+		try {
+			$conn = $this->db->getConnection();
+			$stmt = $conn->prepare("DELETE FROM MATIERE WHERE id = ?");
+			$result = $stmt->execute([$id]);
+
+			if (!$result) {
+				throw new Exception("Erreur lors de la suppression de la matière");
+			}
+
+			return true;
+		} catch (Exception $e) {
+			$this->errorService->logError("Erreur dans deleteMatiere: " . $e->getMessage(), 'database');
+			throw $e;
 		}
 	}
 }
