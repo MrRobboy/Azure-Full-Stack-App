@@ -195,6 +195,9 @@ try {
 			}
 		} elseif ($method === 'POST') {
 			$data = json_decode(file_get_contents('php://input'), true);
+			if (!$data || !isset($data['id_eleve']) || !isset($data['id_matiere']) || !isset($data['id_examen']) || !isset($data['valeur'])) {
+				throw new Exception("Tous les champs sont obligatoires");
+			}
 			$result = $noteController->createNote(
 				$data['id_eleve'],
 				$data['id_matiere'],
@@ -204,13 +207,14 @@ try {
 			sendResponse($result);
 		} elseif ($method === 'PUT' && isset($segments[1])) {
 			$data = json_decode(file_get_contents('php://input'), true);
-			$result = $noteController->updateNote(
-				$segments[1],
-				$data['valeur']
-			);
+			if (!$data || !isset($data['valeur'])) {
+				throw new Exception("La valeur de la note est obligatoire");
+			}
+			$result = $noteController->updateNote($segments[1], $data['valeur']);
 			sendResponse($result);
 		} elseif ($method === 'DELETE' && isset($segments[1])) {
-			sendResponse($noteController->deleteNote($segments[1]));
+			$result = $noteController->deleteNote($segments[1]);
+			sendResponse($result);
 		} else {
 			throw new Exception(json_encode(
 				$errorService->logError('api', 'Route de notes non trouvée', ['uri' => $segments])
@@ -291,73 +295,46 @@ try {
 
 	// Routes des classes
 	if ($segments[0] === 'classes') {
-		try {
-			error_log("Traitement de la route classes - " . date('Y-m-d H:i:s'));
-			error_log("Méthode: " . $method);
-			error_log("Segments: " . print_r($segments, true));
-
-			if ($method === 'GET') {
-				if (isset($segments[1])) {
-					if ($segments[1] === 'eleves' && isset($segments[2])) {
-						error_log("Récupération des élèves de la classe: " . $segments[2]);
-						$result = $classeController->getElevesByClasse($segments[2]);
-						error_log("Résultat de getElevesByClasse: " . print_r($result, true));
-						sendResponse($result);
-					} else {
-						error_log("Récupération de la classe avec l'ID: " . $segments[1]);
-						$result = $classeController->getClasseById($segments[1]);
-						error_log("Résultat de getClasseById: " . print_r($result, true));
-						sendResponse($result);
-					}
+		if ($method === 'GET') {
+			if (isset($segments[1])) {
+				if ($segments[1] === 'eleves' && isset($segments[2])) {
+					sendResponse($classeController->getElevesByClasse($segments[2]));
 				} else {
-					error_log("Récupération de toutes les classes");
-					$result = $classeController->getAllClasses();
-					sendResponse($result);
+					sendResponse($classeController->getClasseById($segments[1]));
 				}
-			} elseif ($method === 'POST') {
-				$data = json_decode(file_get_contents('php://input'), true);
-				if (!$data) {
-					throw new Exception("Données JSON invalides");
-				}
-				if (!isset($data['nom_classe']) || !isset($data['niveau']) || !isset($data['numero']) || !isset($data['rythme'])) {
-					throw new Exception("Tous les champs sont obligatoires");
-				}
-				$result = $classeController->createClasse(
-					$data['nom_classe'],
-					$data['niveau'],
-					$data['numero'],
-					$data['rythme']
-				);
-				sendResponse($result);
-			} elseif ($method === 'PUT' && isset($segments[1])) {
-				$data = json_decode(file_get_contents('php://input'), true);
-				if (!$data) {
-					throw new Exception("Données JSON invalides");
-				}
-				if (!isset($data['nom_classe']) || !isset($data['niveau']) || !isset($data['numero']) || !isset($data['rythme'])) {
-					throw new Exception("Tous les champs sont obligatoires");
-				}
-				$result = $classeController->updateClasse(
-					$segments[1],
-					$data['nom_classe'],
-					$data['niveau'],
-					$data['numero'],
-					$data['rythme']
-				);
-				sendResponse($result);
-			} elseif ($method === 'DELETE' && isset($segments[1])) {
-				$result = $classeController->deleteClasse($segments[1]);
-				sendResponse($result);
 			} else {
-				throw new Exception("Méthode non autorisée", 405);
+				sendResponse($classeController->getAllClasses());
 			}
-		} catch (Exception $e) {
-			error_log("Erreur dans la route classes: " . $e->getMessage());
-			error_log("Trace: " . $e->getTraceAsString());
-			sendResponse([
-				'success' => false,
-				'message' => $e->getMessage()
-			], $e->getCode() ?: 500);
+		} elseif ($method === 'POST') {
+			$data = json_decode(file_get_contents('php://input'), true);
+			if (!$data || !isset($data['nom_classe']) || !isset($data['niveau']) || !isset($data['numero']) || !isset($data['rythme'])) {
+				throw new Exception("Tous les champs sont obligatoires");
+			}
+			$result = $classeController->createClasse(
+				$data['nom_classe'],
+				$data['niveau'],
+				$data['numero'],
+				$data['rythme']
+			);
+			sendResponse($result);
+		} elseif ($method === 'PUT' && isset($segments[1])) {
+			$data = json_decode(file_get_contents('php://input'), true);
+			if (!$data || !isset($data['nom_classe']) || !isset($data['niveau']) || !isset($data['numero']) || !isset($data['rythme'])) {
+				throw new Exception("Tous les champs sont obligatoires");
+			}
+			$result = $classeController->updateClasse(
+				$segments[1],
+				$data['nom_classe'],
+				$data['niveau'],
+				$data['numero'],
+				$data['rythme']
+			);
+			sendResponse($result);
+		} elseif ($method === 'DELETE' && isset($segments[1])) {
+			$result = $classeController->deleteClasse($segments[1]);
+			sendResponse($result);
+		} else {
+			throw new Exception("Méthode non autorisée", 405);
 		}
 	}
 

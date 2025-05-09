@@ -89,6 +89,9 @@ require_once 'templates/base.php';
 				throw new Error(result.message || 'Erreur lors du chargement des informations de l\'examen');
 			}
 
+			// Stocker les informations de l'examen pour une utilisation ultérieure
+			window.examInfo = result.data;
+
 			const examInfo = document.getElementById('examInfo');
 			examInfo.innerHTML = `
 				<div class="card">
@@ -192,6 +195,7 @@ require_once 'templates/base.php';
 			const data = {
 				id_eleve: formData.get('etudiant'),
 				id_examen: examId,
+				id_matiere: examInfo.matiere, // Nous utiliserons l'ID de la matière de l'examen
 				valeur: formData.get('note')
 			};
 
