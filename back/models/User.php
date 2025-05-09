@@ -38,7 +38,7 @@ class User
 	public function getByClasse($classeId)
 	{
 		try {
-			$stmt = $this->db->prepare("SELECT id_user, nom, prenom, email, classe FROM USER WHERE classe = ?");
+			$stmt = $this->db->prepare("SELECT id_user, nom, prenom, email, id_classe FROM USER WHERE id_classe = ?");
 			if (!$stmt) {
 				throw new Exception('Erreur de préparation de la requête', 500);
 			}

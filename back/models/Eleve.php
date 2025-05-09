@@ -66,8 +66,8 @@ class Eleve
 			$sql = "
 				SELECT u.*, c.nom_classe 
 				FROM USER u
-				JOIN CLASSE c ON u.classe = c.id_classe
-				WHERE u.classe = ?
+				JOIN CLASSE c ON u.id_classe = c.id_classe
+				WHERE u.id_classe = ?
 				ORDER BY u.nom ASC, u.prenom ASC
 			";
 

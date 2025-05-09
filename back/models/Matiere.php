@@ -18,7 +18,7 @@ class Matiere
 		try {
 			error_log("Tentative de récupération de toutes les matières");
 			$stmt = $this->db->prepare("SELECT * FROM MATIERE ORDER BY nom");
-			
+
 			if (!$stmt->execute()) {
 				error_log("Erreur lors de l'exécution de la requête");
 				return [];
@@ -39,7 +39,7 @@ class Matiere
 		try {
 			error_log("Tentative de récupération de la matière avec l'ID: " . $id);
 			$stmt = $this->db->prepare("SELECT * FROM MATIERE WHERE id_matiere = ?");
-			
+
 			if (!$stmt->execute([$id])) {
 				error_log("Erreur lors de l'exécution de la requête");
 				return false;
@@ -62,16 +62,25 @@ class Matiere
 	public function createMatiere($data)
 	{
 		try {
-			$conn = $this->db->getConnection();
-			$stmt = $conn->prepare("INSERT INTO MATIERE (nom, coefficient) VALUES (?, ?)");
-			$result = $stmt->execute([$data['nom'], $data['coefficient']]);
+			error_log("Tentative de création d'une matière avec les données: " . print_r($data, true));
 
+			$stmt = $this->db->prepare("INSERT INTO MATIERE (nom, coefficient) VALUES (?, ?)");
+			if (!$stmt) {
+				error_log("Erreur de préparation de la requête: " . print_r($this->db->errorInfo(), true));
+				throw new Exception("Erreur lors de la préparation de la requête");
+			}
+
+			$result = $stmt->execute([$data['nom'], $data['coefficient']]);
 			if (!$result) {
+				error_log("Erreur d'exécution de la requête: " . print_r($stmt->errorInfo(), true));
 				throw new Exception("Erreur lors de la création de la matière");
 			}
 
-			return $conn->lastInsertId();
+			$id = $this->db->lastInsertId();
+			error_log("Matière créée avec succès, ID: " . $id);
+			return $id;
 		} catch (Exception $e) {
+			error_log("Erreur dans createMatiere: " . $e->getMessage());
 			$this->errorService->logError("Erreur dans createMatiere: " . $e->getMessage(), 'database');
 			throw $e;
 		}
@@ -80,16 +89,24 @@ class Matiere
 	public function updateMatiere($id, $data)
 	{
 		try {
-			$conn = $this->db->getConnection();
-			$stmt = $conn->prepare("UPDATE MATIERE SET nom = ?, coefficient = ? WHERE id = ?");
-			$result = $stmt->execute([$data['nom'], $data['coefficient'], $id]);
+			error_log("Tentative de mise à jour de la matière ID: " . $id . " avec les données: " . print_r($data, true));
 
+			$stmt = $this->db->prepare("UPDATE MATIERE SET nom = ?, coefficient = ? WHERE id_matiere = ?");
+			if (!$stmt) {
+				error_log("Erreur de préparation de la requête: " . print_r($this->db->errorInfo(), true));
+				throw new Exception("Erreur lors de la préparation de la requête");
+			}
+
+			$result = $stmt->execute([$data['nom'], $data['coefficient'], $id]);
 			if (!$result) {
+				error_log("Erreur d'exécution de la requête: " . print_r($stmt->errorInfo(), true));
 				throw new Exception("Erreur lors de la mise à jour de la matière");
 			}
 
+			error_log("Matière mise à jour avec succès");
 			return true;
 		} catch (Exception $e) {
+			error_log("Erreur dans updateMatiere: " . $e->getMessage());
 			$this->errorService->logError("Erreur dans updateMatiere: " . $e->getMessage(), 'database');
 			throw $e;
 		}
@@ -98,16 +115,31 @@ class Matiere
 	public function deleteMatiere($id)
 	{
 		try {
-			$conn = $this->db->getConnection();
-			$stmt = $conn->prepare("DELETE FROM MATIERE WHERE id = ?");
-			$result = $stmt->execute([$id]);
+			error_log("Tentative de suppression de la matière ID: " . $id);
 
+			// Vérifier si la matière existe
+			$matiere = $this->getById($id);
+			if (!$matiere) {
+				error_log("Matière non trouvée avec l'ID: " . $id);
+				throw new Exception("La matière n'existe pas");
+			}
+
+			$stmt = $this->db->prepare("DELETE FROM MATIERE WHERE id_matiere = ?");
+			if (!$stmt) {
+				error_log("Erreur de préparation de la requête: " . print_r($this->db->errorInfo(), true));
+				throw new Exception("Erreur lors de la préparation de la requête");
+			}
+
+			$result = $stmt->execute([$id]);
 			if (!$result) {
+				error_log("Erreur d'exécution de la requête: " . print_r($stmt->errorInfo(), true));
 				throw new Exception("Erreur lors de la suppression de la matière");
 			}
 
+			error_log("Matière supprimée avec succès");
 			return true;
 		} catch (Exception $e) {
+			error_log("Erreur dans deleteMatiere: " . $e->getMessage());
 			$this->errorService->logError("Erreur dans deleteMatiere: " . $e->getMessage(), 'database');
 			throw $e;
 		}
