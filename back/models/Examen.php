@@ -128,22 +128,37 @@ class Examen
 	public function update($id, $titre, $matiere, $classe)
 	{
 		try {
+			error_log("Tentative de mise à jour de l'examen ID: $id");
+			error_log("Données reçues: titre=$titre, matiere=$matiere, classe=$classe");
+
 			$stmt = $this->db->prepare("
-				UPDATE EXAMEN 
-				SET titre = ?, id_matiere = ?, id_classe = ?
-				WHERE id_examen = ?
+				UPDATE EXAM 
+				SET titre = ?, matiere = ?, classe = ?
+				WHERE id_exam = ?
 			");
 
-			if (!$stmt) {
-				throw new Exception("Erreur de préparation de la requête");
+			if ($stmt === false) {
+				$error = $this->db->errorInfo();
+				error_log("Erreur de préparation de la requête: " . print_r($error, true));
+				throw new Exception("Erreur lors de la préparation de la requête: " . $error[2]);
 			}
 
 			if (!$stmt->execute([$titre, $matiere, $classe, $id])) {
-				throw new Exception("Erreur lors de la mise à jour de l'examen: " . implode(", ", $stmt->errorInfo()));
+				$error = $stmt->errorInfo();
+				error_log("Erreur d'exécution de la requête: " . print_r($error, true));
+				throw new Exception("Erreur lors de la mise à jour de l'examen: " . $error[2]);
 			}
 
-			return $this->getById($id);
+			$result = $this->getById($id);
+			if ($result === null) {
+				throw new Exception("L'examen n'a pas été trouvé après la mise à jour");
+			}
+
+			error_log("Mise à jour réussie pour l'examen ID: $id");
+			return $result;
 		} catch (Exception $e) {
+			error_log("Erreur dans update: " . $e->getMessage());
+			error_log("Trace de l'erreur: " . $e->getTraceAsString());
 			$this->errorService->logError('Examen::update', $e->getMessage());
 			return false;
 		}
@@ -152,18 +167,33 @@ class Examen
 	public function delete($id)
 	{
 		try {
+			error_log("Tentative de suppression de l'examen ID: $id");
+
+			// Vérifier si l'examen existe
+			$examen = $this->getById($id);
+			if ($examen === null) {
+				throw new Exception("L'examen n'existe pas");
+			}
+
 			$stmt = $this->db->prepare("DELETE FROM EXAM WHERE id_exam = ?");
 
-			if (!$stmt) {
-				throw new Exception("Erreur de préparation de la requête");
+			if ($stmt === false) {
+				$error = $this->db->errorInfo();
+				error_log("Erreur de préparation de la requête: " . print_r($error, true));
+				throw new Exception("Erreur lors de la préparation de la requête: " . $error[2]);
 			}
 
 			if (!$stmt->execute([$id])) {
-				throw new Exception("Erreur lors de la suppression de l'examen: " . implode(", ", $stmt->errorInfo()));
+				$error = $stmt->errorInfo();
+				error_log("Erreur d'exécution de la requête: " . print_r($error, true));
+				throw new Exception("Erreur lors de la suppression de l'examen: " . $error[2]);
 			}
 
+			error_log("Suppression réussie de l'examen ID: $id");
 			return true;
 		} catch (Exception $e) {
+			error_log("Erreur dans delete: " . $e->getMessage());
+			error_log("Trace de l'erreur: " . $e->getTraceAsString());
 			$this->errorService->logError('Examen::delete', $e->getMessage());
 			return false;
 		}
