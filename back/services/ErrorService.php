@@ -39,30 +39,45 @@ class ErrorService
 
 	private function __construct()
 	{
-		$this->logDir = dirname(dirname(__DIR__)) . '/logs/';
+		// Déterminer si nous sommes sur Windows ou Linux
+		$isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+
+		// Chemin de base pour les logs
+		$basePath = dirname(dirname(__DIR__));
+
+		// Sur Windows, utiliser le chemin Windows, sinon utiliser le chemin Linux
+		if ($isWindows) {
+			$this->logDir = str_replace('/', '\\', $basePath . '\\logs\\');
+		} else {
+			$this->logDir = $basePath . '/logs/';
+		}
+
 		$this->ensureLogDirectories();
 	}
 
 	private function ensureLogDirectories()
 	{
 		try {
+			// Créer le dossier principal des logs s'il n'existe pas
 			if (!file_exists($this->logDir)) {
 				@mkdir($this->logDir, 0777, true);
 			}
 
+			// Créer les sous-dossiers et fichiers de log
 			foreach ($this->logFiles as $type => $file) {
 				$dir = dirname($this->logDir . $file);
 				if (!file_exists($dir)) {
 					@mkdir($dir, 0777, true);
 				}
-				// Créer le fichier de log s'il n'existe pas
+
 				$logFile = $this->logDir . $file;
 				if (!file_exists($logFile)) {
-					@touch($logFile);
+					@file_put_contents($logFile, '');
 					@chmod($logFile, 0666);
 				}
 			}
 		} catch (Exception $e) {
+			// En cas d'erreur, utiliser le journal d'erreurs système
 			error_log("Impossible de créer les répertoires de logs: " . $e->getMessage());
 		}
 	}
@@ -89,17 +104,24 @@ class ErrorService
 
 		$logFile = $this->logDir . ($this->logFiles[$type] ?? 'general/errors.log');
 
-		// Vérifier si le fichier existe et est accessible en écriture
-		if (!file_exists($logFile)) {
-			@touch($logFile);
-			@chmod($logFile, 0666);
-		}
+		try {
+			// Vérifier si le fichier existe et est accessible en écriture
+			if (!file_exists($logFile)) {
+				@file_put_contents($logFile, '');
+				@chmod($logFile, 0666);
+			}
 
-		if (!is_writable($logFile)) {
-			@chmod($logFile, 0666);
-		}
+			if (!is_writable($logFile)) {
+				@chmod($logFile, 0666);
+			}
 
-		error_log($logMessage, 3, $logFile);
+			// Essayer d'écrire dans le fichier de log
+			@file_put_contents($logFile, $logMessage, FILE_APPEND);
+		} catch (Exception $e) {
+			// En cas d'échec, utiliser le journal d'erreurs système
+			error_log("Erreur lors de l'écriture dans le fichier de log: " . $e->getMessage());
+			error_log($logMessage);
+		}
 	}
 
 	public function getErrorResponse($errorCode, $additionalDetails = [])
