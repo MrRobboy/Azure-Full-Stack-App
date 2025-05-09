@@ -39,7 +39,7 @@ class ErrorService
 
 	private function __construct()
 	{
-		$this->logDir = __DIR__ . '/../../logs/';
+		$this->logDir = dirname(dirname(__DIR__)) . '/logs/';
 		$this->ensureLogDirectories();
 	}
 
@@ -47,13 +47,19 @@ class ErrorService
 	{
 		try {
 			if (!file_exists($this->logDir)) {
-				@mkdir($this->logDir, 0755, true);
+				@mkdir($this->logDir, 0777, true);
 			}
 
 			foreach ($this->logFiles as $type => $file) {
 				$dir = dirname($this->logDir . $file);
 				if (!file_exists($dir)) {
-					@mkdir($dir, 0755, true);
+					@mkdir($dir, 0777, true);
+				}
+				// Créer le fichier de log s'il n'existe pas
+				$logFile = $this->logDir . $file;
+				if (!file_exists($logFile)) {
+					@touch($logFile);
+					@chmod($logFile, 0666);
 				}
 			}
 		} catch (Exception $e) {
@@ -82,6 +88,17 @@ class ErrorService
 		$logMessage .= "----------------------------------------\n";
 
 		$logFile = $this->logDir . ($this->logFiles[$type] ?? 'general/errors.log');
+
+		// Vérifier si le fichier existe et est accessible en écriture
+		if (!file_exists($logFile)) {
+			@touch($logFile);
+			@chmod($logFile, 0666);
+		}
+
+		if (!is_writable($logFile)) {
+			@chmod($logFile, 0666);
+		}
+
 		error_log($logMessage, 3, $logFile);
 	}
 
