@@ -69,7 +69,7 @@ class ErrorService
 		return self::$instance;
 	}
 
-	public function logError($type, $message, $details = [])
+	public function logError($message, $type = 'general', $details = [])
 	{
 		$timestamp = date('Y-m-d H:i:s');
 		$logMessage = "[$timestamp] [$type] $message\n";
@@ -78,10 +78,10 @@ class ErrorService
 			$logMessage .= "Détails: " . print_r($details, true) . "\n";
 		}
 
-		$logMessage .= "Trace: " . debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5) . "\n";
+		$logMessage .= "Trace: " . print_r(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5), true) . "\n";
 		$logMessage .= "----------------------------------------\n";
 
-		$logFile = $this->logDir . $this->logFiles[$type] ?? 'general/errors.log';
+		$logFile = $this->logDir . ($this->logFiles[$type] ?? 'general/errors.log');
 		error_log($logMessage, 3, $logFile);
 	}
 

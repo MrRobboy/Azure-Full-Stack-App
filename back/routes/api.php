@@ -129,6 +129,16 @@ function handleError($e)
 	}
 }
 
+// Gestion globale des erreurs
+set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+	error_log("Erreur PHP: [$errno] $errstr dans $errfile à la ligne $errline");
+	throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
+});
+
+set_exception_handler(function ($e) {
+	handleError($e);
+});
+
 try {
 	error_log("Début de la requête API");
 	error_log("Méthode HTTP: " . $method);
@@ -298,12 +308,21 @@ try {
 		if ($method === 'GET') {
 			if (isset($segments[1])) {
 				if ($segments[1] === 'eleves' && isset($segments[2])) {
-					sendResponse($classeController->getElevesByClasse($segments[2]));
+					error_log("Récupération des élèves de la classe: " . $segments[2]);
+					$result = $classeController->getElevesByClasse($segments[2]);
+					error_log("Résultat: " . print_r($result, true));
+					sendResponse($result);
 				} else {
-					sendResponse($classeController->getClasseById($segments[1]));
+					error_log("Récupération de la classe: " . $segments[1]);
+					$result = $classeController->getClasseById($segments[1]);
+					error_log("Résultat: " . print_r($result, true));
+					sendResponse($result);
 				}
 			} else {
-				sendResponse($classeController->getAllClasses());
+				error_log("Récupération de toutes les classes");
+				$result = $classeController->getAllClasses();
+				error_log("Résultat: " . print_r($result, true));
+				sendResponse($result);
 			}
 		} elseif ($method === 'POST') {
 			$data = json_decode(file_get_contents('php://input'), true);
@@ -408,8 +427,8 @@ try {
 				$data = json_decode(file_get_contents('php://input'), true);
 				error_log("Données reçues: " . print_r($data, true));
 
-				if (!$data) {
-					throw new Exception("Données invalides");
+				if (!$data || !isset($data['nom']) || !isset($data['prenom']) || !isset($data['email']) || !isset($data['password'])) {
+					throw new Exception("Tous les champs sont obligatoires");
 				}
 
 				$result = $profController->createProf($data);
@@ -417,7 +436,7 @@ try {
 				sendResponse($result, 201);
 			} catch (Exception $e) {
 				error_log("Erreur: " . $e->getMessage());
-				sendResponse(['message' => $e->getMessage()], 500);
+				sendResponse(['message' => $e->getMessage()], 400);
 			}
 		} elseif ($method === 'PUT' && isset($segments[1])) {
 			try {
@@ -425,8 +444,8 @@ try {
 				$data = json_decode(file_get_contents('php://input'), true);
 				error_log("Données reçues: " . print_r($data, true));
 
-				if (!$data) {
-					throw new Exception("Données invalides");
+				if (!$data || !isset($data['nom']) || !isset($data['prenom']) || !isset($data['email'])) {
+					throw new Exception("Tous les champs sont obligatoires");
 				}
 
 				$result = $profController->updateProf($segments[1], $data);
@@ -434,18 +453,21 @@ try {
 				sendResponse($result);
 			} catch (Exception $e) {
 				error_log("Erreur: " . $e->getMessage());
-				sendResponse(['message' => $e->getMessage()], 500);
+				sendResponse(['message' => $e->getMessage()], 400);
 			}
 		} elseif ($method === 'DELETE' && isset($segments[1])) {
 			try {
 				error_log("Suppression du professeur avec l'ID: " . $segments[1]);
 				$result = $profController->deleteProf($segments[1]);
-				error_log("Professeur supprimé avec succès: " . print_r($result, true));
-				sendResponse($result);
+				error_log("Professeur supprimé avec succès");
+				sendResponse(['message' => 'Professeur supprimé avec succès']);
 			} catch (Exception $e) {
 				error_log("Erreur: " . $e->getMessage());
-				sendResponse(['message' => $e->getMessage()], 500);
+				sendResponse(['message' => $e->getMessage()], 400);
 			}
+		} else {
+			error_log("Méthode non autorisée: " . $method);
+			sendResponse(['message' => 'Méthode non autorisée'], 405);
 		}
 	}
 
