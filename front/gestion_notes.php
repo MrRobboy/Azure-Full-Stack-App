@@ -7,131 +7,22 @@ if (!isset($_SESSION['prof_id'])) {
 }
 
 $pageTitle = "Gestion des Notes";
-ob_start();
+require_once 'templates/base.php';
 ?>
-
-<head>
-	<title><?php echo $pageTitle; ?></title>
-	<link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
-	<link rel="stylesheet" href="css/styles.css">
-</head>
-
-<style>
-	.container {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 20px;
-	}
-
-	.main-content {
-		background: white;
-		padding: 20px;
-		border-radius: 8px;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-	}
-
-	h1 {
-		color: #333;
-		margin-bottom: 20px;
-	}
-
-	.form-container {
-		margin-bottom: 30px;
-		padding: 20px;
-		background: #f8f9fa;
-		border-radius: 8px;
-	}
-
-	.form-row {
-		margin-bottom: 15px;
-	}
-
-	label {
-		display: block;
-		margin-bottom: 5px;
-		color: #555;
-	}
-
-	input[type="text"],
-	input[type="email"],
-	input[type="password"],
-	input[type="number"],
-	select {
-		width: 100%;
-		padding: 8px;
-		border: 1px solid #ddd;
-		border-radius: 4px;
-		font-size: 14px;
-	}
-
-	.btn {
-		background: #007bff;
-		color: white;
-		padding: 10px 20px;
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 14px;
-		transition: background 0.3s;
-	}
-
-	.btn:hover {
-		background: #0056b3;
-	}
-
-	.table-responsive {
-		overflow-x: auto;
-	}
-
-	.table {
-		width: 100%;
-		border-collapse: collapse;
-		margin-top: 20px;
-	}
-
-	.table th,
-	.table td {
-		padding: 12px;
-		text-align: left;
-		border-bottom: 1px solid #ddd;
-	}
-
-	.table th {
-		background: #f8f9fa;
-		font-weight: 600;
-	}
-
-	.btn-edit {
-		background: #28a745;
-		margin-right: 5px;
-	}
-
-	.btn-edit:hover {
-		background: #218838;
-	}
-
-	.btn-danger {
-		background: #dc3545;
-	}
-
-	.btn-danger:hover {
-		background: #c82333;
-	}
-</style>
 
 <div class="container">
 	<div class="main-content">
 		<h1>Gestion des Notes</h1>
 
-		<div id="examsList">
+		<div id="examsList" class="mb-4">
 			<!-- La liste des examens sera chargée ici -->
 		</div>
 
-		<div id="notesList">
+		<div id="notesList" class="mb-4">
 			<!-- Les notes seront chargées ici -->
 		</div>
 
-		<div id="addNoteForm" style="display: none;">
+		<div id="addNoteForm" class="form-container" style="display: none;">
 			<h3>Ajouter une note</h3>
 			<form id="noteForm">
 				<div class="form-row">
@@ -146,25 +37,24 @@ ob_start();
 					<input type="number" name="note" id="note" min="0" max="20" step="0.5" required>
 				</div>
 
-				<button type="submit" class="btn">Ajouter la note</button>
+				<button type="submit" class="btn btn-primary">Ajouter la note</button>
 			</form>
 		</div>
 	</div>
 </div>
 
-<script src="js/notification-system.js"></script>
-<script src="js/error-messages.js"></script>
+<script src="/js/notification-system.js"></script>
 <script>
 	let currentExamId = null;
 
 	// Fonction pour charger la liste des examens
 	async function loadExams() {
 		try {
-			const response = await fetch('api/examens');
+			const response = await fetch('/api/exams');
 			const result = await response.json();
 
 			if (!result.success) {
-				throw new Error(result.error || 'Erreur lors du chargement des examens');
+				throw new Error(result.message || 'Erreur lors du chargement des examens');
 			}
 
 			const examsList = document.getElementById('examsList');
@@ -176,214 +66,229 @@ ob_start();
 			}
 
 			const table = document.createElement('table');
+			table.className = 'table';
 			table.innerHTML = `
-			<thead>
-				<tr>
-					<th>Titre</th>
-					<th>Matière</th>
-					<th>Classe</th>
-					<th>Action</th>
-				</tr>
-			</thead>
-			<tbody></tbody>
-		`;
+				<thead>
+					<tr>
+						<th>Titre</th>
+						<th>Matière</th>
+						<th>Classe</th>
+						<th>Date</th>
+						<th>Action</th>
+					</tr>
+				</thead>
+				<tbody></tbody>
+			`;
 
 			result.data.forEach(exam => {
 				const tr = document.createElement('tr');
 				tr.innerHTML = `
-				<td>${exam.titre}</td>
-				<td>${exam.nom_matiere}</td>
-				<td>${exam.nom_classe}</td>
-				<td>
-					<button class="btn" onclick="selectExam(${exam.id_examen})">Gérer les notes</button>
-				</td>
-			`;
+					<td>${exam.titre}</td>
+					<td>${exam.nom_matiere}</td>
+					<td>${exam.nom_classe}</td>
+					<td>${exam.date}</td>
+					<td>
+						<button class="btn btn-primary" onclick="selectExam(${exam.id_exam})">Gérer les notes</button>
+					</td>
+				`;
 				table.querySelector('tbody').appendChild(tr);
 			});
 
 			examsList.appendChild(table);
 		} catch (error) {
-			console.error('Erreur:', error);
-			NotificationSystem.error(error.message || ErrorMessages.GENERAL.SERVER_ERROR);
+			NotificationSystem.error(error.message);
 		}
 	}
 
-	// Fonction pour sélectionner un examen
-	async function selectExam(examId) {
-		currentExamId = examId;
-		document.getElementById('addNoteForm').style.display = 'block';
-		await Promise.all([loadEtudiants(), loadNotes()]);
-	}
-
-	// Fonction pour charger les étudiants
-	async function loadEtudiants() {
+	// Fonction pour charger les étudiants d'une classe
+	async function loadStudents(classeId) {
 		try {
-			const response = await fetch(`api/examens/${currentExamId}/etudiants`);
+			const response = await fetch(`/api/classes/eleves/${classeId}`);
 			const result = await response.json();
 
 			if (!result.success) {
-				throw new Error(result.error || 'Erreur lors du chargement des étudiants');
+				throw new Error(result.message || 'Erreur lors du chargement des étudiants');
 			}
 
 			const select = document.getElementById('etudiant');
 			select.innerHTML = '<option value="">Sélectionnez un étudiant</option>';
 
-			result.data.forEach(etudiant => {
+			result.data.forEach(student => {
 				const option = document.createElement('option');
-				option.value = etudiant.id_user;
-				option.textContent = `${etudiant.prenom} ${etudiant.nom}`;
+				option.value = student.id_user;
+				option.textContent = `${student.nom} ${student.prenom}`;
 				select.appendChild(option);
 			});
 		} catch (error) {
-			console.error('Erreur:', error);
-			NotificationSystem.error(error.message || ErrorMessages.GENERAL.SERVER_ERROR);
+			NotificationSystem.error(error.message);
 		}
 	}
 
-	// Fonction pour charger les notes
-	async function loadNotes() {
+	// Fonction pour charger les notes d'un examen
+	async function loadNotes(examId) {
 		try {
-			const response = await fetch(`api/examens/${currentExamId}/notes`);
+			const response = await fetch(`/api/notes/exam/${examId}`);
 			const result = await response.json();
 
 			if (!result.success) {
-				throw new Error(result.error || 'Erreur lors du chargement des notes');
+				throw new Error(result.message || 'Erreur lors du chargement des notes');
 			}
 
 			const notesList = document.getElementById('notesList');
-			notesList.innerHTML = '<h3>Notes</h3>';
+			notesList.innerHTML = '<h3>Notes de l\'examen</h3>';
 
 			if (result.data.length === 0) {
-				notesList.innerHTML += '<p>Aucune note enregistrée</p>';
+				notesList.innerHTML += '<p>Aucune note disponible</p>';
 				return;
 			}
 
 			const table = document.createElement('table');
+			table.className = 'table';
 			table.innerHTML = `
-			<thead>
-				<tr>
-					<th>Étudiant</th>
-					<th>Note</th>
-					<th>Actions</th>
-				</tr>
-			</thead>
-			<tbody></tbody>
-		`;
+				<thead>
+					<tr>
+						<th>Étudiant</th>
+						<th>Note</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody></tbody>
+			`;
 
 			result.data.forEach(note => {
 				const tr = document.createElement('tr');
 				tr.innerHTML = `
-				<td>${note.prenom} ${note.nom}</td>
-				<td>${note.note}</td>
-				<td>
-					<button class="btn btn-edit" onclick="editNote(${note.id_note}, ${note.note})">Modifier</button>
-					<button class="btn btn-danger" onclick="deleteNote(${note.id_note})">Supprimer</button>
-				</td>
-			`;
+					<td>${note.nom} ${note.prenom}</td>
+					<td>${note.valeur}</td>
+					<td>
+						<button class="btn btn-warning" onclick="editNote(${note.id_note})">Modifier</button>
+						<button class="btn btn-danger" onclick="deleteNote(${note.id_note})">Supprimer</button>
+					</td>
+				`;
 				table.querySelector('tbody').appendChild(tr);
 			});
 
 			notesList.appendChild(table);
 		} catch (error) {
-			console.error('Erreur:', error);
-			NotificationSystem.error(error.message || ErrorMessages.GENERAL.SERVER_ERROR);
+			NotificationSystem.error(error.message);
+		}
+	}
+
+	// Fonction pour sélectionner un examen
+	async function selectExam(examId) {
+		try {
+			currentExamId = examId;
+			const response = await fetch(`/api/exams/${examId}`);
+			const result = await response.json();
+
+			if (!result.success) {
+				throw new Error(result.message || 'Erreur lors de la récupération de l\'examen');
+			}
+
+			await loadStudents(result.data.classe);
+			await loadNotes(examId);
+			document.getElementById('addNoteForm').style.display = 'block';
+		} catch (error) {
+			NotificationSystem.error(error.message);
 		}
 	}
 
 	// Fonction pour ajouter une note
-	document.getElementById('noteForm').addEventListener('submit', async function(e) {
-		e.preventDefault();
-
-		const etudiant = document.getElementById('etudiant').value;
-		const note = document.getElementById('note').value;
-
+	async function addNote(event) {
+		event.preventDefault();
 		try {
-			const response = await fetch(`api/examens/${currentExamId}/notes`, {
+			const formData = new FormData(event.target);
+			const data = {
+				id_eleve: formData.get('etudiant'),
+				id_examen: currentExamId,
+				valeur: formData.get('note')
+			};
+
+			const response = await fetch('/api/notes', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({
-					etudiant,
-					note
-				})
+				body: JSON.stringify(data)
 			});
 
 			const result = await response.json();
 
 			if (!result.success) {
-				throw new Error(result.error || 'Erreur lors de l\'ajout de la note');
+				throw new Error(result.message || 'Erreur lors de l\'ajout de la note');
 			}
 
-			NotificationSystem.success(result.message || 'Note ajoutée avec succès');
-			document.getElementById('etudiant').value = '';
-			document.getElementById('note').value = '';
-			await loadNotes();
+			NotificationSystem.success('Note ajoutée avec succès');
+			event.target.reset();
+			await loadNotes(currentExamId);
 		} catch (error) {
-			console.error('Erreur:', error);
-			NotificationSystem.error(error.message || ErrorMessages.GENERAL.SERVER_ERROR);
+			NotificationSystem.error(error.message);
 		}
-	});
+	}
 
 	// Fonction pour modifier une note
-	async function editNote(noteId, currentNote) {
-		const newNote = prompt('Nouvelle note:', currentNote);
+	async function editNote(noteId) {
+		try {
+			const response = await fetch(`/api/notes/${noteId}`);
+			const result = await response.json();
 
-		if (newNote !== null && newNote !== currentNote) {
-			try {
-				const response = await fetch(`api/notes/${noteId}`, {
-					method: 'PUT',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						note: newNote
-					})
-				});
-
-				const result = await response.json();
-
-				if (!result.success) {
-					throw new Error(result.error || 'Erreur lors de la modification de la note');
-				}
-
-				NotificationSystem.success(result.message || 'Note modifiée avec succès');
-				await loadNotes();
-			} catch (error) {
-				console.error('Erreur:', error);
-				NotificationSystem.error(error.message || ErrorMessages.GENERAL.SERVER_ERROR);
+			if (!result.success) {
+				throw new Error(result.message || 'Erreur lors de la récupération de la note');
 			}
+
+			const note = prompt('Entrez la nouvelle note :', result.data.valeur);
+			if (note === null) return;
+
+			const updateResponse = await fetch(`/api/notes/${noteId}`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					valeur: note
+				})
+			});
+
+			const updateResult = await updateResponse.json();
+
+			if (!updateResult.success) {
+				throw new Error(updateResult.message || 'Erreur lors de la modification de la note');
+			}
+
+			NotificationSystem.success('Note modifiée avec succès');
+			await loadNotes(currentExamId);
+		} catch (error) {
+			NotificationSystem.error(error.message);
 		}
 	}
 
 	// Fonction pour supprimer une note
 	async function deleteNote(noteId) {
-		if (confirm('Êtes-vous sûr de vouloir supprimer cette note ?')) {
-			try {
-				const response = await fetch(`api/notes/${noteId}`, {
-					method: 'DELETE'
-				});
-
-				const result = await response.json();
-
-				if (!result.success) {
-					throw new Error(result.error || 'Erreur lors de la suppression de la note');
-				}
-
-				NotificationSystem.success(result.message || 'Note supprimée avec succès');
-				await loadNotes();
-			} catch (error) {
-				console.error('Erreur:', error);
-				NotificationSystem.error(error.message || ErrorMessages.GENERAL.SERVER_ERROR);
+		try {
+			if (!confirm('Êtes-vous sûr de vouloir supprimer cette note ?')) {
+				return;
 			}
+
+			const response = await fetch(`/api/notes/${noteId}`, {
+				method: 'DELETE'
+			});
+
+			const result = await response.json();
+
+			if (!result.success) {
+				throw new Error(result.message || 'Erreur lors de la suppression de la note');
+			}
+
+			NotificationSystem.success('Note supprimée avec succès');
+			await loadNotes(currentExamId);
+		} catch (error) {
+			NotificationSystem.error(error.message);
 		}
 	}
 
-	// Charger les examens au chargement de la page
-	document.addEventListener('DOMContentLoaded', loadExams);
+	// Initialisation
+	document.addEventListener('DOMContentLoaded', () => {
+		loadExams();
+		document.getElementById('noteForm').addEventListener('submit', addNote);
+	});
 </script>
-
-<?php
-$content = ob_get_clean();
-require_once 'templates/base.php';
-?>
