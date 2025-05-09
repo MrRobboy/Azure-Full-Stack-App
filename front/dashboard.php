@@ -47,31 +47,6 @@ ob_start();
     </div>
 </div>
 
-<div class="card">
-    <div class="card-header">
-        <h2 class="card-title">
-            <i class="fas fa-chart-line"></i> Statistiques récentes
-        </h2>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Matière</th>
-                        <th>Moyenne</th>
-                        <th>Meilleure note</th>
-                        <th>Plus basse note</th>
-                    </tr>
-                </thead>
-                <tbody id="statsTable">
-                    <!-- Les statistiques seront chargées dynamiquement -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
 <script src="js/notification-system.js"></script>
 <script src="js/error-messages.js"></script>
 <script src="js/config.js"></script>
@@ -122,58 +97,9 @@ ob_start();
         }
     }
 
-    // Fonction pour charger les statistiques
-    async function loadStats() {
-        try {
-            const response = await fetch(getApiUrl('notes'));
-            const result = await response.json();
-
-            if (!result.success || !result.data) {
-                throw new Error('Données invalides reçues de l\'API');
-            }
-
-            const notes = result.data;
-
-            // Regrouper les notes par matière
-            const stats = {};
-            for (const note of notes) {
-                if (!stats[note.nom_matiere]) {
-                    stats[note.nom_matiere] = {
-                        notes: [],
-                        moyenne: 0
-                    };
-                }
-                stats[note.nom_matiere].notes.push(parseFloat(note.note));
-            }
-
-            // Calculer les statistiques
-            const statsTable = document.getElementById('statsTable');
-            statsTable.innerHTML = '';
-
-            for (const [matiere, data] of Object.entries(stats)) {
-                const moyenne = data.notes.reduce((a, b) => a + b, 0) / data.notes.length;
-                const meilleure = Math.max(...data.notes);
-                const plusBasse = Math.min(...data.notes);
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${matiere}</td>
-                    <td>${moyenne.toFixed(2)}</td>
-                    <td>${meilleure}</td>
-                    <td>${plusBasse}</td>
-                `;
-                statsTable.appendChild(row);
-            }
-        } catch (error) {
-            console.error('Erreur lors du chargement des statistiques:', error);
-            NotificationSystem.error('Erreur lors du chargement des statistiques');
-        }
-    }
-
     // Initialisation
     document.addEventListener('DOMContentLoaded', () => {
         loadCounters();
-        loadStats();
     });
 </script>
 
