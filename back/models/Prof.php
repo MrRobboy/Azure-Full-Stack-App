@@ -98,4 +98,97 @@ class Prof
 			throw new Exception('Erreur lors de la récupération des examens', 500);
 		}
 	}
+
+	public function getAll()
+	{
+		try {
+			$stmt = $this->db->prepare("SELECT id_prof, nom, prenom, email FROM PROF");
+			if (!$stmt) {
+				throw new Exception('Erreur de préparation de la requête', 500);
+			}
+
+			$stmt->execute();
+			return $stmt->fetchAll();
+		} catch (PDOException $e) {
+			throw new Exception('Erreur lors de la récupération des professeurs', 500);
+		}
+	}
+
+	public function getByEmail($email)
+	{
+		try {
+			$stmt = $this->db->prepare("SELECT * FROM PROF WHERE email = ?");
+			if (!$stmt) {
+				throw new Exception('Erreur de préparation de la requête', 500);
+			}
+
+			$stmt->execute([$email]);
+			return $stmt->fetch();
+		} catch (PDOException $e) {
+			throw new Exception('Erreur lors de la récupération du professeur', 500);
+		}
+	}
+
+	public function create($data)
+	{
+		try {
+			$stmt = $this->db->prepare("INSERT INTO PROF (nom, prenom, email, password) VALUES (?, ?, ?, ?)");
+			if (!$stmt) {
+				throw new Exception('Erreur de préparation de la requête', 500);
+			}
+
+			$stmt->execute([
+				$data['nom'],
+				$data['prenom'],
+				$data['email'],
+				$data['password']
+			]);
+
+			return $this->db->lastInsertId();
+		} catch (PDOException $e) {
+			throw new Exception('Erreur lors de la création du professeur', 500);
+		}
+	}
+
+	public function update($id, $data)
+	{
+		try {
+			$fields = [];
+			$values = [];
+
+			foreach ($data as $key => $value) {
+				$fields[] = "$key = ?";
+				$values[] = $value;
+			}
+
+			$values[] = $id;
+
+			$sql = "UPDATE PROF SET " . implode(', ', $fields) . " WHERE id_prof = ?";
+			$stmt = $this->db->prepare($sql);
+
+			if (!$stmt) {
+				throw new Exception('Erreur de préparation de la requête', 500);
+			}
+
+			$stmt->execute($values);
+			return true;
+		} catch (PDOException $e) {
+			throw new Exception('Erreur lors de la mise à jour du professeur', 500);
+		}
+	}
+
+	public function delete($id)
+	{
+		try {
+			$stmt = $this->db->prepare("DELETE FROM PROF WHERE id_prof = ?");
+			if (!$stmt) {
+				throw new Exception('Erreur de préparation de la requête', 500);
+			}
+
+			$stmt->execute([$id]);
+			return true;
+		} catch (PDOException $e) {
+			throw new Exception('Erreur lors de la suppression du professeur', 500);
+		}
+	}
 }

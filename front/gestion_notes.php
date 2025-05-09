@@ -10,6 +10,115 @@ $pageTitle = "Gestion des Notes";
 ob_start();
 ?>
 
+<head>
+	<title><?php echo $pageTitle; ?></title>
+	<link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
+	<link rel="stylesheet" href="css/styles.css">
+</head>
+
+<style>
+	.container {
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 20px;
+	}
+
+	.main-content {
+		background: white;
+		padding: 20px;
+		border-radius: 8px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	}
+
+	h1 {
+		color: #333;
+		margin-bottom: 20px;
+	}
+
+	.form-container {
+		margin-bottom: 30px;
+		padding: 20px;
+		background: #f8f9fa;
+		border-radius: 8px;
+	}
+
+	.form-row {
+		margin-bottom: 15px;
+	}
+
+	label {
+		display: block;
+		margin-bottom: 5px;
+		color: #555;
+	}
+
+	input[type="text"],
+	input[type="email"],
+	input[type="password"],
+	input[type="number"],
+	select {
+		width: 100%;
+		padding: 8px;
+		border: 1px solid #ddd;
+		border-radius: 4px;
+		font-size: 14px;
+	}
+
+	.btn {
+		background: #007bff;
+		color: white;
+		padding: 10px 20px;
+		border: none;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 14px;
+		transition: background 0.3s;
+	}
+
+	.btn:hover {
+		background: #0056b3;
+	}
+
+	.table-responsive {
+		overflow-x: auto;
+	}
+
+	.table {
+		width: 100%;
+		border-collapse: collapse;
+		margin-top: 20px;
+	}
+
+	.table th,
+	.table td {
+		padding: 12px;
+		text-align: left;
+		border-bottom: 1px solid #ddd;
+	}
+
+	.table th {
+		background: #f8f9fa;
+		font-weight: 600;
+	}
+
+	.btn-edit {
+		background: #28a745;
+		margin-right: 5px;
+	}
+
+	.btn-edit:hover {
+		background: #218838;
+	}
+
+	.btn-danger {
+		background: #dc3545;
+	}
+
+	.btn-danger:hover {
+		background: #c82333;
+	}
+</style>
+
 <div class="container">
 	<div class="main-content">
 		<h1>Gestion des Notes</h1>
@@ -43,6 +152,8 @@ ob_start();
 	</div>
 </div>
 
+<script src="js/notification-system.js"></script>
+<script src="js/error-messages.js"></script>
 <script>
 	let currentExamId = null;
 
@@ -93,7 +204,7 @@ ob_start();
 			examsList.appendChild(table);
 		} catch (error) {
 			console.error('Erreur:', error);
-			handleApiError(error);
+			NotificationSystem.error(error.message || ErrorMessages.GENERAL.SERVER_ERROR);
 		}
 	}
 
@@ -125,7 +236,7 @@ ob_start();
 			});
 		} catch (error) {
 			console.error('Erreur:', error);
-			handleApiError(error);
+			NotificationSystem.error(error.message || ErrorMessages.GENERAL.SERVER_ERROR);
 		}
 	}
 
@@ -175,7 +286,7 @@ ob_start();
 			notesList.appendChild(table);
 		} catch (error) {
 			console.error('Erreur:', error);
-			handleApiError(error);
+			NotificationSystem.error(error.message || ErrorMessages.GENERAL.SERVER_ERROR);
 		}
 	}
 
@@ -204,13 +315,13 @@ ob_start();
 				throw new Error(result.error || 'Erreur lors de l\'ajout de la note');
 			}
 
-			showSuccess(result.message || 'Note ajoutée avec succès');
+			NotificationSystem.success(result.message || 'Note ajoutée avec succès');
 			document.getElementById('etudiant').value = '';
 			document.getElementById('note').value = '';
 			await loadNotes();
 		} catch (error) {
 			console.error('Erreur:', error);
-			handleApiError(error);
+			NotificationSystem.error(error.message || ErrorMessages.GENERAL.SERVER_ERROR);
 		}
 	});
 
@@ -236,11 +347,11 @@ ob_start();
 					throw new Error(result.error || 'Erreur lors de la modification de la note');
 				}
 
-				showSuccess(result.message || 'Note modifiée avec succès');
+				NotificationSystem.success(result.message || 'Note modifiée avec succès');
 				await loadNotes();
 			} catch (error) {
 				console.error('Erreur:', error);
-				handleApiError(error);
+				NotificationSystem.error(error.message || ErrorMessages.GENERAL.SERVER_ERROR);
 			}
 		}
 	}
@@ -259,11 +370,11 @@ ob_start();
 					throw new Error(result.error || 'Erreur lors de la suppression de la note');
 				}
 
-				showSuccess(result.message || 'Note supprimée avec succès');
+				NotificationSystem.success(result.message || 'Note supprimée avec succès');
 				await loadNotes();
 			} catch (error) {
 				console.error('Erreur:', error);
-				handleApiError(error);
+				NotificationSystem.error(error.message || ErrorMessages.GENERAL.SERVER_ERROR);
 			}
 		}
 	}

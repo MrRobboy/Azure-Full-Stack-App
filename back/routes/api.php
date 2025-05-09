@@ -14,6 +14,7 @@ require_once __DIR__ . '/../controllers/NoteController.php';
 require_once __DIR__ . '/../controllers/MatiereController.php';
 require_once __DIR__ . '/../controllers/ClasseController.php';
 require_once __DIR__ . '/../controllers/ExamenController.php';
+require_once __DIR__ . '/../controllers/ProfController.php';
 require_once __DIR__ . '/../services/ErrorService.php';
 
 // Configuration des headers pour les requêtes API
@@ -46,6 +47,7 @@ $noteController = new NoteController();
 $matiereController = new MatiereController();
 $classeController = new ClasseController();
 $examenController = new ExamenController();
+$profController = new ProfController();
 
 // Fonction pour envoyer une réponse JSON
 function sendResponse($data, $status = 200)
@@ -413,6 +415,74 @@ try {
 					'success' => false,
 					'error' => $e->getMessage()
 				], 400);
+			}
+		}
+	}
+
+	// Routes des professeurs
+	if ($segments[0] === 'profs') {
+		error_log("Traitement de la route profs - " . date('Y-m-d H:i:s'));
+
+		if ($method === 'GET') {
+			try {
+				if (isset($segments[1])) {
+					error_log("Récupération du professeur avec l'ID: " . $segments[1]);
+					$result = $profController->getProfById($segments[1]);
+					error_log("Données du professeur: " . print_r($result, true));
+					sendResponse($result);
+				} else {
+					error_log("Récupération de tous les professeurs");
+					$result = $profController->getAllProfs();
+					error_log("Données des professeurs: " . print_r($result, true));
+					sendResponse($result);
+				}
+			} catch (Exception $e) {
+				error_log("Erreur: " . $e->getMessage());
+				sendResponse(['message' => $e->getMessage()], 500);
+			}
+		} elseif ($method === 'POST') {
+			try {
+				error_log("Création d'un nouveau professeur");
+				$data = json_decode(file_get_contents('php://input'), true);
+				error_log("Données reçues: " . print_r($data, true));
+
+				if (!$data) {
+					throw new Exception("Données invalides");
+				}
+
+				$result = $profController->createProf($data);
+				error_log("Professeur créé avec succès: " . print_r($result, true));
+				sendResponse($result, 201);
+			} catch (Exception $e) {
+				error_log("Erreur: " . $e->getMessage());
+				sendResponse(['message' => $e->getMessage()], 500);
+			}
+		} elseif ($method === 'PUT' && isset($segments[1])) {
+			try {
+				error_log("Mise à jour du professeur avec l'ID: " . $segments[1]);
+				$data = json_decode(file_get_contents('php://input'), true);
+				error_log("Données reçues: " . print_r($data, true));
+
+				if (!$data) {
+					throw new Exception("Données invalides");
+				}
+
+				$result = $profController->updateProf($segments[1], $data);
+				error_log("Professeur mis à jour avec succès: " . print_r($result, true));
+				sendResponse($result);
+			} catch (Exception $e) {
+				error_log("Erreur: " . $e->getMessage());
+				sendResponse(['message' => $e->getMessage()], 500);
+			}
+		} elseif ($method === 'DELETE' && isset($segments[1])) {
+			try {
+				error_log("Suppression du professeur avec l'ID: " . $segments[1]);
+				$result = $profController->deleteProf($segments[1]);
+				error_log("Professeur supprimé avec succès: " . print_r($result, true));
+				sendResponse($result);
+			} catch (Exception $e) {
+				error_log("Erreur: " . $e->getMessage());
+				sendResponse(['message' => $e->getMessage()], 500);
 			}
 		}
 	}
