@@ -424,7 +424,7 @@ try {
 	}
 
 	// Routes des examens
-	if ($segments[0] === 'exams') {
+	if ($segments[0] === 'examens') {
 		error_log("Traitement de la requête d'examens");
 		if ($method === 'GET') {
 			if (isset($segments[1])) {
