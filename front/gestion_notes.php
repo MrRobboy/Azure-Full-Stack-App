@@ -99,6 +99,7 @@ require_once 'templates/base.php';
 	// Fonction pour charger les informations de l'examen
 	async function loadExamInfo() {
 		try {
+			console.log('Chargement des informations de l\'examen:', examId);
 			const {
 				data: result
 			} = await fetchWithLogging(`api/exams/${examId}`);
@@ -106,6 +107,8 @@ require_once 'templates/base.php';
 			if (!result.success) {
 				throw new Error(result.message || 'Erreur lors du chargement des informations de l\'examen');
 			}
+
+			console.log('Informations de l\'examen reçues:', result.data);
 
 			// Stocker les informations de l'examen pour une utilisation ultérieure
 			window.examInfo = result.data;
@@ -120,9 +123,16 @@ require_once 'templates/base.php';
 				</div>
 			`;
 
+			// Vérifier que nous avons bien l'ID de la classe
+			if (!result.data.id_classe) {
+				throw new Error('ID de la classe manquant dans les informations de l\'examen');
+			}
+
+			console.log('Chargement des étudiants pour la classe:', result.data.id_classe);
 			await loadStudents(result.data.id_classe);
 			await loadNotes(examId);
 		} catch (error) {
+			console.error('Erreur lors du chargement des informations de l\'examen:', error);
 			NotificationSystem.error(error.message);
 		}
 	}
@@ -130,13 +140,16 @@ require_once 'templates/base.php';
 	// Fonction pour charger les étudiants d'une classe
 	async function loadStudents(classeId) {
 		try {
+			console.log('Chargement des étudiants pour la classe:', classeId);
 			const {
 				data: result
-			} = await fetchWithLogging(`api/classes/eleves/${classeId}`);
+			} = await fetchWithLogging(`api/classes/${classeId}/eleves`);
 
 			if (!result.success) {
 				throw new Error(result.message || 'Erreur lors du chargement des étudiants');
 			}
+
+			console.log('Étudiants reçus:', result.data);
 
 			const select = document.getElementById('etudiant');
 			select.innerHTML = '<option value="">Sélectionnez un étudiant</option>';
@@ -148,6 +161,7 @@ require_once 'templates/base.php';
 				select.appendChild(option);
 			});
 		} catch (error) {
+			console.error('Erreur lors du chargement des étudiants:', error);
 			NotificationSystem.error(error.message);
 		}
 	}
@@ -155,6 +169,7 @@ require_once 'templates/base.php';
 	// Fonction pour charger les notes d'un examen
 	async function loadNotes(examId) {
 		try {
+			console.log('Chargement des notes pour l\'examen:', examId);
 			const {
 				data: result
 			} = await fetchWithLogging(`api/notes/exam/${examId}`);
@@ -162,6 +177,8 @@ require_once 'templates/base.php';
 			if (!result.success) {
 				throw new Error(result.message || 'Erreur lors du chargement des notes');
 			}
+
+			console.log('Notes reçues:', result.data);
 
 			const notesList = document.getElementById('notesList');
 			notesList.innerHTML = `
@@ -171,7 +188,7 @@ require_once 'templates/base.php';
 				<div class="card-body">
 			`;
 
-			if (result.data.length === 0) {
+			if (!result.data || result.data.length === 0) {
 				notesList.querySelector('.card-body').innerHTML = '<p>Aucune note disponible</p>';
 				return;
 			}
@@ -204,6 +221,7 @@ require_once 'templates/base.php';
 
 			notesList.querySelector('.card-body').appendChild(table);
 		} catch (error) {
+			console.error('Erreur lors du chargement des notes:', error);
 			NotificationSystem.error(error.message);
 		}
 	}
