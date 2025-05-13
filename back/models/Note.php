@@ -120,7 +120,19 @@ class Note
 				return [];
 			}
 
-			return $result;
+			// Transformer les résultats pour correspondre au format attendu
+			$formattedResult = array_map(function ($note) {
+				return [
+					'id_note' => $note['id_note'],
+					'valeur' => $note['valeur'],
+					'id_eleve' => $note['id_eleve'],
+					'id_examen' => $note['id_examen'],
+					'nom' => $note['nom'],
+					'prenom' => $note['prenom']
+				];
+			}, $result);
+
+			return $formattedResult;
 		} catch (Exception $e) {
 			$this->errorService->logError('Note::getByExamen', $e->getMessage());
 			return [];
