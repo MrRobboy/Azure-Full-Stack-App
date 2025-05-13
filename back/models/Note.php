@@ -102,6 +102,8 @@ class Note
 	public function getByExamen($id_examen)
 	{
 		try {
+			error_log("Note::getByExamen - Début avec id_examen: " . $id_examen);
+
 			$stmt = $this->db->prepare("
 				SELECT n.id_note, n.valeur, n.id_eleve, n.id_examen,
 					u.nom, u.prenom
@@ -111,12 +113,20 @@ class Note
 				ORDER BY u.nom ASC, u.prenom ASC
 			");
 
+			error_log("Note::getByExamen - Requête préparée");
+
 			if (!$stmt->execute([$id_examen])) {
+				error_log("Note::getByExamen - Erreur lors de l'exécution de la requête");
 				throw new Exception("Erreur lors de l'exécution de la requête");
 			}
 
+			error_log("Note::getByExamen - Requête exécutée avec succès");
+
 			$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+			error_log("Note::getByExamen - Résultat brut: " . print_r($result, true));
+
 			if ($result === false) {
+				error_log("Note::getByExamen - Aucun résultat trouvé");
 				return [];
 			}
 
@@ -132,8 +142,10 @@ class Note
 				];
 			}, $result);
 
+			error_log("Note::getByExamen - Résultat formaté: " . print_r($formattedResult, true));
 			return $formattedResult;
 		} catch (Exception $e) {
+			error_log("Note::getByExamen - Exception: " . $e->getMessage());
 			$this->errorService->logError('Note::getByExamen', $e->getMessage());
 			return [];
 		}

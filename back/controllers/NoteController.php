@@ -97,21 +97,34 @@ class NoteController
 	public function getNotesByExamen($id_examen)
 	{
 		try {
+			error_log("NoteController::getNotesByExamen - Début avec id_examen: " . $id_examen);
+
 			if (!is_numeric($id_examen)) {
+				error_log("NoteController::getNotesByExamen - ID examen invalide: " . $id_examen);
 				throw new Exception("ID examen invalide");
 			}
+
+			error_log("NoteController::getNotesByExamen - Appel du modèle");
 			$result = $this->noteModel->getByExamen($id_examen);
+			error_log("NoteController::getNotesByExamen - Résultat du modèle: " . print_r($result, true));
+
 			if ($result === false) {
+				error_log("NoteController::getNotesByExamen - Erreur lors de la récupération des notes");
 				throw new Exception("Erreur lors de la récupération des notes de l'examen");
 			}
+
 			if (!is_array($result)) {
+				error_log("NoteController::getNotesByExamen - Le résultat n'est pas un tableau, conversion en tableau vide");
 				$result = [];
 			}
+
+			error_log("NoteController::getNotesByExamen - Retour du résultat final: " . print_r($result, true));
 			return [
 				'success' => true,
 				'data' => $result
 			];
 		} catch (Exception $e) {
+			error_log("NoteController::getNotesByExamen - Exception: " . $e->getMessage());
 			$this->errorService->logError('NoteController::getNotesByExamen', $e->getMessage());
 			return [
 				'success' => false,
