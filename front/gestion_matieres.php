@@ -369,7 +369,9 @@ ob_start();
 
 			if (result.success) {
 				NotificationSystem.success(result.message || 'La matière a été supprimée avec succès');
-				loadMatieres();
+				// Attendre un court instant avant de recharger les matières
+				await new Promise(resolve => setTimeout(resolve, 500));
+				await loadMatieres();
 			} else {
 				throw new Error(result.error || 'Erreur lors de la suppression de la matière');
 			}
