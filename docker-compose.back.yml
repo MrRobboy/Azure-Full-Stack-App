@@ -5,7 +5,7 @@ services:
     build:
       context: ./back
       dockerfile: Dockerfile
-    image: votre-username/gestion-notes-back:latest
+    image: hmdela/gestion-notes-back:latest
     container_name: gestion-notes-back
     ports:
       - "80:80"
