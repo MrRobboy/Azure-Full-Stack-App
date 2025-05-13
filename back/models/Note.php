@@ -46,12 +46,10 @@ class Note
 	{
 		try {
 			$stmt = $this->db->prepare("
-				SELECT n.*, e.nom as nom_eleve, e.prenom as prenom_eleve,
-					m.nom as nom_matiere, ex.titre as nom_examen 
-				FROM NOTE n
-				JOIN USER e ON n.id_eleve = e.id_user
-				JOIN MATIERE m ON n.id_matiere = m.id_matiere
-				JOIN EXAMEN ex ON n.id_examen = ex.id_examen
+				SELECT n.id_note, n.note as valeur, n.user as id_eleve, n.exam as id_examen,
+					u.nom, u.prenom
+				FROM NOTES n
+				JOIN USER u ON n.user = u.id_user
 				WHERE n.id_note = ?
 			");
 
@@ -64,7 +62,15 @@ class Note
 				return null;
 			}
 
-			return $result;
+			// Transformer le résultat pour correspondre au format attendu
+			return [
+				'id_note' => $result['id_note'],
+				'valeur' => $result['valeur'],
+				'id_eleve' => $result['id_eleve'],
+				'id_examen' => $result['id_examen'],
+				'nom' => $result['nom'],
+				'prenom' => $result['prenom']
+			];
 		} catch (Exception $e) {
 			$this->errorService->logError('Note::getById', $e->getMessage());
 			return null;
