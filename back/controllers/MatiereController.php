@@ -149,7 +149,8 @@ class MatiereController
 			}
 			return [
 				'success' => true,
-				'message' => "Matière supprimée avec succès"
+				'message' => "Matière supprimée avec succès",
+				'data' => $result
 			];
 		} catch (Exception $e) {
 			$this->errorService->logError('MatiereController::deleteMatiere', $e->getMessage());
