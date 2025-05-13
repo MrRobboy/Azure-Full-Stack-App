@@ -103,11 +103,11 @@ class Note
 	{
 		try {
 			$stmt = $this->db->prepare("
-				SELECT n.id_note, n.note as valeur, n.user as id_eleve, n.exam as id_examen,
+				SELECT n.id_note, n.valeur, n.id_eleve, n.id_examen,
 					u.nom, u.prenom
-				FROM NOTES n
-				JOIN USER u ON n.user = u.id_user
-				WHERE n.exam = ?
+				FROM NOTE n
+				JOIN USER u ON n.id_eleve = u.id_user
+				WHERE n.id_examen = ?
 				ORDER BY u.nom ASC, u.prenom ASC
 			");
 
@@ -131,11 +131,11 @@ class Note
 	{
 		try {
 			$stmt = $this->db->prepare("
-				INSERT INTO NOTES (note, user, exam) 
-				VALUES (?, ?, ?)
+				INSERT INTO NOTE (valeur, id_eleve, id_matiere, id_examen) 
+				VALUES (?, ?, ?, ?)
 			");
 
-			if (!$stmt->execute([$valeur, $id_eleve, $id_examen])) {
+			if (!$stmt->execute([$valeur, $id_eleve, $id_matiere, $id_examen])) {
 				throw new Exception("Erreur lors de l'insertion de la note");
 			}
 
@@ -151,12 +151,12 @@ class Note
 	{
 		try {
 			$stmt = $this->db->prepare("
-				UPDATE NOTES 
-				SET note = ?, user = ?, exam = ? 
+				UPDATE NOTE 
+				SET valeur = ?, id_eleve = ?, id_matiere = ?, id_examen = ? 
 				WHERE id_note = ?
 			");
 
-			if (!$stmt->execute([$valeur, $id_eleve, $id_examen, $id])) {
+			if (!$stmt->execute([$valeur, $id_eleve, $id_matiere, $id_examen, $id])) {
 				throw new Exception("Erreur lors de la mise à jour de la note");
 			}
 
@@ -170,7 +170,7 @@ class Note
 	public function delete($id)
 	{
 		try {
-			$stmt = $this->db->prepare("DELETE FROM NOTES WHERE id_note = ?");
+			$stmt = $this->db->prepare("DELETE FROM NOTE WHERE id_note = ?");
 
 			if (!$stmt->execute([$id])) {
 				throw new Exception("Erreur lors de la suppression de la note");
