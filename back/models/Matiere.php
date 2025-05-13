@@ -64,13 +64,13 @@ class Matiere
 		try {
 			error_log("Tentative de création d'une matière avec les données: " . print_r($data, true));
 
-			$stmt = $this->db->prepare("INSERT INTO MATIERE (nom, coefficient) VALUES (?, ?)");
+			$stmt = $this->db->prepare("INSERT INTO MATIERE (nom) VALUES (?)");
 			if (!$stmt) {
 				error_log("Erreur de préparation de la requête: " . print_r($this->db->errorInfo(), true));
 				throw new Exception("Erreur lors de la préparation de la requête");
 			}
 
-			$result = $stmt->execute([$data['nom'], $data['coefficient']]);
+			$result = $stmt->execute([$data['nom']]);
 			if (!$result) {
 				error_log("Erreur d'exécution de la requête: " . print_r($stmt->errorInfo(), true));
 				throw new Exception("Erreur lors de la création de la matière");
@@ -91,13 +91,13 @@ class Matiere
 		try {
 			error_log("Tentative de mise à jour de la matière ID: " . $id . " avec les données: " . print_r($data, true));
 
-			$stmt = $this->db->prepare("UPDATE MATIERE SET nom = ?, coefficient = ? WHERE id_matiere = ?");
+			$stmt = $this->db->prepare("UPDATE MATIERE SET nom = ? WHERE id_matiere = ?");
 			if (!$stmt) {
 				error_log("Erreur de préparation de la requête: " . print_r($this->db->errorInfo(), true));
 				throw new Exception("Erreur lors de la préparation de la requête");
 			}
 
-			$result = $stmt->execute([$data['nom'], $data['coefficient'], $id]);
+			$result = $stmt->execute([$data['nom'], $id]);
 			if (!$result) {
 				error_log("Erreur d'exécution de la requête: " . print_r($stmt->errorInfo(), true));
 				throw new Exception("Erreur lors de la mise à jour de la matière");
