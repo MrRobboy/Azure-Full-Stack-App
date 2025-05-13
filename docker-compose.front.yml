@@ -5,7 +5,7 @@ services:
     build:
       context: ./front
       dockerfile: Dockerfile
-    image: gestion-notes-front:latest
+    image: votre-username/gestion-notes-front:latest
     container_name: gestion-notes-front
     ports:
       - "80:80"
