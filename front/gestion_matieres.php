@@ -367,12 +367,12 @@ ob_start();
 			const result = await response.json();
 			console.log('Résultat de la suppression:', result);
 
-			if (!result.success) {
+			if (result.success) {
+				NotificationSystem.success(result.message || 'La matière a été supprimée avec succès');
+				loadMatieres();
+			} else {
 				throw new Error(result.error || 'Erreur lors de la suppression de la matière');
 			}
-
-			NotificationSystem.success('La matière a été supprimée avec succès');
-			loadMatieres();
 		} catch (error) {
 			console.error('Erreur lors de la suppression:', error);
 			NotificationSystem.error(error.message);
