@@ -462,7 +462,7 @@ ob_start();
 					<td>${exam.nom_classe}</td>
 					<td>${exam.date ? new Date(exam.date).toLocaleDateString('fr-FR') : 'Non défini'}</td>
 					<td>
-						<button class="btn btn-primary" onclick="editExam(${exam.id_examen})">Modifier</button>
+						<button class="btn btn-primary" onclick="editExam(${exam.id_examen}, '${exam.titre}', ${exam.matiere}, ${exam.classe}, '${exam.date}')">Modifier</button>
 						<button class="btn btn-danger" onclick="deleteExam(${exam.id_examen})">Supprimer</button>
 						<button class="btn btn-info" onclick="manageNotes(${exam.id_examen})">Gérer les notes</button>
 					</td>
