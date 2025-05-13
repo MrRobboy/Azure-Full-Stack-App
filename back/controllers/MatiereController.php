@@ -74,7 +74,7 @@ class MatiereController
 					'error' => "Le nom de la matière est requis"
 				];
 			}
-			$result = $this->matiere->create($data);
+			$result = $this->matiere->createMatiere($data);
 			if ($result === false) {
 				return [
 					'success' => false,
@@ -110,7 +110,7 @@ class MatiereController
 					'error' => "Le nom de la matière est requis"
 				];
 			}
-			$result = $this->matiere->update($id, $data);
+			$result = $this->matiere->updateMatiere($id, $data);
 			if ($result === false) {
 				return [
 					'success' => false,
@@ -140,7 +140,7 @@ class MatiereController
 					'error' => "ID invalide"
 				];
 			}
-			$result = $this->matiere->delete($id);
+			$result = $this->matiere->deleteMatiere($id);
 			if ($result === false) {
 				return [
 					'success' => false,
