@@ -315,10 +315,10 @@ require_once 'templates/base.php';
 		// Gérer la soumission du formulaire
 		document.getElementById('editNoteForm').addEventListener('submit', async function(e) {
 			e.preventDefault();
-			const newNote = document.getElementById('edit_note').value;
+			const newNote = parseFloat(document.getElementById('edit_note').value);
 
-			if (newNote < 0 || newNote > 20) {
-				NotificationSystem.warning('La note doit être comprise entre 0 et 20');
+			if (isNaN(newNote) || newNote < 0 || newNote > 20) {
+				NotificationSystem.warning('La note doit être un nombre compris entre 0 et 20');
 				return;
 			}
 
@@ -336,7 +336,7 @@ require_once 'templates/base.php';
 				});
 
 				if (!result.success) {
-					throw new Error(result.message || 'Erreur lors de la modification de la note');
+					throw new Error(result.error || 'Erreur lors de la modification de la note');
 				}
 
 				closeNoteModal();
