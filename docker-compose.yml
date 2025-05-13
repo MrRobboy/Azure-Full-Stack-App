@@ -1,13 +1,28 @@
 version: '3.8'
 
 services:
-  web:
-    build: .
+  front:
+    build: 
+      context: ./front
+      dockerfile: Dockerfile
     ports:
       - "80:80"
     volumes:
       - ./front:/var/www/html
-      - ./back:/var/www/html/back
+    environment:
+      - BACKEND_URL=http://back
+    depends_on:
+      - back
+
+  back:
+    build: 
+      context: ./back
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    volumes:
+      - ./back:/var/www/html
+      - ./BDD/MCD_ddl.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
       - DB_HOST=db
       - DB_NAME=${DB_NAME}
@@ -21,13 +36,12 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
       - MYSQL_DATABASE=${DB_NAME}
-      - MYSQL_USER=${DB_USER}
+      - DB_USER=${DB_USER}
       - MYSQL_PASSWORD=${DB_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
-      - ./BDD/MCD_ddl.sql:/docker-entrypoint-initdb.d/init.sql
 
 volumes:
   mariadb_data: 
