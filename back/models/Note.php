@@ -105,11 +105,11 @@ class Note
 			error_log("Note::getByExamen - Début avec id_examen: " . $id_examen);
 
 			$stmt = $this->db->prepare("
-				SELECT n.id_note, n.valeur, n.id_eleve, n.id_examen,
+				SELECT n.id_note, n.note as valeur, n.user as id_eleve, n.exam as id_examen,
 					u.nom, u.prenom
-				FROM NOTE n
-				JOIN USER u ON n.id_eleve = u.id_user
-				WHERE n.id_examen = ?
+				FROM NOTES n
+				JOIN USER u ON n.user = u.id_user
+				WHERE n.exam = ?
 				ORDER BY u.nom ASC, u.prenom ASC
 			");
 
@@ -155,11 +155,11 @@ class Note
 	{
 		try {
 			$stmt = $this->db->prepare("
-				INSERT INTO NOTE (valeur, id_eleve, id_matiere, id_examen) 
-				VALUES (?, ?, ?, ?)
+				INSERT INTO NOTES (note, user, exam) 
+				VALUES (?, ?, ?)
 			");
 
-			if (!$stmt->execute([$valeur, $id_eleve, $id_matiere, $id_examen])) {
+			if (!$stmt->execute([$valeur, $id_eleve, $id_examen])) {
 				throw new Exception("Erreur lors de l'insertion de la note");
 			}
 
@@ -175,8 +175,8 @@ class Note
 	{
 		try {
 			$stmt = $this->db->prepare("
-				UPDATE NOTE 
-				SET valeur = ?
+				UPDATE NOTES 
+				SET note = ?
 				WHERE id_note = ?
 			");
 
@@ -194,7 +194,7 @@ class Note
 	public function delete($id)
 	{
 		try {
-			$stmt = $this->db->prepare("DELETE FROM NOTE WHERE id_note = ?");
+			$stmt = $this->db->prepare("DELETE FROM NOTES WHERE id_note = ?");
 
 			if (!$stmt->execute([$id])) {
 				throw new Exception("Erreur lors de la suppression de la note");
