@@ -338,10 +338,10 @@ try {
 				error_log("Suppression de la matière avec l'ID: " . $segments[1]);
 				$result = $matiereController->deleteMatiere($segments[1]);
 				error_log("Matière supprimée avec succès");
-				sendResponse(['message' => 'Matière supprimée avec succès']);
+				sendResponse($result);
 			} catch (Exception $e) {
 				error_log("Erreur: " . $e->getMessage());
-				sendResponse(['message' => $e->getMessage()], 400);
+				sendResponse(['success' => false, 'error' => $e->getMessage()], 400);
 			}
 		} else {
 			error_log("Méthode non autorisée: " . $method);
