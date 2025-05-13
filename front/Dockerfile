@@ -42,4 +42,8 @@ RUN echo "Header set Access-Control-Allow-Origin '*'" >> /etc/apache2/conf-avail
 	&& echo "Header set Access-Control-Allow-Headers 'Content-Type, Authorization'" >> /etc/apache2/conf-available/cors.conf \
 	&& a2enconf cors
 
+# Environment variables
+ENV BACKEND_URL="https://app-front-fullstack-prod-f2guakd8e8f7aeen.northeurope-01.azurewebsites.net"
+ENV FRONTEND_URL="https://app-back-fullstack-prod-cxfgczgncsbzcxec.northeurope-01.azurewebsites.net"
+
 EXPOSE 80 
