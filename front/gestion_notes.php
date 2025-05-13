@@ -291,62 +291,82 @@ require_once 'templates/base.php';
 
 	// Fonction pour modifier une note
 	async function editNote(noteId) {
-		// Créer le modal
-		const modal = document.createElement('div');
-		modal.className = 'modal';
-		modal.innerHTML = `
-			<div class="modal-content">
-				<h3>Modifier la note</h3>
-				<form id="editNoteForm">
-					<div class="form-group">
-						<label for="edit_note">Nouvelle note :</label>
-						<input type="number" id="edit_note" class="form-control" min="0" max="20" step="0.5" required>
-					</div>
-					<div class="form-actions">
-						<button type="button" class="btn btn-secondary" onclick="closeNoteModal()">Annuler</button>
-						<button type="submit" class="btn btn-primary">Enregistrer</button>
-					</div>
-				</form>
-			</div>
-		`;
+		try {
+			console.log('Récupération de la note:', noteId);
+			const {
+				data: result
+			} = await fetchWithLogging(`api/notes/${noteId}`);
 
-		document.body.appendChild(modal);
-
-		// Gérer la soumission du formulaire
-		document.getElementById('editNoteForm').addEventListener('submit', async function(e) {
-			e.preventDefault();
-			const newNote = parseFloat(document.getElementById('edit_note').value);
-
-			if (isNaN(newNote) || newNote < 0 || newNote > 20) {
-				NotificationSystem.warning('La note doit être un nombre compris entre 0 et 20');
-				return;
+			if (!result.success) {
+				throw new Error(result.error || 'Erreur lors de la récupération de la note');
 			}
 
-			try {
-				const {
-					data: result
-				} = await fetchWithLogging(`api/notes/${noteId}`, {
-					method: 'PUT',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						valeur: newNote
-					})
-				});
+			console.log('Note récupérée:', result.data);
+			const currentNote = result.data.valeur;
 
-				if (!result.success) {
-					throw new Error(result.error || 'Erreur lors de la modification de la note');
+			// Créer le modal
+			const modal = document.createElement('div');
+			modal.className = 'modal';
+			modal.innerHTML = `
+				<div class="modal-content">
+					<h3>Modifier la note</h3>
+					<form id="editNoteForm">
+						<div class="form-group">
+							<label for="edit_note">Nouvelle note :</label>
+							<input type="number" id="edit_note" class="form-control" min="0" max="20" step="0.5" value="${currentNote}" required>
+						</div>
+						<div class="form-actions">
+							<button type="button" class="btn btn-secondary" onclick="closeNoteModal()">Annuler</button>
+							<button type="submit" class="btn btn-primary">Enregistrer</button>
+						</div>
+					</form>
+				</div>
+			`;
+
+			document.body.appendChild(modal);
+
+			// Gérer la soumission du formulaire
+			document.getElementById('editNoteForm').addEventListener('submit', async function(e) {
+				e.preventDefault();
+				const newNote = parseFloat(document.getElementById('edit_note').value);
+
+				if (isNaN(newNote) || newNote < 0 || newNote > 20) {
+					NotificationSystem.warning('La note doit être un nombre compris entre 0 et 20');
+					return;
 				}
 
-				closeNoteModal();
-				NotificationSystem.success('Note modifiée avec succès');
-				await loadNotes(examId);
-			} catch (error) {
-				console.error('Erreur lors de la modification de la note:', error);
-				NotificationSystem.error(error.message);
-			}
-		});
+				try {
+					console.log('Envoi de la modification pour la note:', noteId, 'Nouvelle valeur:', newNote);
+					const {
+						data: result
+					} = await fetchWithLogging(`api/notes/${noteId}`, {
+						method: 'PUT',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							valeur: newNote
+						})
+					});
+
+					console.log('Réponse de la modification:', result);
+
+					if (!result.success) {
+						throw new Error(result.error || 'Erreur lors de la modification de la note');
+					}
+
+					closeNoteModal();
+					NotificationSystem.success('Note modifiée avec succès');
+					await loadNotes(examId);
+				} catch (error) {
+					console.error('Erreur lors de la modification de la note:', error);
+					NotificationSystem.error(error.message);
+				}
+			});
+		} catch (error) {
+			console.error('Erreur lors de la récupération de la note:', error);
+			NotificationSystem.error(error.message);
+		}
 	}
 
 	// Fonction pour fermer le modal de modification de note
