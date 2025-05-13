@@ -3,6 +3,7 @@ require_once __DIR__ . '/../models/Note.php';
 require_once __DIR__ . '/../models/Eleve.php';
 require_once __DIR__ . '/../models/Matiere.php';
 require_once __DIR__ . '/../models/Examen.php';
+require_once __DIR__ . '/../models/UserPrivilege.php';
 require_once __DIR__ . '/../services/ErrorService.php';
 
 class NoteController
@@ -11,6 +12,7 @@ class NoteController
 	private $eleveModel;
 	private $matiereModel;
 	private $examenModel;
+	private $userPrivilegeModel;
 	private $errorService;
 
 	public function __construct()
@@ -19,7 +21,17 @@ class NoteController
 		$this->eleveModel = new Eleve();
 		$this->matiereModel = new Matiere();
 		$this->examenModel = new Examen();
+		$this->userPrivilegeModel = new UserPrivilege();
 		$this->errorService = ErrorService::getInstance();
+	}
+
+	private function checkNotePrivilege($id_eleve, $valeur)
+	{
+		$min_note = $this->userPrivilegeModel->getMinNoteForUser($id_eleve);
+		if ($min_note !== null && $valeur < $min_note) {
+			throw new Exception("Cet étudiant ne peut pas avoir une note inférieure à " . $min_note);
+		}
+		return true;
 	}
 
 	public function getAllNotes()
@@ -152,6 +164,9 @@ class NoteController
 				throw new Exception("La note doit être un nombre compris entre 0 et 20");
 			}
 
+			// Vérification des privilèges
+			$this->checkNotePrivilege($id_eleve, $valeur);
+
 			$result = $this->noteModel->create($id_eleve, $id_matiere, $id_examen, $valeur);
 			if ($result === false) {
 				throw new Exception("Erreur lors de la création de la note");
@@ -184,6 +199,9 @@ class NoteController
 			if (!is_numeric($valeur) || $valeur < 0 || $valeur > 20) {
 				throw new Exception("La note doit être un nombre compris entre 0 et 20");
 			}
+
+			// Vérification des privilèges
+			$this->checkNotePrivilege($note['id_eleve'], $valeur);
 
 			$result = $this->noteModel->update($id, $valeur);
 
