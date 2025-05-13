@@ -8,10 +8,10 @@ RUN apt-get update && apt-get install -y \
 	libzip-dev \
 	unzip \
 	&& docker-php-ext-configure gd --with-freetype --with-jpeg \
-	&& docker-php-ext-install -j$(nproc) gd zip
+	&& docker-php-ext-install -j$(nproc) gd zip pdo pdo_mysql mysqli
 
 # Enable Apache modules
-RUN a2enmod rewrite
+RUN a2enmod rewrite headers
 
 # Set working directory
 WORKDIR /var/www/html
@@ -25,5 +25,11 @@ RUN chown -R www-data:www-data /var/www/html \
 
 # Configure Apache
 COPY apache-config.conf /etc/apache2/sites-available/000-default.conf
+
+# Add CORS headers
+RUN echo "Header set Access-Control-Allow-Origin '*'" >> /etc/apache2/conf-available/cors.conf \
+	&& echo "Header set Access-Control-Allow-Methods 'GET, POST, PUT, DELETE, OPTIONS'" >> /etc/apache2/conf-available/cors.conf \
+	&& echo "Header set Access-Control-Allow-Headers 'Content-Type, Authorization'" >> /etc/apache2/conf-available/cors.conf \
+	&& a2enconf cors
 
 EXPOSE 80 

@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 	&& docker-php-ext-install -j$(nproc) gd pdo pdo_mysql mysqli zip
 
 # Enable Apache modules
-RUN a2enmod rewrite
+RUN a2enmod rewrite headers
 
 # Set working directory
 WORKDIR /var/www/html
@@ -25,5 +25,18 @@ RUN chown -R www-data:www-data /var/www/html \
 
 # Configure Apache
 COPY apache-config.conf /etc/apache2/sites-available/000-default.conf
+
+# Add CORS headers
+RUN echo "Header set Access-Control-Allow-Origin '*'" >> /etc/apache2/conf-available/cors.conf \
+	&& echo "Header set Access-Control-Allow-Methods 'GET, POST, PUT, DELETE, OPTIONS'" >> /etc/apache2/conf-available/cors.conf \
+	&& echo "Header set Access-Control-Allow-Headers 'Content-Type, Authorization'" >> /etc/apache2/conf-available/cors.conf \
+	&& a2enconf cors
+
+# Create initialization script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["apache2-foreground"]
 
 EXPOSE 80 
