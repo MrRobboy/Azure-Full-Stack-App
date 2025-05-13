@@ -172,14 +172,7 @@ class NoteController
 				throw new Exception("La note doit être un nombre compris entre 0 et 20");
 			}
 
-			// On garde les mêmes valeurs pour l'élève, la matière et l'examen
-			$result = $this->noteModel->update(
-				$id,
-				$note['id_eleve'],
-				$note['id_matiere'],
-				$note['id_examen'],
-				$valeur
-			);
+			$result = $this->noteModel->update($id, $valeur);
 
 			if ($result === false) {
 				throw new Exception("Erreur lors de la mise à jour de la note");
@@ -187,7 +180,7 @@ class NoteController
 
 			return [
 				'success' => true,
-				'data' => $this->noteModel->getById($id),
+				'data' => $result,
 				'message' => 'Note mise à jour avec succès'
 			];
 		} catch (Exception $e) {

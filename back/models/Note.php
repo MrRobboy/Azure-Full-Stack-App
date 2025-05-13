@@ -159,16 +159,16 @@ class Note
 		}
 	}
 
-	public function update($id, $id_eleve, $id_matiere, $id_examen, $valeur)
+	public function update($id, $valeur)
 	{
 		try {
 			$stmt = $this->db->prepare("
 				UPDATE NOTE 
-				SET valeur = ?, id_eleve = ?, id_matiere = ?, id_examen = ? 
+				SET valeur = ?
 				WHERE id_note = ?
 			");
 
-			if (!$stmt->execute([$valeur, $id_eleve, $id_matiere, $id_examen, $id])) {
+			if (!$stmt->execute([$valeur, $id])) {
 				throw new Exception("Erreur lors de la mise à jour de la note");
 			}
 
