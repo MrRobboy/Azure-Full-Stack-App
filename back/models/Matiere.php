@@ -124,6 +124,24 @@ class Matiere
 				throw new Exception("La matière n'existe pas");
 			}
 
+			// Vérifier si la matière est utilisée dans d'autres tables
+			$stmt = $this->db->prepare("
+				SELECT 
+					(SELECT COUNT(*) FROM EXAM WHERE matiere = ?) as exam_count,
+					(SELECT COUNT(*) FROM PROF WHERE matiere = ?) as prof_count
+			");
+			if (!$stmt->execute([$id, $id])) {
+				throw new Exception("Erreur lors de la vérification des références");
+			}
+			$counts = $stmt->fetch(PDO::FETCH_ASSOC);
+
+			if ($counts['exam_count'] > 0) {
+				throw new Exception("Impossible de supprimer cette matière car elle est utilisée dans des examens");
+			}
+			if ($counts['prof_count'] > 0) {
+				throw new Exception("Impossible de supprimer cette matière car elle est assignée à des professeurs");
+			}
+
 			$stmt = $this->db->prepare("DELETE FROM MATIERE WHERE id_matiere = ?");
 			if (!$stmt) {
 				error_log("Erreur de préparation de la requête: " . print_r($this->db->errorInfo(), true));
