@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  back:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    image: gestion-notes-back:latest
+    container_name: gestion-notes-back
+    ports:
+      - "80:80"
+    environment:
+      - FRONTEND_URL=${FRONTEND_URL}
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PORT=${DB_PORT}
+    volumes:
+      - ./back:/var/www/html
+      - ./logs:/var/log/apache2
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge 

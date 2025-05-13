@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  front:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    image: gestion-notes-front:latest
+    container_name: gestion-notes-front
+    ports:
+      - "80:80"
+    environment:
+      - BACKEND_URL=${BACKEND_URL}
+      - FRONTEND_URL=${FRONTEND_URL}
+    volumes:
+      - ./front:/var/www/html
+      - ./logs:/var/log/apache2
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge 
