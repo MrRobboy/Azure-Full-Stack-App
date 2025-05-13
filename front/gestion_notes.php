@@ -291,32 +291,156 @@ require_once 'templates/base.php';
 
 	// Fonction pour modifier une note
 	async function editNote(noteId) {
-		const newNote = prompt('Entrez la nouvelle note :');
-		if (newNote === null) return;
+		// Créer le modal
+		const modal = document.createElement('div');
+		modal.className = 'modal';
+		modal.innerHTML = `
+			<div class="modal-content">
+				<h3>Modifier la note</h3>
+				<form id="editNoteForm">
+					<div class="form-group">
+						<label for="edit_note">Nouvelle note :</label>
+						<input type="number" id="edit_note" class="form-control" min="0" max="20" step="0.5" required>
+					</div>
+					<div class="form-actions">
+						<button type="button" class="btn btn-secondary" onclick="closeNoteModal()">Annuler</button>
+						<button type="submit" class="btn btn-primary">Enregistrer</button>
+					</div>
+				</form>
+			</div>
+		`;
 
-		try {
-			const {
-				data: result
-			} = await fetchWithLogging(`api/notes/${noteId}`, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					valeur: newNote
-				})
-			});
+		document.body.appendChild(modal);
 
-			if (!result.success) {
-				throw new Error(result.message || 'Erreur lors de la modification de la note');
+		// Gérer la soumission du formulaire
+		document.getElementById('editNoteForm').addEventListener('submit', async function(e) {
+			e.preventDefault();
+			const newNote = document.getElementById('edit_note').value;
+
+			if (newNote < 0 || newNote > 20) {
+				NotificationSystem.warning('La note doit être comprise entre 0 et 20');
+				return;
 			}
 
-			NotificationSystem.success('Note modifiée avec succès');
-			await loadNotes(examId);
-		} catch (error) {
-			NotificationSystem.error(error.message);
+			try {
+				const {
+					data: result
+				} = await fetchWithLogging(`api/notes/${noteId}`, {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						valeur: newNote
+					})
+				});
+
+				if (!result.success) {
+					throw new Error(result.message || 'Erreur lors de la modification de la note');
+				}
+
+				closeNoteModal();
+				NotificationSystem.success('Note modifiée avec succès');
+				await loadNotes(examId);
+			} catch (error) {
+				console.error('Erreur lors de la modification de la note:', error);
+				NotificationSystem.error(error.message);
+			}
+		});
+	}
+
+	// Fonction pour fermer le modal de modification de note
+	function closeNoteModal() {
+		const modal = document.querySelector('.modal');
+		if (modal) {
+			modal.remove();
 		}
 	}
+
+	// Ajouter les styles pour le modal
+	const modalStyle = document.createElement('style');
+	modalStyle.textContent = `
+		.modal {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background-color: rgba(0, 0, 0, 0.5);
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			z-index: 1000;
+		}
+
+		.modal-content {
+			background: white;
+			padding: 20px;
+			border-radius: 8px;
+			width: 90%;
+			max-width: 400px;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+		}
+
+		.modal-content h3 {
+			margin-top: 0;
+			margin-bottom: 20px;
+			color: #333;
+		}
+
+		.form-group {
+			margin-bottom: 15px;
+		}
+
+		.form-group label {
+			display: block;
+			margin-bottom: 5px;
+			color: #555;
+		}
+
+		.form-control {
+			width: 100%;
+			padding: 8px;
+			border: 1px solid #ddd;
+			border-radius: 4px;
+			font-size: 14px;
+		}
+
+		.form-actions {
+			display: flex;
+			justify-content: flex-end;
+			gap: 10px;
+			margin-top: 20px;
+		}
+
+		.btn {
+			padding: 8px 16px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 14px;
+			transition: background-color 0.3s;
+		}
+
+		.btn-primary {
+			background: #007bff;
+			color: white;
+		}
+
+		.btn-primary:hover {
+			background: #0056b3;
+		}
+
+		.btn-secondary {
+			background: #6c757d;
+			color: white;
+		}
+
+		.btn-secondary:hover {
+			background: #5a6268;
+		}
+	`;
+	document.head.appendChild(modalStyle);
 
 	// Fonction pour supprimer une note
 	async function deleteNote(noteId) {

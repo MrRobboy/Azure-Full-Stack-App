@@ -64,12 +64,13 @@ ob_start();
 	.btn {
 		background: #007bff;
 		color: white;
-		padding: 10px 20px;
+		padding: 8px 12px;
 		border: none;
 		border-radius: 4px;
 		cursor: pointer;
-		font-size: 14px;
+		font-size: 13px;
 		transition: background 0.3s;
+		margin: 0 2px;
 	}
 
 	.btn:hover {
@@ -100,7 +101,6 @@ ob_start();
 
 	.btn-edit {
 		background: #28a745;
-		margin-right: 5px;
 	}
 
 	.btn-edit:hover {
@@ -113,6 +113,20 @@ ob_start();
 
 	.btn-danger:hover {
 		background: #c82333;
+	}
+
+	.btn-info {
+		background: #17a2b8;
+	}
+
+	.btn-info:hover {
+		background: #138496;
+	}
+
+	.action-buttons {
+		display: flex;
+		gap: 4px;
+		justify-content: flex-start;
 	}
 
 	.notification-container {
@@ -462,9 +476,11 @@ ob_start();
 					<td>${exam.nom_classe}</td>
 					<td>${exam.date ? new Date(exam.date).toLocaleDateString('fr-FR') : 'Non défini'}</td>
 					<td>
-						<button class="btn btn-primary" onclick="editExam(${exam.id_examen}, '${exam.titre}', ${exam.matiere}, ${exam.classe}, '${exam.date}')">Modifier</button>
-						<button class="btn btn-danger" onclick="deleteExam(${exam.id_examen})">Supprimer</button>
-						<button class="btn btn-info" onclick="manageNotes(${exam.id_examen})">Gérer les notes</button>
+						<div class="action-buttons">
+							<button class="btn btn-edit" onclick="editExam(${exam.id_examen}, '${exam.titre}', ${exam.matiere}, ${exam.classe}, '${exam.date}')">Modifier</button>
+							<button class="btn btn-danger" onclick="deleteExam(${exam.id_examen})">Supprimer</button>
+							<button class="btn btn-info" onclick="manageNotes(${exam.id_examen})">Notes</button>
+						</div>
 					</td>
 				`;
 				tbody.appendChild(tr);
