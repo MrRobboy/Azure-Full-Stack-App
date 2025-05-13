@@ -9,7 +9,7 @@ services:
       - ./front:/var/www/html
       - ./back:/var/www/html/back
     environment:
-      - DB_HOST=${DB_HOST}
+      - DB_HOST=db
       - DB_NAME=${DB_NAME}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
@@ -17,15 +17,17 @@ services:
       - db
 
   db:
-    image: mcr.microsoft.com/mssql/server:2019-latest
+    image: mariadb:10.6
     environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=${DB_PASSWORD}
-      - MSSQL_PID=Express
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
     ports:
-      - "1433:1433"
+      - "3306:3306"
     volumes:
-      - sqldata:/var/opt/mssql
+      - mariadb_data:/var/lib/mysql
+      - ./BDD/MCD_ddl.sql:/docker-entrypoint-initdb.d/init.sql
 
 volumes:
-  sqldata: 
+  mariadb_data: 
