@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 	&& docker-php-ext-install -j$(nproc) gd zip pdo pdo_mysql mysqli
 
 # Enable Apache modules
-RUN a2enmod rewrite headers
+RUN a2enmod rewrite headers proxy proxy_http ssl
 
 # Set working directory
 WORKDIR /var/www/html
@@ -21,11 +21,12 @@ COPY . /var/www/html/
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \
-	&& chmod -R 755 /var/www/html
+	&& chmod -R 755 /var/www/html \
+	&& chmod -R 777 /var/www/html/logs
 
 # Configure Apache
 RUN echo '<VirtualHost *:80>\n\
-	ServerAdmin webmaster@localhost\n\
+	ServerAdmin admin@localhost\n\
 	DocumentRoot /var/www/html\n\
 	ErrorLog ${APACHE_LOG_DIR}/error.log\n\
 	CustomLog ${APACHE_LOG_DIR}/access.log combined\n\
