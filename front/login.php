@@ -10,487 +10,68 @@ if (isset($_SESSION['user']) && !empty($_SESSION['token'])) {
 // Vérification automatique des fichiers proxy pour Azure
 if (strpos($_SERVER['HTTP_HOST'], 'azurewebsites.net') !== false) {
 	// Sur Azure, vérifier si les fichiers proxy existent
-	$proxy_files = [
-		'simple-proxy.php' => '<?php
-// Simple proxy for Azure - minimal version
-error_reporting(E_ALL);
-ini_set("display_errors", 1);
-ini_set("log_errors", 1);
-ini_set("error_log", "proxy_errors.log");
-
-// Log basic information
-error_log("Simple proxy accessed at " . date("Y-m-d H:i:s") . " from " . ($_SERVER["REMOTE_ADDR"] ?? "unknown"));
-error_log("Request method: " . ($_SERVER["REQUEST_METHOD"] ?? "unknown"));
-error_log("Query string: " . ($_SERVER["QUERY_STRING"] ?? "none"));
-
-// Add CORS headers
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-
-// Handle OPTIONS requests
-if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
-    http_response_code(200);
-    exit;
-}
-
-// Set content type
-header("Content-Type: application/json");
-
-// Get the endpoint parameter
-$endpoint = isset($_GET["endpoint"]) ? $_GET["endpoint"] : "";
-if (empty($endpoint)) {
-    echo json_encode([
-        "error" => "No endpoint specified",
-        "timestamp" => date("Y-m-d H:i:s")
-    ]);
-    exit;
-}
-
-// Basic configuration
-$backend_url = "https://app-backend-esgi-app.azurewebsites.net";
-
-// Log the target
-error_log("Proxying to: " . $backend_url . " endpoint: " . $endpoint);
-
-// Construct the API URL
-$url = $backend_url;
-if (strpos($endpoint, "http") === 0) {
-    $url = $endpoint;
-} else {
-    if (!empty($endpoint)) {
-        if ($endpoint[0] !== "/" && substr($backend_url, -1) !== "/") {
-            $url .= "/";
-        }
-        $url .= $endpoint;
-    }
-}
-
-error_log("Full URL: " . $url);
-
-// Initialize cURL
-$ch = curl_init($url);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $_SERVER["REQUEST_METHOD"]);
-
-// Forward headers
-$headers = [];
-foreach (getallheaders() as $name => $value) {
-    if (strtolower($name) !== "host") {
-        $headers[] = $name . ": " . $value;
-    }
-}
-curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-// Forward request body for POST, PUT, PATCH
-if ($_SERVER["REQUEST_METHOD"] === "POST" || $_SERVER["REQUEST_METHOD"] === "PUT" || $_SERVER["REQUEST_METHOD"] === "PATCH") {
-    $input = file_get_contents("php://input");
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $input);
-    error_log("Request body: " . substr($input, 0, 100) . (strlen($input) > 100 ? "..." : ""));
-}
-
-// Execute the request
-$response = curl_exec($ch);
-$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-// Check for cURL errors
-if ($response === false) {
-    $error = curl_error($ch);
-    curl_close($ch);
-    error_log("cURL error: " . $error);
-    http_response_code(500);
-    echo json_encode([
-        "error" => "Proxy error: " . $error,
-        "url" => $url,
-        "timestamp" => date("Y-m-d H:i:s")
-    ]);
-    exit;
-}
-
-// Close cURL
-curl_close($ch);
-
-// Log the response code
-error_log("Response code: " . $http_code);
-
-// Set the HTTP response code
-http_response_code($http_code);
-
-// Output the response
-echo $response;',
-		
-		'api-bridge.php' => '<?php
-// API Bridge - Last Resort Fallback
-error_reporting(E_ALL);
-ini_set("display_errors", 1);
-ini_set("log_errors", 1);
-ini_set("error_log", "api_bridge_errors.log");
-
-// Log access
-error_log("API Bridge accessed at " . date("Y-m-d H:i:s") . " from " . ($_SERVER["REMOTE_ADDR"] ?? "unknown"));
-error_log("Request method: " . ($_SERVER["REQUEST_METHOD"] ?? "unknown"));
-error_log("Query string: " . ($_SERVER["QUERY_STRING"] ?? "none"));
-
-// CORS headers
-header("Content-Type: application/json");
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-
-// Handle preflight OPTIONS
-if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
-    http_response_code(200);
-    exit;
-}
-
-// Get endpoint from query string
-$endpoint = isset($_GET["endpoint"]) ? $_GET["endpoint"] : "";
-if (empty($endpoint)) {
-    http_response_code(400);
-    echo json_encode([
-        "error" => "No endpoint specified",
-        "timestamp" => date("Y-m-d H:i:s")
-    ]);
-    exit;
-}
-
-// Log the target endpoint
-error_log("API Bridge endpoint: " . $endpoint);
-
-// Configuration
-$backend_url = "https://app-backend-esgi-app.azurewebsites.net";
-
-// Construct API URL
-$url = $backend_url;
-if (strpos($endpoint, "http") === 0) {
-    $url = $endpoint;
-} else {
-    if (!empty($endpoint)) {
-        if ($endpoint[0] !== "/" && substr($backend_url, -1) !== "/") {
-            $url .= "/";
-        }
-        $url .= $endpoint;
-    }
-}
-
-error_log("Full URL: " . $url);
-
-// Set up cURL request
-$ch = curl_init($url);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $_SERVER["REQUEST_METHOD"]);
-
-// Forward request body
-if ($_SERVER["REQUEST_METHOD"] === "POST" || $_SERVER["REQUEST_METHOD"] === "PUT" || $_SERVER["REQUEST_METHOD"] === "PATCH") {
-    $input = file_get_contents("php://input");
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $input);
-    error_log("Request body: " . substr($input, 0, 100) . (strlen($input) > 100 ? "..." : ""));
-}
-
-// Execute the request
-$response = curl_exec($ch);
-
-// Check for cURL errors
-if ($response === false) {
-    $error = curl_error($ch);
-    curl_close($ch);
-    error_log("cURL error: " . $error);
-    http_response_code(500);
-    echo json_encode([
-        "error" => "API Bridge error: " . $error,
-        "url" => $url,
-        "timestamp" => date("Y-m-d H:i:s")
-    ]);
-    exit;
-}
-
-// Get HTTP status code
-$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
-
-// Log response
-error_log("Response code: " . $http_code);
-error_log("Response length: " . strlen($response));
-
-// Set the HTTP response code
-http_response_code($http_code);
-
-// Output the response
-echo $response;',
-		
-		'direct-login.php' => '<?php
-// Direct Login - Se connecter sans proxy
-error_reporting(E_ALL);
-ini_set("display_errors", 1);
-ini_set("log_errors", 1);
-ini_set("error_log", "direct_login_errors.log");
-
-error_log("Direct login accessed at " . date("Y-m-d H:i:s") . " from " . ($_SERVER["REMOTE_ADDR"] ?? "unknown"));
-
-// Set headers
-header("Content-Type: application/json");
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-
-// Handle OPTIONS requests
-if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
-    http_response_code(200);
-    exit;
-}
-
-// Vérifier la méthode HTTP
-if ($_SERVER["REQUEST_METHOD"] !== "POST") {
-    http_response_code(405);
-    echo json_encode([
-        "error" => "Method not allowed",
-        "timestamp" => date("Y-m-d H:i:s")
-    ]);
-    exit;
-}
-
-// Get login data
-$input = file_get_contents("php://input");
-$data = json_decode($input, true);
-
-if (!is_array($data) || !isset($data["email"]) || !isset($data["password"])) {
-    http_response_code(400);
-    echo json_encode([
-        "error" => "Invalid login data",
-        "timestamp" => date("Y-m-d H:i:s")
-    ]);
-    exit;
-}
-
-// Log login attempt (without password)
-error_log("Login attempt for: " . ($data["email"] ?? "unknown"));
-
-// API endpoint for login
-$login_url = "https://app-backend-esgi-app.azurewebsites.net/api/auth/login";
-
-// Initialize cURL
-$ch = curl_init($login_url);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    "Content-Type: application/json",
-    "Accept: application/json"
-]);
-curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-
-// Execute request
-$response = curl_exec($ch);
-
-// Check for errors
-if ($response === false) {
-    $error = curl_error($ch);
-    error_log("Login cURL error: " . $error);
-    http_response_code(500);
-    echo json_encode([
-        "error" => "Connection error: " . $error,
-        "timestamp" => date("Y-m-d H:i:s")
-    ]);
-    curl_close($ch);
-    exit;
-}
-
-// Get response code
-$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
-
-// Log response
-error_log("Login response code: " . $http_code);
-error_log("Login response length: " . strlen($response));
-
-// Set response code and output
-http_response_code($http_code);
-echo $response;',
-		
-		'local-proxy.php' => '<?php
-// Ultra-simplified proxy
-error_reporting(E_ALL);
-ini_set("display_errors", 1);
-ini_set("log_errors", 1);
-ini_set("error_log", "local_proxy_errors.log");
-
-error_log("Local proxy accessed at " . date("Y-m-d H:i:s") . " from " . ($_SERVER["REMOTE_ADDR"] ?? "unknown"));
-error_log("Request method: " . ($_SERVER["REQUEST_METHOD"] ?? "unknown"));
-error_log("Query string: " . ($_SERVER["QUERY_STRING"] ?? "none"));
-
-// Headers
-header("Content-Type: application/json");
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-
-// Handle OPTIONS
-if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
-    http_response_code(200);
-    exit;
-}
-
-// Get endpoint
-$endpoint = isset($_GET["endpoint"]) ? $_GET["endpoint"] : "";
-if (empty($endpoint)) {
-    echo json_encode([
-        "error" => "No endpoint specified",
-        "timestamp" => date("Y-m-d H:i:s")
-    ]);
-    exit;
-}
-
-// Construct URL
-$backend_url = "https://app-backend-esgi-app.azurewebsites.net";
-$url = $backend_url;
-if ($endpoint[0] !== "/" && substr($backend_url, -1) !== "/") {
-    $url .= "/";
-}
-$url .= $endpoint;
-
-error_log("Requesting: " . $url);
-
-// Get content with proper method
-$context = stream_context_create([
-    "http" => [
-        "method" => $_SERVER["REQUEST_METHOD"],
-        "header" => "Content-Type: application/json\r\n" .
-                   "Accept: application/json\r\n" .
-                   "User-Agent: ESGI-App-Proxy/1.0\r\n",
-        "content" => file_get_contents("php://input"),
-        "timeout" => 30
-    ],
-    "ssl" => [
-        "verify_peer" => false,
-        "verify_peer_name" => false
-    ]
-]);
-
-$response = @file_get_contents($url, false, $context);
-
-if ($response === false) {
-    error_log("Local proxy error: " . error_get_last()["message"] ?? "Unknown error");
-    http_response_code(500);
-    echo json_encode([
-        "error" => "Failed to connect to backend",
-        "url" => $url,
-        "timestamp" => date("Y-m-d H:i:s")
-    ]);
-    exit;
-}
-
-// Get response code 
-$status_line = $http_response_header[0] ?? '';
-$status = 200; // Default status
-if (preg_match("#HTTP/[0-9.]+\s+([0-9]+)#", $status_line, $match)) {
-    $status = intval($match[1]);
-}
-http_response_code($status);
-
-// Output response
-echo $response;',
-		
-		'status.php' => '<?php
-// Status and health check file
-error_reporting(E_ALL);
-ini_set("display_errors", 1);
-ini_set("log_errors", 1);
-ini_set("error_log", "status_check.log");
-
-// Log access
-error_log("Status check accessed at " . date("Y-m-d H:i:s") . " from " . ($_SERVER["REMOTE_ADDR"] ?? "unknown"));
-
-// Headers
-header("Content-Type: application/json");
-header("Access-Control-Allow-Origin: *");
-
-// Check if filesystem is writable
-$temp_file = __DIR__ . '/temp_test.txt';
-$fs_writable = @file_put_contents($temp_file, "Test") !== false;
-if ($fs_writable) {
-    @unlink($temp_file);
-}
-
-// Check files existence
-$proxy_files = [
-    'simple-proxy.php',
-    'api-bridge.php',
-    'direct-login.php',
-    'local-proxy.php'
-];
-$file_status = [];
-foreach ($proxy_files as $file) {
-    $file_path = __DIR__ . '/' . $file;
-    $file_status[$file] = [
-        'exists' => file_exists($file_path),
-        'size' => file_exists($file_path) ? filesize($file_path) : 0,
-        'permissions' => file_exists($file_path) ? substr(sprintf("%o", fileperms($file_path)), -4) : "none",
-        'readable' => file_exists($file_path) ? is_readable($file_path) : false,
-        'path' => $file_path
-    ];
-}
-
-echo json_encode([
-    "success" => true,
-    "status" => "ok",
-    "server" => $_SERVER["SERVER_NAME"] ?? 'unknown',
-    "message" => "System status check",
-    "timestamp" => date("Y-m-d H:i:s"),
-    "environment" => strpos($_SERVER["HTTP_HOST"] ?? "", "azurewebsites.net") !== false ? "azure" : "local",
-    "php_version" => PHP_VERSION,
-    "filesystem_writable" => $fs_writable,
-    "proxy_files" => $file_status,
-    "server_info" => [
-        "software" => $_SERVER["SERVER_SOFTWARE"] ?? "unknown",
-        "document_root" => $_SERVER["DOCUMENT_ROOT"] ?? "unknown",
-        "script_filename" => $_SERVER["SCRIPT_FILENAME"] ?? "unknown"
-    ]
-]);'
+	$proxy_files_to_check = [
+		'simple-proxy.php',
+		'api-bridge.php',
+		'direct-login.php',
+		'local-proxy.php',
+		'local-proxy-fix.php',
+		'status.php'
 	];
-	
+
 	// Diagnostiquer l'accès au fichier système
 	$diagnostics = [];
 	$diagnostics['document_root'] = $_SERVER['DOCUMENT_ROOT'] ?? 'unknown';
-	$diagnostics['script_filename'] = $_SERVER['SCRIPT_FILENAME'] ?? 'unknown'; 
+	$diagnostics['script_filename'] = $_SERVER['SCRIPT_FILENAME'] ?? 'unknown';
 	$diagnostics['current_dir'] = __DIR__;
 	$diagnostics['can_write_current'] = is_writable(__DIR__);
-	
+
 	error_log('Azure deployment diagnostics: ' . json_encode($diagnostics));
-	
-	// Créer les fichiers manquants avec contenu plus robuste
-	foreach ($proxy_files as $filename => $content) {
+
+	// Vérifier les fichiers manquants
+	$missing_files = [];
+	foreach ($proxy_files_to_check as $filename) {
 		$filepath = __DIR__ . '/' . $filename;
 		$file_exists = file_exists($filepath);
-		
+
 		if (!$file_exists || filesize($filepath) < 100) {
-			$success = @file_put_contents($filepath, $content);
-			if ($success) {
-				// Rendre le fichier accessible
-				@chmod($filepath, 0755);
-				error_log("Created/Updated proxy file: $filename with " . strlen($content) . " bytes");
-			} else {
-				error_log("Failed to create $filename, error: " . error_get_last()['message'] ?? 'unknown');
-			}
+			$missing_files[] = $filename;
 		}
-		
-		// Aussi créer les copies dans d'autres dossiers pour plus de fiabilité
-		$extra_dirs = ['/api', '/proxy'];
-		foreach ($extra_dirs as $dir) {
-			$dir_path = __DIR__ . $dir;
-			
-			// Créer le dossier s'il n'existe pas
-			if (!is_dir($dir_path)) {
-				$dir_created = @mkdir($dir_path, 0755, true);
-				error_log("Directory creation " . ($dir_created ? "succeeded" : "failed") . " for " . $dir);
-			}
-			
-			if (is_dir($dir_path)) {
+	}
+
+	// Si des fichiers sont manquants, rediriger vers le script d'extraction
+	if (!empty($missing_files)) {
+		if (!file_exists(__DIR__ . '/extract_proxy.php')) {
+			// Si extract_proxy.php n'existe pas, créer un message d'erreur
+			echo "<div style='color:red;padding:20px;background:#fee'>
+				Erreur: Fichiers proxy manquants et extract_proxy.php non disponible.
+				Veuillez déployer à nouveau les fichiers ou contacter l'administrateur.
+			</div>";
+		} else {
+			// Rediriger vers le script d'extraction
+			header('Location: extract_proxy.php');
+			exit;
+		}
+	}
+
+	// Aussi créer les copies dans d'autres dossiers pour plus de fiabilité
+	$extra_dirs = ['/api', '/proxy'];
+	foreach ($extra_dirs as $dir) {
+		$dir_path = __DIR__ . $dir;
+
+		// Créer le dossier s'il n'existe pas
+		if (!is_dir($dir_path)) {
+			$dir_created = @mkdir($dir_path, 0755, true);
+			error_log("Directory creation " . ($dir_created ? "succeeded" : "failed") . " for " . $dir);
+		}
+
+		if (is_dir($dir_path)) {
+			foreach ($proxy_files_to_check as $filename) {
+				$src_file = __DIR__ . '/' . $filename;
 				$extra_filepath = $dir_path . '/' . $filename;
-				if (!file_exists($extra_filepath) || filesize($extra_filepath) < 100) {
-					$success = @file_put_contents($extra_filepath, $content);
+
+				if (file_exists($src_file) && (!file_exists($extra_filepath) || filesize($extra_filepath) < 100)) {
+					$success = @copy($src_file, $extra_filepath);
 					if ($success) {
 						@chmod($extra_filepath, 0755);
 						error_log("Created/Updated proxy file in $dir: $filename");
@@ -499,107 +80,89 @@ echo json_encode([
 			}
 		}
 	}
-	
+
 	// Vérifier si web.config existe et le mettre à jour si nécessaire
 	$web_config_file = __DIR__ . '/web.config';
 	$create_web_config = !file_exists($web_config_file) || filesize($web_config_file) < 100;
-	
+
 	if ($create_web_config) {
-				$web_config_content = '<?xml version="1.0" encoding="UTF-8"?><configuration>    <system.webServer>        <rewrite>            <rules>                <rule name="PHP Files" stopProcessing="true">                    <match url="^.*\.php$" />                    <action type="None" />                </rule>                                <rule name="SimpleProxyAccess" stopProcessing="true">                    <match url="^(.*/)?simple-proxy\.php$" />                    <action type="Rewrite" url="simple-proxy.php" />                </rule>                                <rule name="ApiBridgeAccess" stopProcessing="true">                    <match url="^(.*/)?api-bridge\.php$" />                    <action type="Rewrite" url="api-bridge.php" />                </rule>                                <rule name="LocalProxyAccess" stopProcessing="true">                    <match url="^(.*/)?local-proxy\.php$" />                    <action type="Rewrite" url="local-proxy.php" />                </rule>                                <rule name="DirectLoginAccess" stopProcessing="true">                    <match url="^(.*/)?direct-login\.php$" />                    <action type="Rewrite" url="direct-login.php" />                </rule>                                <rule name="StatusAccess" stopProcessing="true">                    <match url="^(.*/)?status\.php$" />                    <action type="Rewrite" url="status.php" />                </rule>                                <rule name="LoginRedirect" stopProcessing="true">                    <match url="^login$" />                    <action type="Rewrite" url="login.php" />                </rule>                                <rule name="DashboardRedirect" stopProcessing="true">                    <match url="^dashboard$" />                    <action type="Rewrite" url="dashboard.php" />                </rule>            </rules>        </rewrite>                <directoryBrowse enabled="true" />                <httpProtocol>            <customHeaders>                <add name="Access-Control-Allow-Origin" value="*" />                <add name="Access-Control-Allow-Methods" value="GET, POST, OPTIONS, PUT, DELETE" />                <add name="Access-Control-Allow-Headers" value="Content-Type, Authorization, X-Requested-With" />            </customHeaders>        </httpProtocol>    </system.webServer></configuration>';
+		$web_config_content = '<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<system.webServer>
+		<rewrite>
+			<rules>
+				<!-- Default document handler -->
+				<rule name="DefaultDocument" stopProcessing="true">
+					<match url="^$" />
+					<action type="Rewrite" url="index.php" />
+				</rule>
+				
+				<!-- Ensure PHP files are processed correctly -->
+				<rule name="PHPHandler" stopProcessing="true">
+					<match url="^.*\.php$" />
+					<action type="None" />
+				</rule>
+				
+				<!-- Ensure root PHP files are properly rewritten -->
+				<rule name="RootPhpFiles" stopProcessing="true">
+					<match url="^(login|dashboard|index|logout|session-handler|status)$" />
+					<action type="Rewrite" url="{R:1}.php" />
+				</rule>
+				
+				<!-- Proxy access from any path of the application -->
+				<rule name="ProxyFiles" stopProcessing="true">
+					<match url="^(.*/)?(?:simple-proxy|api-bridge|direct-login|local-proxy|local-proxy-fix)\.php$" />
+					<action type="Rewrite" url="{R:2}.php" />
+				</rule>
+				
+				<!-- Management pages -->
+				<rule name="GestionRedirects" stopProcessing="true">
+					<match url="^gestion/([a-z_]+)(/.*)?$" />
+					<action type="Rewrite" url="gestion_{R:1}.php{R:2}" appendQueryString="true" />
+				</rule>
+			</rules>
+		</rewrite>
+		
+		<!-- Enable directory browsing for troubleshooting -->
+		<directoryBrowse enabled="true" />
+		
+		<!-- Add CORS headers for API access -->
+		<httpProtocol>
+			<customHeaders>
+				<add name="Access-Control-Allow-Origin" value="*" />
+				<add name="Access-Control-Allow-Methods" value="GET, POST, OPTIONS, PUT, DELETE" />
+				<add name="Access-Control-Allow-Headers" value="Content-Type, Authorization, X-Requested-With" />
+			</customHeaders>
+		</httpProtocol>
+		
+		<!-- Cache configuration to improve performance -->
+		<staticContent>
+			<clientCache cacheControlMode="UseMaxAge" cacheControlMaxAge="1.00:00:00" />
+			<!-- MIME types for proper site functioning -->
+			<mimeMap fileExtension=".woff" mimeType="application/font-woff" />
+			<mimeMap fileExtension=".woff2" mimeType="application/font-woff2" />
+		</staticContent>
+		
+		<!-- Default document configuration -->
+		<defaultDocument>
+			<files>
+				<clear />
+				<add value="index.php" />
+				<add value="index.html" />
+				<add value="login.php" />
+			</files>
+		</defaultDocument>
+	</system.webServer>
+</configuration>';
 		$web_config_result = @file_put_contents($web_config_file, $web_config_content);
 		error_log("Web.config " . ($web_config_result ? "created/updated successfully" : "creation failed"));
 	}
-	
+
 	// Créer un test.html pour diagnostiquer les problèmes
 	$test_html_file = __DIR__ . '/proxy-test.html';
 	if (!file_exists($test_html_file)) {
-		$test_html_content = '<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Proxy Test Page</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
-        .success { color: green; }
-        .error { color: red; }
-        .test { margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; }
-        pre { background: #f5f5f5; padding: 10px; overflow: auto; }
-    </style>
-</head>
-<body>
-    <h1>Proxy Test Page</h1>
-    <div id="status">Testing proxy files...</div>
-    <div id="results"></div>
-    
-    <script>
-        // Files to test
-        const filesToTest = [
-            "simple-proxy.php",
-            "api-bridge.php",
-            "direct-login.php",
-            "local-proxy.php",
-            "status.php",
-            "/simple-proxy.php",
-            "/api-bridge.php",
-            "/api/simple-proxy.php",
-            "/proxy/simple-proxy.php"
-        ];
-        
-        // Test results
-        const results = {};
-        let testsCompleted = 0;
-        
-        // Test each file
-        filesToTest.forEach(file => {
-            const testDiv = document.createElement("div");
-            testDiv.className = "test";
-            testDiv.innerHTML = `<h3>Testing: ${file}</h3><div class="status">In progress...</div>`;
-            document.getElementById("results").appendChild(testDiv);
-            
-            // Try to fetch the file with status.php endpoint
-            fetch(`${file}?endpoint=status.php`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error ${response.status}`);
-                    }
-                    return response.text();
-                })
-                .then(text => {
-                    testDiv.querySelector(".status").innerHTML = 
-                        `<p class="success">SUCCESS</p><pre>${text}</pre>`;
-                    results[file] = { success: true, text };
-                })
-                .catch(error => {
-                    testDiv.querySelector(".status").innerHTML = 
-                        `<p class="error">FAILED: ${error.message}</p>`;
-                    results[file] = { success: false, error: error.message };
-                })
-                .finally(() => {
-                    testsCompleted++;
-                    document.getElementById("status").textContent = 
-                        `Completed ${testsCompleted} of ${filesToTest.length} tests`;
-                    
-                    if (testsCompleted === filesToTest.length) {
-                        // All tests completed, show summary
-                        const workingProxies = Object.keys(results)
-                            .filter(file => results[file].success);
-                        
-                        if (workingProxies.length > 0) {
-                            document.getElementById("status").innerHTML = 
-                                `<h2 class="success">Found ${workingProxies.length} working proxies!</h2>
-                                <p>Working proxies: ${workingProxies.join(", ")}</p>`;
-                        } else {
-                            document.getElementById("status").innerHTML = 
-                                `<h2 class="error">No working proxies found!</h2>`;
-                        }
-                    }
-                });
-        });
-    </script>
-</body>
-</html>';
-		@file_put_contents($test_html_file, $test_html_content);
-		error_log("Created proxy test HTML file");
+		// Le contenu existant du proxy-test.html peut être conservé
+		// Nous ne le modifions pas dans cette version pour éviter plus d'erreurs
 	}
 }
 
