@@ -48,6 +48,7 @@ ob_start();
 	</div>
 </div>
 
+<script src="js/config.js"></script>
 <script>
 	function toggleErrorDetails() {
 		const details = document.querySelector('.error-details');
@@ -93,7 +94,7 @@ ob_start();
 
 		try {
 			console.log('Tentative de connexion...');
-			const response = await fetch('/api/auth/login', {
+			const response = await fetch(getApiUrl('auth') + '/login', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
