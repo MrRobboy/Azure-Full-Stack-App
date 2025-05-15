@@ -9,6 +9,23 @@ require_once 'templates/base.php';
 			<h1>Test de connexion à l'API</h1>
 			<div class="card mb-4">
 				<div class="card-header">
+					<h3>Test manuel de CORS</h3>
+				</div>
+				<div class="card-body">
+					<p>Si les tests automatiques échouent, essayez de tester directement l'endpoint CORS Azure :</p>
+					<select id="corsTestMethod" class="form-select mb-2">
+						<option value="GET">GET</option>
+						<option value="POST">POST</option>
+						<option value="OPTIONS">OPTIONS</option>
+					</select>
+					<button id="manualCorsTestBtn" class="btn btn-primary mb-3">Tester CORS Manuellement</button>
+					<div id="manualCorsResult" class="alert alert-info">Aucun test effectué</div>
+					<div id="manualCorsDetails" class="mt-3"></div>
+				</div>
+			</div>
+
+			<div class="card mb-4">
+				<div class="card-header">
 					<h3>Configuration</h3>
 				</div>
 				<div class="card-body">
@@ -78,7 +95,31 @@ require_once 'templates/base.php';
 		// Test de connexion au backend
 		async function testBackendConnection() {
 			try {
-				// Essayer d'abord notre test CORS dédié
+				// Essayer d'abord notre nouvel endpoint Azure CORS spécifique
+				try {
+					const azureCorsResponse = await fetch(appConfig.apiBaseUrl.replace('/api', '') + '/azure-cors.php', {
+						method: 'GET',
+						credentials: 'include',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-Requested-With': 'XMLHttpRequest'
+						}
+					});
+
+					if (azureCorsResponse.ok) {
+						const azureCorsData = await azureCorsResponse.json();
+						updateStatus('backendStatus', true, 'Test CORS Azure réussi - Backend accessible', azureCorsData);
+						// Si succès, tester la connexion à la base de données
+						testDatabaseConnection();
+						// Et tester les endpoints de l'API
+						testApiEndpoints();
+						return;
+					}
+				} catch (azureCorsError) {
+					console.error('Erreur lors du test CORS Azure:', azureCorsError);
+				}
+
+				// Essayer ensuite notre test CORS standard
 				try {
 					const corsResponse = await fetch(appConfig.apiBaseUrl.replace('/api', '') + '/test-cors.php', {
 						method: 'GET',
@@ -102,7 +143,7 @@ require_once 'templates/base.php';
 					console.error('Erreur lors du test CORS:', corsError);
 				}
 
-				// Si le test CORS échoue, essayer l'ancien endpoint status
+				// Si le test CORS échoue, essayer l'endpoint status
 				try {
 					const response = await fetch(appConfig.apiBaseUrl + '/status', {
 						method: 'GET',
@@ -124,22 +165,6 @@ require_once 'templates/base.php';
 					}
 				} catch (statusError) {
 					console.error('Erreur lors du test de status:', statusError);
-				}
-
-				// Si CORS et status échouent, essayer XDomain client
-				try {
-					console.log("Essai de la méthode XDomain...");
-					const xdResponse = await window.xdomainClient.ping();
-					if (xdResponse && xdResponse.success) {
-						updateStatus('backendStatus', true, 'Backend accessible via XDomain', xdResponse);
-						// Si succès, tester la connexion à la base de données
-						testDatabaseConnection();
-						// Et tester les endpoints de l'API
-						testApiEndpoints();
-						return;
-					}
-				} catch (xdError) {
-					console.error('Erreur lors du test XDomain:', xdError);
 				}
 
 				// Si XDomain échoue aussi, essayer JSONP comme dernier recours
@@ -179,6 +204,27 @@ require_once 'templates/base.php';
 		// Test de connexion à la base de données
 		async function testDatabaseConnection() {
 			try {
+				// Essayer d'abord via notre endpoint Azure CORS
+				try {
+					const azureCorsResponse = await fetch(appConfig.apiBaseUrl.replace('/api', '') + '/azure-cors.php?type=db', {
+						method: 'GET',
+						credentials: 'include',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-Requested-With': 'XMLHttpRequest'
+						}
+					});
+
+					if (azureCorsResponse.ok) {
+						const data = await azureCorsResponse.json();
+						updateStatus('dbStatus', true, 'Test de base de données via Azure CORS réussi', data);
+						return;
+					}
+				} catch (azureError) {
+					console.error('Erreur lors du test de DB via Azure CORS:', azureError);
+				}
+
+				// Essayer l'endpoint standard
 				const response = await fetch(appConfig.apiBaseUrl + '/db-status', {
 					method: 'GET',
 					credentials: 'include',
@@ -210,6 +256,34 @@ require_once 'templates/base.php';
 
 			for (const endpoint of endpoints) {
 				try {
+					// Essayer d'abord via notre endpoint Azure CORS avec le paramètre resource
+					try {
+						const azureCorsUrl = `${appConfig.apiBaseUrl.replace('/api', '')}/azure-cors.php?resource=${endpoint}`;
+						const azureResponse = await fetch(azureCorsUrl, {
+							method: 'GET',
+							credentials: 'include',
+							headers: {
+								'Content-Type': 'application/json',
+								'X-Requested-With': 'XMLHttpRequest'
+							}
+						});
+
+						if (azureResponse.ok) {
+							const data = await azureResponse.json();
+							const resultEl = document.createElement('div');
+							resultEl.innerHTML = `
+								<div class="alert alert-success mb-2">
+									<strong>✅ Endpoint ${endpoint} (via Azure CORS)</strong>: OK (${azureResponse.status})
+								</div>
+							`;
+							results.appendChild(resultEl);
+							continue; // Passer à l'endpoint suivant
+						}
+					} catch (azureError) {
+						console.error(`Erreur lors du test Azure CORS pour ${endpoint}:`, azureError);
+					}
+
+					// Si Azure CORS échoue, essayer l'API standard
 					const response = await fetch(getApiUrl(endpoint), {
 						method: 'GET',
 						credentials: 'include',
@@ -223,27 +297,27 @@ require_once 'templates/base.php';
 					if (response.ok) {
 						const data = await response.json();
 						resultEl.innerHTML = `
-                        <div class="alert alert-success mb-2">
-                            <strong>✅ Endpoint ${endpoint}</strong>: OK (${response.status})
-                        </div>
-                    `;
+							<div class="alert alert-success mb-2">
+								<strong>✅ Endpoint ${endpoint}</strong>: OK (${response.status})
+							</div>
+						`;
 					} else {
 						allSuccess = false;
 						resultEl.innerHTML = `
-                        <div class="alert alert-danger mb-2">
-                            <strong>❌ Endpoint ${endpoint}</strong>: Échec (${response.status}: ${response.statusText})
-                        </div>
-                    `;
+							<div class="alert alert-danger mb-2">
+								<strong>❌ Endpoint ${endpoint}</strong>: Échec (${response.status}: ${response.statusText})
+							</div>
+						`;
 					}
 					results.appendChild(resultEl);
 				} catch (error) {
 					allSuccess = false;
 					const resultEl = document.createElement('div');
 					resultEl.innerHTML = `
-                    <div class="alert alert-danger mb-2">
-                        <strong>❌ Endpoint ${endpoint}</strong>: Erreur (${error.message})
-                    </div>
-                `;
+						<div class="alert alert-danger mb-2">
+							<strong>❌ Endpoint ${endpoint}</strong>: Erreur (${error.message})
+						</div>
+					`;
 					results.appendChild(resultEl);
 				}
 			}
@@ -254,5 +328,40 @@ require_once 'templates/base.php';
 
 		// Lancer les tests de connexion
 		testBackendConnection();
+
+		document.getElementById('manualCorsTestBtn').addEventListener('click', async function() {
+			const resultElement = document.getElementById('manualCorsResult');
+			const detailsElement = document.getElementById('manualCorsDetails');
+			const method = document.getElementById('corsTestMethod').value;
+
+			resultElement.className = 'alert alert-info';
+			resultElement.textContent = 'Test en cours...';
+			detailsElement.innerHTML = '';
+
+			try {
+				const response = await fetch('https://app-backend-esgi-app.azurewebsites.net/azure-cors.php', {
+					method: method,
+					credentials: 'include',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-Requested-With': 'XMLHttpRequest'
+					}
+				});
+
+				if (response.ok) {
+					const data = await response.json();
+					resultElement.className = 'alert alert-success';
+					resultElement.textContent = 'Test CORS réussi!';
+					detailsElement.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+				} else {
+					resultElement.className = 'alert alert-danger';
+					resultElement.textContent = `Échec du test CORS: ${response.status} ${response.statusText}`;
+				}
+			} catch (error) {
+				resultElement.className = 'alert alert-danger';
+				resultElement.textContent = `Erreur lors du test CORS: ${error.message}`;
+				console.error('Erreur du test CORS manuel:', error);
+			}
+		});
 	});
 </script>
