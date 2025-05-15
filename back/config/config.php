@@ -20,7 +20,7 @@ if (ENVIRONMENT === 'development') {
 
 // Configuration de la base de données SQL Server
 define('DB_HOST', 'localhost'); // Ou l'adresse IP/nom du serveur SQL
-define('DB_NAME', 'gestion_notes');
+define('DB_NAME', 'sqldb-esgi-app');
 define('DB_USER', 'sqladmin'); // Modifiez selon votre configuration
 define('DB_PASS', 'Cisco123');
 define('DB_PORT', '1433'); // Port standard pour SQL Server
