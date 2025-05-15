@@ -12,6 +12,32 @@ error_log("Simple proxy file path: $self_path");
 error_log("Parent directory: $parent_dir");
 error_log("File exists: " . (file_exists($self_path) ? 'yes' : 'no'));
 
+// Initialize or get mock data session
+session_start();
+if (!isset($_SESSION['mock_data'])) {
+	$_SESSION['mock_data'] = [
+		'matieres' => [
+			[
+				'id_matiere' => 1,
+				'nom' => 'Mathématiques'
+			],
+			[
+				'id_matiere' => 2,
+				'nom' => 'Français'
+			],
+			[
+				'id_matiere' => 16,
+				'nom' => 'Docker'
+			],
+			[
+				'id_matiere' => 17,
+				'nom' => 'Azure'
+			]
+		],
+		'last_matiere_id' => 17
+	];
+}
+
 // Add CORS headers to avoid issues
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
@@ -315,25 +341,8 @@ if ($mock_data) {
 			// Check if this is a GET, POST, PUT or DELETE request
 			$method = $_SERVER['REQUEST_METHOD'];
 
-			// Base mock data for subjects
-			$matieres = [
-				[
-					'id_matiere' => 1,
-					'nom' => 'Mathématiques'
-				],
-				[
-					'id_matiere' => 2,
-					'nom' => 'Français'
-				],
-				[
-					'id_matiere' => 16,
-					'nom' => 'Docker'
-				],
-				[
-					'id_matiere' => 17,
-					'nom' => 'Azure'
-				]
-			];
+			// Use the matieres data from session
+			$matieres = $_SESSION['mock_data']['matieres'];
 
 			// Handle different HTTP methods similar to the classes endpoint
 			switch ($method) {
@@ -397,12 +406,19 @@ if ($mock_data) {
 					}
 
 					// Generate a new ID
-					$new_id = max(array_column($matieres, 'id_matiere')) + 1;
+					$_SESSION['mock_data']['last_matiere_id']++;
+					$new_id = $_SESSION['mock_data']['last_matiere_id'];
 
 					// Create new subject
 					$new_matiere = array_merge([
 						'id_matiere' => $new_id
 					], $matiere_data);
+
+					// Add to our session store
+					$_SESSION['mock_data']['matieres'][] = $new_matiere;
+
+					// Log the added matiere
+					error_log("Added new matiere: " . json_encode($new_matiere));
 
 					echo json_encode([
 						'success' => true,
@@ -447,13 +463,37 @@ if ($mock_data) {
 						break;
 					}
 
+					// Find the matiere to update
+					$found = false;
+					foreach ($_SESSION['mock_data']['matieres'] as $key => $matiere) {
+						if ($matiere['id_matiere'] == $id) {
+							// Update the matiere
+							$_SESSION['mock_data']['matieres'][$key] = array_merge(
+								$_SESSION['mock_data']['matieres'][$key],
+								$matiere_data
+							);
+							$updated_matiere = $_SESSION['mock_data']['matieres'][$key];
+							$found = true;
+							break;
+						}
+					}
+
+					if (!$found) {
+						http_response_code(404);
+						echo json_encode([
+							'success' => false,
+							'message' => 'Subject not found (mocked)'
+						]);
+						break;
+					}
+
 					// Log the update operation
-					error_log("Updating subject with ID: {$id} and data: " . json_encode($matiere_data));
+					error_log("Updated matiere ID {$id}: " . json_encode($updated_matiere));
 
 					echo json_encode([
 						'success' => true,
 						'message' => 'Subject updated successfully (mocked)',
-						'data' => array_merge(['id_matiere' => (int)$id], $matiere_data)
+						'data' => $updated_matiere
 					]);
 					break;
 
@@ -481,8 +521,30 @@ if ($mock_data) {
 						break;
 					}
 
+					// Find and remove the matiere
+					$found = false;
+					foreach ($_SESSION['mock_data']['matieres'] as $key => $matiere) {
+						if ($matiere['id_matiere'] == $id) {
+							// Remove the matiere
+							unset($_SESSION['mock_data']['matieres'][$key]);
+							// Re-index the array
+							$_SESSION['mock_data']['matieres'] = array_values($_SESSION['mock_data']['matieres']);
+							$found = true;
+							break;
+						}
+					}
+
+					if (!$found) {
+						http_response_code(404);
+						echo json_encode([
+							'success' => false,
+							'message' => 'Subject not found (mocked)'
+						]);
+						break;
+					}
+
 					// Log the delete operation
-					error_log("Deleting subject with ID: {$id}");
+					error_log("Deleted matiere with ID: {$id}");
 
 					echo json_encode([
 						'success' => true,
