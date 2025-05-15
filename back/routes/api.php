@@ -567,6 +567,116 @@ try {
 		}
 	}
 
+	// Routes pour les privilèges des étudiants
+	if ($segments[0] === 'privileges') {
+		checkAuth();
+
+		try {
+			// Créer une instance du modèle de privilèges
+			require_once __DIR__ . '/../models/UserPrivilege.php';
+			$privilegeModel = new UserPrivilege();
+
+			if ($method === 'GET') {
+				if (isset($segments[1]) && $segments[1] === 'students') {
+					// Récupérer tous les privilèges des étudiants
+					$privileges = $privilegeModel->getAllPrivileges();
+					sendResponse([
+						'success' => true,
+						'data' => $privileges
+					]);
+				} elseif (isset($segments[1]) && is_numeric($segments[1])) {
+					// Récupérer le privilège d'un étudiant spécifique
+					$minNote = $privilegeModel->getMinNoteForUser($segments[1]);
+					if ($minNote !== null) {
+						sendResponse([
+							'success' => true,
+							'data' => [
+								'id_user' => (int)$segments[1],
+								'min_note' => (float)$minNote
+							]
+						]);
+					} else {
+						sendResponse([
+							'success' => false,
+							'message' => 'Aucun privilège trouvé pour cet étudiant'
+						], 404);
+					}
+				} else {
+					throw new Exception("Route de privilège invalide", 400);
+				}
+			} elseif ($method === 'POST') {
+				// Ajouter un nouveau privilège
+				$data = json_decode(file_get_contents('php://input'), true);
+				if (!$data || !isset($data['id_user']) || !isset($data['min_note'])) {
+					throw new Exception("Les champs id_user et min_note sont obligatoires");
+				}
+
+				// Vérifier que la note minimale est valide
+				if (!is_numeric($data['min_note']) || $data['min_note'] < 0 || $data['min_note'] > 20) {
+					throw new Exception("La note minimale doit être un nombre entre 0 et 20");
+				}
+
+				$result = $privilegeModel->addPrivilege($data['id_user'], $data['min_note']);
+				if ($result) {
+					sendResponse([
+						'success' => true,
+						'message' => 'Privilège ajouté avec succès',
+						'data' => [
+							'id_user' => (int)$data['id_user'],
+							'min_note' => (float)$data['min_note']
+						]
+					]);
+				} else {
+					throw new Exception("Erreur lors de l'ajout du privilège");
+				}
+			} elseif ($method === 'PUT' && isset($segments[1]) && is_numeric($segments[1])) {
+				// Mettre à jour un privilège existant
+				$data = json_decode(file_get_contents('php://input'), true);
+				if (!$data || !isset($data['min_note'])) {
+					throw new Exception("Le champ min_note est obligatoire");
+				}
+
+				// Vérifier que la note minimale est valide
+				if (!is_numeric($data['min_note']) || $data['min_note'] < 0 || $data['min_note'] > 20) {
+					throw new Exception("La note minimale doit être un nombre entre 0 et 20");
+				}
+
+				$result = $privilegeModel->addPrivilege($segments[1], $data['min_note']);
+				if ($result) {
+					sendResponse([
+						'success' => true,
+						'message' => 'Privilège mis à jour avec succès',
+						'data' => [
+							'id_user' => (int)$segments[1],
+							'min_note' => (float)$data['min_note']
+						]
+					]);
+				} else {
+					throw new Exception("Erreur lors de la mise à jour du privilège");
+				}
+			} elseif ($method === 'DELETE' && isset($segments[1]) && is_numeric($segments[1])) {
+				// Supprimer un privilège
+				$result = $privilegeModel->removePrivilege($segments[1]);
+				if ($result) {
+					sendResponse([
+						'success' => true,
+						'message' => 'Privilège supprimé avec succès'
+					]);
+				} else {
+					throw new Exception("Erreur lors de la suppression du privilège");
+				}
+			} else {
+				throw new Exception("Méthode non autorisée", 405);
+			}
+		} catch (Exception $e) {
+			error_log("Erreur dans la route privileges: " . $e->getMessage());
+			sendResponse([
+				'success' => false,
+				'message' => $e->getMessage()
+			], $e->getCode() ?: 500);
+		}
+	}
+
 	// Route non trouvée
 	throw new Exception("Route non trouvée", 404);
 } catch (Exception $e) {

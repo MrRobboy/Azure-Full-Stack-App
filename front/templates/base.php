@@ -81,6 +81,9 @@
 					<a href="/gestion_users.php" class="nav-link">
 						<i class="fas fa-users-cog"></i> Utilisateurs
 					</a>
+					<a href="/gestion_privileges.php" class="nav-link">
+						<i class="fas fa-shield-alt"></i> Privilèges
+					</a>
 					<a href="/logout.php" class="nav-link">
 						<i class="fas fa-sign-out-alt"></i> Déconnexion
 					</a>

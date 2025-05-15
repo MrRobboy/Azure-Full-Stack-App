@@ -64,6 +64,16 @@ async function checkBackendUrl(url) {
 
 // Fonction pour obtenir l'URL de l'API
 function getApiUrl(endpoint) {
+	if (endpoint === "privileges") {
+		// Cas spécial pour l'API de privilèges
+		const baseUrl = window.location.hostname.includes(
+			"azurewebsites.net"
+		)
+			? "https://app-backend-esgi-app.azurewebsites.net"
+			: window.location.origin;
+		return `${baseUrl}/api/privileges`;
+	}
+
 	if (appConfig.useProxy) {
 		// Utiliser le proxy local - essayer les deux formats avec et sans "api/"
 		// Le proxy tentera les deux formats
