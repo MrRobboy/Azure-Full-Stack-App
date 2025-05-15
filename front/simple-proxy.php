@@ -52,31 +52,258 @@ if (empty($endpoint)) {
 // If the backend is down or unreachable, we can mock the response for testing
 $mock_data = true; // Set to true to enable mocking
 
-if ($mock_data && $endpoint === 'api/auth/login') {
-	$raw_post = file_get_contents("php://input");
-	$user_data = json_decode($raw_post, true);
+if ($mock_data) {
+	// Map of mock data endpoints
+	$mock_endpoints = [
+		'api/auth/login' => function () {
+			$raw_post = file_get_contents("php://input");
+			$user_data = json_decode($raw_post, true);
 
-	// Simple mock login response for testing
-	if ($user_data && $user_data['email'] === 'admin@test.com') {
-		echo json_encode([
-			'success' => true,
-			'message' => 'Login successful (mocked)',
-			'user' => [
-				'id' => 1,
-				'email' => $user_data['email'],
-				'name' => 'Admin User',
-				'role' => 'admin'
-			],
-			'token' => 'mock_token_123456'
-		]);
-	} else {
-		http_response_code(401);
-		echo json_encode([
-			'success' => false,
-			'message' => 'Invalid credentials (mocked)'
-		]);
+			// Simple mock login response for testing
+			if ($user_data && isset($user_data['email'])) {
+				// Accept any credentials for testing, but show email in the response
+				echo json_encode([
+					'success' => true,
+					'message' => 'Login successful (mocked)',
+					'user' => [
+						'id' => 1,
+						'email' => $user_data['email'],
+						'name' => 'Test User (' . $user_data['email'] . ')',
+						'role' => 'admin'
+					],
+					'token' => 'mock_jwt_token_' . base64_encode(json_encode([
+						'user_id' => 1,
+						'email' => $user_data['email'],
+						'exp' => time() + 3600
+					]))
+				]);
+
+				// Log successful mock login
+				error_log("Mock login successful for user: " . $user_data['email']);
+			} else {
+				http_response_code(401);
+				echo json_encode([
+					'success' => false,
+					'message' => 'Invalid credentials (mocked)'
+				]);
+
+				// Log failed mock login
+				error_log("Mock login failed - invalid credentials");
+			}
+		},
+
+		'classes' => function () {
+			// Mock data for classes based on SQL structure
+			echo json_encode([
+				'success' => true,
+				'message' => 'Classes retrieved successfully (mocked)',
+				'data' => [
+					[
+						'id_classe' => 1,
+						'nom_classe' => '2A1',
+						'niveau' => '2ème Année',
+						'rythme' => 'Alternance',
+						'numero' => '1'
+					],
+					[
+						'id_classe' => 3,
+						'nom_classe' => '2A2',
+						'niveau' => '2ème Année',
+						'rythme' => 'Alternance',
+						'numero' => '2'
+					],
+					[
+						'id_classe' => 4,
+						'nom_classe' => '2A3',
+						'niveau' => '2ème Année',
+						'rythme' => 'Alternance',
+						'numero' => '3'
+					],
+					[
+						'id_classe' => 6,
+						'nom_classe' => '2A5 (aka la classe bien guez)',
+						'niveau' => '2ème Année',
+						'rythme' => 'Alternance',
+						'numero' => '5'
+					],
+					[
+						'id_classe' => 7,
+						'nom_classe' => '1A2',
+						'niveau' => '1ère Année',
+						'rythme' => 'Alternance',
+						'numero' => '2'
+					]
+				]
+			]);
+		},
+
+		'matieres' => function () {
+			// Mock data for subjects based on SQL structure
+			echo json_encode([
+				'success' => true,
+				'message' => 'Matières retrieved successfully (mocked)',
+				'data' => [
+					[
+						'id_matiere' => 1,
+						'nom' => 'Mathématiques'
+					],
+					[
+						'id_matiere' => 2,
+						'nom' => 'Français'
+					],
+					[
+						'id_matiere' => 16,
+						'nom' => 'Docker'
+					],
+					[
+						'id_matiere' => 17,
+						'nom' => 'Azure'
+					]
+				]
+			]);
+		},
+
+		'examens' => function () {
+			// Mock data for exams based on SQL structure
+			echo json_encode([
+				'success' => true,
+				'message' => 'Examens retrieved successfully (mocked)',
+				'data' => [
+					[
+						'id_exam' => 1,
+						'titre' => 'Analyse de texte',
+						'matiere' => 2,
+						'classe' => 3,
+						'date' => '2025-05-10',
+						'matiere_nom' => 'Français',
+						'classe_nom' => '2A2'
+					],
+					[
+						'id_exam' => 10,
+						'titre' => 'TEST POSITIONNEMENT',
+						'matiere' => 1,
+						'classe' => 3,
+						'date' => '2025-05-20',
+						'matiere_nom' => 'Mathématiques',
+						'classe_nom' => '2A2'
+					],
+					[
+						'id_exam' => 12,
+						'titre' => 'Examen Docker',
+						'matiere' => 16,
+						'classe' => 3,
+						'date' => '2025-05-16',
+						'matiere_nom' => 'Docker',
+						'classe_nom' => '2A2'
+					]
+				]
+			]);
+		},
+
+		'profs' => function () {
+			// Mock data for professors based on SQL structure
+			echo json_encode([
+				'success' => true,
+				'message' => 'Professeurs retrieved successfully (mocked)',
+				'data' => [
+					[
+						'id_prof' => 1,
+						'nom' => 'El Attar',
+						'prenom' => 'Ahmed',
+						'email' => 'mr.ahmed.elattar.pro@gmail.com',
+						'matiere' => 1,
+						'matiere_nom' => 'Mathématiques'
+					],
+					[
+						'id_prof' => 2,
+						'nom' => 'Ngo',
+						'prenom' => 'Mathis',
+						'email' => 'mathis.ngoo@gmail.com',
+						'matiere' => null,
+						'matiere_nom' => null
+					]
+				]
+			]);
+		},
+
+		'users' => function () {
+			// Mock data for users based on SQL structure
+			echo json_encode([
+				'success' => true,
+				'message' => 'Users retrieved successfully (mocked)',
+				'data' => [
+					[
+						'id_user' => 1,
+						'nom' => 'Pelcat',
+						'prenom' => 'Arthur',
+						'email' => 'apelcat@myges.fr',
+						'classe' => 3,
+						'classe_nom' => '2A2'
+					],
+					[
+						'id_user' => 2,
+						'nom' => 'Sage',
+						'prenom' => 'William',
+						'email' => 'wsage@myges.fr',
+						'classe' => 3,
+						'classe_nom' => '2A2'
+					],
+					[
+						'id_user' => 3,
+						'nom' => 'Theo',
+						'prenom' => 'Przybylski',
+						'email' => 'tprzybylski@myges.fr',
+						'classe' => 4,
+						'classe_nom' => '2A3'
+					],
+					[
+						'id_user' => 4,
+						'nom' => 'El Attar',
+						'prenom' => 'Ahmed',
+						'email' => 'aelattar@myges.fr',
+						'classe' => 3,
+						'classe_nom' => '2A2'
+					],
+					[
+						'id_user' => 5,
+						'nom' => 'Ngo',
+						'prenom' => 'Mathis',
+						'email' => 'mngo4@myges.fr',
+						'classe' => 3,
+						'classe_nom' => '2A2'
+					]
+				]
+			]);
+		}
+	];
+
+	// Check if we have a mock response for this endpoint
+	$clean_endpoint = trim($endpoint, '/');
+
+	// Try exact match first
+	if (isset($mock_endpoints[$clean_endpoint])) {
+		error_log("Using mock data for endpoint: " . $clean_endpoint);
+		$mock_endpoints[$clean_endpoint]();
+		exit;
 	}
-	exit;
+
+	// Check if it's an API endpoint that we should mock
+	if (strpos($clean_endpoint, 'api/') === 0) {
+		$api_endpoint = substr($clean_endpoint, 4); // Remove 'api/' prefix
+		if (isset($mock_endpoints[$api_endpoint])) {
+			error_log("Using mock data for API endpoint: " . $api_endpoint);
+			$mock_endpoints[$api_endpoint]();
+			exit;
+		}
+	}
+
+	// For status.php, we'll let it pass through to the real backend
+	if ($clean_endpoint === 'status.php') {
+		error_log("Passing through status.php to real backend");
+		// Continue processing
+	} else {
+		error_log("No mock data defined for endpoint: " . $clean_endpoint . " - trying real backend");
+	}
 }
 
 try {

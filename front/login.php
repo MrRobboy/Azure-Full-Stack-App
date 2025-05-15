@@ -1,6 +1,12 @@
 <?php
 session_start();
 
+// If user is already logged in, redirect to dashboard
+if (isset($_SESSION['user']) && !empty($_SESSION['token'])) {
+	header('Location: dashboard.php');
+	exit;
+}
+
 $pageTitle = "Connexion";
 ob_start();
 ?>
@@ -92,6 +98,28 @@ ob_start();
 		NotificationSystem.error(error.message || 'Erreur de connexion');
 	}
 
+	// Function to store session data via AJAX
+	async function storeSessionData(userData, token) {
+		try {
+			const response = await fetch('session-handler.php', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					action: 'login',
+					user: userData,
+					token: token
+				})
+			});
+
+			return response.ok;
+		} catch (error) {
+			console.error('Session storage error:', error);
+			return false;
+		}
+	}
+
 	document.getElementById('login-form').addEventListener('submit', async function(e) {
 		e.preventDefault();
 
@@ -155,11 +183,23 @@ ob_start();
 				throw new Error('Réponse invalide du serveur: ' + responseText);
 			}
 
-			if (response.ok) {
-				NotificationSystem.success('Connexion réussie');
-				window.location.href = 'dashboard.php';
+			if (response.ok && data.success) {
+				// Store user data in a session (using PHP session)
+				const sessionSaved = await storeSessionData(data.user, data.token);
+
+				if (sessionSaved) {
+					NotificationSystem.success('Connexion réussie! Redirection vers le tableau de bord...');
+					console.log('Login successful, redirecting to dashboard...');
+
+					// Short delay for notification to be visible
+					setTimeout(() => {
+						window.location.href = 'dashboard.php';
+					}, 1000);
+				} else {
+					throw new Error('Erreur de sauvegarde de session');
+				}
 			} else {
-				displayError(data.error || {
+				displayError({
 					type: 'Erreur d\'authentification',
 					message: data.message || 'Identifiants incorrects',
 					details: data
