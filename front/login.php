@@ -7,6 +7,37 @@ if (isset($_SESSION['user']) && !empty($_SESSION['token'])) {
 	exit;
 }
 
+// Vérification automatique des fichiers proxy pour Azure
+if (strpos($_SERVER['HTTP_HOST'], 'azurewebsites.net') !== false) {
+	// Sur Azure, vérifier si les fichiers proxy existent
+	$proxy_files = [
+		'simple-proxy.php',
+		'api-bridge.php',
+		'direct-login.php',
+		'local-proxy.php'
+	];
+
+	$missing_files = [];
+	foreach ($proxy_files as $file) {
+		if (!file_exists(__DIR__ . '/' . $file)) {
+			$missing_files[] = $file;
+		}
+	}
+
+	// Si des fichiers sont manquants, exécuter l'auto-déployer
+	if (count($missing_files) > 0) {
+		// Générer les fichiers manquants via auto-deployer.php
+		if (file_exists(__DIR__ . '/auto-deployer.php')) {
+			include_once __DIR__ . '/auto-deployer.php';
+			// Après l'auto-déploiement, continuer normalement
+		} else {
+			// Crée un simple proxy sur place si nécessaire
+			$simple_proxy_content = '<?php header("Content-Type: application/json"); echo file_get_contents("https://app-backend-esgi-app.azurewebsites.net/".($_GET["endpoint"] ?? "status.php"));';
+			@file_put_contents(__DIR__ . '/simple-proxy.php', $simple_proxy_content);
+		}
+	}
+}
+
 $pageTitle = "Connexion";
 ob_start();
 ?>
@@ -58,6 +89,9 @@ ob_start();
 <script src="js/config.js?v=1.9"></script>
 <script src="js/notification-system.js?v=1.1"></script>
 <script>
+	// Vérificateur en ligne pour détecter si les fichiers proxy sont accessibles(function() {    const isAzure = window.location.hostname.includes('azurewebsites.net');    if (!isAzure) return; // Seulement sur Azure    // Tente d'accéder au fichier status.php directement    fetch('status.php').then(response => {        if (response.ok) {            console.log('Le fichier status.php est accessible');        } else {            console.warn('status.php n\'est pas accessible, tentative de génération automatique');            // Essayons de générer le fichier status.php via l'auto-deployer            fetch('auto-deployer.php', {                method: 'POST',                headers: { 'X-Requested-With': 'XMLHttpRequest' }            }).then(deployResponse => {                if (deployResponse.ok) {                    console.log('Auto-deployer exécuté avec succès');                } else {                    console.error('Échec de l\'auto-deployer');                }            }).catch(e => console.error('Erreur lors de l\'exécution de l\'auto-deployer:', e));        }    }).catch(e => console.error('Erreur lors de l\'accès à status.php:', e));})();
+</script>
+<script>
 	// Utiliser le chemin du proxy depuis la configuration
 	let proxyPath = appConfig.proxyUrl;
 	console.log('Environment:', isAzure ? 'Azure' : 'Local');
@@ -73,9 +107,25 @@ ob_start();
 	async function testProxyPath(path) {
 		try {
 			console.log('Testing proxy path:', path);
-			const response = await fetch(`${path}?endpoint=status.php`);
+			// Utiliser un endpoint qui existe vraiment sur l'API
+			// On évite status.php qui pourrait ne pas exister, et on préfère directement tester l'API
+			const response = await fetch(`${path}?endpoint=${encodeURIComponent('api/status')}`);
 			const success = response.ok;
 			console.log(`Proxy test ${path}: ${success ? 'SUCCESS' : 'FAILED'} (${response.status})`);
+
+			// Si succès, essayons de lire la réponse pour vérifier que c'est bien du JSON valide
+			if (success) {
+				try {
+					const text = await response.text();
+					console.log(`Proxy ${path} response:`, text);
+					// On vérifie si la réponse est du JSON valide
+					JSON.parse(text);
+				} catch (jsonErr) {
+					console.warn(`Proxy ${path} returned invalid JSON:`, jsonErr);
+					// Mais on ignore cette erreur, tant que la connexion est établie
+				}
+			}
+
 			return success;
 		} catch (err) {
 			console.error(`Proxy test ${path} error:`, err);
