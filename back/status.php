@@ -4,7 +4,7 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -23,9 +23,9 @@ $status = [
     'php_version' => phpversion(),
     'server_info' => $_SERVER['SERVER_SOFTWARE'] ?? 'Inconnu',
     'database' => [
-        'type' => defined('DB_TYPE') ? DB_TYPE : 'mysql',
-        'host' => DB_HOST,
-        'name' => DB_NAME,
+        'type' => defined('DB_TYPE') ? DB_TYPE : 'sqlsrv',
+        'host' => defined('SQL_SERVER') ? SQL_SERVER : 'Non défini',
+        'name' => defined('SQL_DATABASE') ? SQL_DATABASE : 'Non défini',
         'connected' => false // Sera mis à jour ci-dessous
     ]
 ];
@@ -49,9 +49,9 @@ if (strpos($requestPath, '/db-status') !== false) {
             'success' => true,
             'message' => 'Connexion à la base de données réussie',
             'data' => [
-                'db_type' => defined('DB_TYPE') ? DB_TYPE : 'mysql',
-                'db_host' => DB_HOST,
-                'db_name' => DB_NAME,
+                'db_type' => defined('DB_TYPE') ? DB_TYPE : 'sqlsrv',
+                'db_host' => defined('SQL_SERVER') ? SQL_SERVER : 'Non défini',
+                'db_name' => defined('SQL_DATABASE') ? SQL_DATABASE : 'Non défini',
                 'tables_count' => count($tables),
                 'tables' => $tables
             ]
@@ -62,9 +62,9 @@ if (strpos($requestPath, '/db-status') !== false) {
             'message' => 'Échec de connexion à la base de données',
             'error' => $e->getMessage(),
             'data' => [
-                'db_type' => defined('DB_TYPE') ? DB_TYPE : 'mysql',
-                'db_host' => DB_HOST,
-                'db_name' => DB_NAME
+                'db_type' => defined('DB_TYPE') ? DB_TYPE : 'sqlsrv',
+                'db_host' => defined('SQL_SERVER') ? SQL_SERVER : 'Non défini',
+                'db_name' => defined('SQL_DATABASE') ? SQL_DATABASE : 'Non défini'
             ]
         ]);
     }

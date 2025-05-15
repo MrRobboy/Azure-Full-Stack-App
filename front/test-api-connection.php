@@ -77,7 +77,14 @@ require_once 'templates/base.php';
 		// Test de connexion au backend
 		async function testBackendConnection() {
 			try {
-				const response = await fetch(appConfig.apiBaseUrl + '/status');
+				const response = await fetch(appConfig.apiBaseUrl + '/status', {
+					method: 'GET',
+					credentials: 'include',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-Requested-With': 'XMLHttpRequest'
+					}
+				});
 				if (response.ok) {
 					const data = await response.json();
 					updateStatus('backendStatus', true, 'Le backend est accessible', data);
@@ -99,7 +106,14 @@ require_once 'templates/base.php';
 		// Test de connexion à la base de données
 		async function testDatabaseConnection() {
 			try {
-				const response = await fetch(appConfig.apiBaseUrl + '/db-status');
+				const response = await fetch(appConfig.apiBaseUrl + '/db-status', {
+					method: 'GET',
+					credentials: 'include',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-Requested-With': 'XMLHttpRequest'
+					}
+				});
 				if (response.ok) {
 					const data = await response.json();
 					updateStatus('dbStatus', data.success, data.message, data.data);
@@ -124,7 +138,12 @@ require_once 'templates/base.php';
 			for (const endpoint of endpoints) {
 				try {
 					const response = await fetch(getApiUrl(endpoint), {
-						credentials: 'include'
+						method: 'GET',
+						credentials: 'include',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-Requested-With': 'XMLHttpRequest'
+						}
 					});
 
 					const resultEl = document.createElement('div');

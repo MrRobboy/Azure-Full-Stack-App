@@ -19,10 +19,16 @@ if (ENVIRONMENT === 'development') {
 }
 
 // Configuration de la base de données SQL Server
-define('DB_HOST', 'sql-esgi-app.database.windows.net'); // Azure SQL Server host
-define('DB_NAME', 'sqldb-esgi-app');
-define('DB_USER', 'sqladmin'); // Modifiez selon votre configuration
-define('DB_PASS', 'Cisco123');
+define('SQL_SERVER', 'sql-esgi-app.database.windows.net'); // Azure SQL Server host
+define('SQL_DATABASE', 'sqldb-esgi-app');
+define('SQL_USER', 'sqladmin'); // Modifiez selon votre configuration
+define('SQL_PASSWORD', 'Cisco123');
+
+// Définition pour la rétrocompatibilité avec le code existant
+define('DB_HOST', SQL_SERVER);
+define('DB_NAME', SQL_DATABASE);
+define('DB_USER', SQL_USER);
+define('DB_PASS', SQL_PASSWORD);
 define('DB_PORT', '1433'); // Port standard pour SQL Server
 
 // Indiquer le type de base de données
@@ -42,9 +48,11 @@ define('BACK_PATH', BASE_PATH);
 // Logs utiles pour debug
 if (ENVIRONMENT === 'development') {
     error_log("Configuration de la base de données :");
+    error_log("SQL_SERVER = " . SQL_SERVER);
+    error_log("SQL_USER = " . SQL_USER);
+    error_log("SQL_DATABASE = " . SQL_DATABASE);
+    error_log("SQL_PASSWORD est " . (empty(SQL_PASSWORD) ? "vide" : "défini"));
     error_log("DB_HOST = " . DB_HOST);
-    error_log("DB_USER = " . DB_USER);
     error_log("DB_NAME = " . DB_NAME);
-    error_log("DB_PASS est " . (empty(DB_PASS) ? "vide" : "défini"));
     error_log("API_BASE_URL = " . API_BASE_URL);
 }
