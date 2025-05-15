@@ -52,6 +52,7 @@ require_once 'templates/base.php';
 
 <script src="js/notification-system.js?v=1.1"></script>
 <script src="js/config.js?v=1.2"></script>
+<script src="js/xdomain-client.js"></script>
 <script>
 	document.addEventListener('DOMContentLoaded', function() {
 		// Afficher l'URL de l'API
@@ -78,46 +79,97 @@ require_once 'templates/base.php';
 		async function testBackendConnection() {
 			try {
 				// Essayer d'abord notre test CORS dédié
-				const corsResponse = await fetch(appConfig.apiBaseUrl.replace('/api', '') + '/test-cors.php', {
-					method: 'GET',
-					credentials: 'include',
-					headers: {
-						'Content-Type': 'application/json',
-						'X-Requested-With': 'XMLHttpRequest'
-					}
-				});
+				try {
+					const corsResponse = await fetch(appConfig.apiBaseUrl.replace('/api', '') + '/test-cors.php', {
+						method: 'GET',
+						credentials: 'include',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-Requested-With': 'XMLHttpRequest'
+						}
+					});
 
-				if (corsResponse.ok) {
-					const corsData = await corsResponse.json();
-					updateStatus('backendStatus', true, 'Test CORS réussi - Le backend est accessible', corsData);
-					// Si succès, tester la connexion à la base de données
-					testDatabaseConnection();
-					// Et tester les endpoints de l'API
-					testApiEndpoints();
-					return;
+					if (corsResponse.ok) {
+						const corsData = await corsResponse.json();
+						updateStatus('backendStatus', true, 'Test CORS réussi - Le backend est accessible', corsData);
+						// Si succès, tester la connexion à la base de données
+						testDatabaseConnection();
+						// Et tester les endpoints de l'API
+						testApiEndpoints();
+						return;
+					}
+				} catch (corsError) {
+					console.error('Erreur lors du test CORS:', corsError);
 				}
 
 				// Si le test CORS échoue, essayer l'ancien endpoint status
-				const response = await fetch(appConfig.apiBaseUrl + '/status', {
-					method: 'GET',
-					credentials: 'include',
-					headers: {
-						'Content-Type': 'application/json',
-						'X-Requested-With': 'XMLHttpRequest'
-					}
-				});
-				if (response.ok) {
-					const data = await response.json();
-					updateStatus('backendStatus', true, 'Le backend est accessible', data);
+				try {
+					const response = await fetch(appConfig.apiBaseUrl + '/status', {
+						method: 'GET',
+						credentials: 'include',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-Requested-With': 'XMLHttpRequest'
+						}
+					});
 
+					if (response.ok) {
+						const data = await response.json();
+						updateStatus('backendStatus', true, 'Le backend est accessible', data);
+						// Si succès, tester la connexion à la base de données
+						testDatabaseConnection();
+						// Et tester les endpoints de l'API
+						testApiEndpoints();
+						return;
+					}
+				} catch (statusError) {
+					console.error('Erreur lors du test de status:', statusError);
+				}
+
+				// Si CORS et status échouent, essayer XDomain client
+				try {
+					console.log("Essai de la méthode XDomain...");
+					const xdResponse = await window.xdomainClient.ping();
+					if (xdResponse && xdResponse.success) {
+						updateStatus('backendStatus', true, 'Backend accessible via XDomain', xdResponse);
+						// Si succès, tester la connexion à la base de données
+						testDatabaseConnection();
+						// Et tester les endpoints de l'API
+						testApiEndpoints();
+						return;
+					}
+				} catch (xdError) {
+					console.error('Erreur lors du test XDomain:', xdError);
+				}
+
+				// Si XDomain échoue aussi, essayer JSONP comme dernier recours
+				const baseUrl = appConfig.apiBaseUrl.replace('/api', '');
+				const jsonpUrl = `${baseUrl}/jsonp-test.php?callback=handleJsonpResponse`;
+				const script = document.createElement('script');
+				script.src = jsonpUrl;
+
+				// Définir la fonction de callback
+				window.handleJsonpResponse = function(data) {
+					updateStatus('backendStatus', true, 'Backend accessible via JSONP', data);
 					// Si succès, tester la connexion à la base de données
 					testDatabaseConnection();
-
 					// Et tester les endpoints de l'API
 					testApiEndpoints();
-				} else {
-					updateStatus('backendStatus', false, `Impossible d'accéder au backend (${response.status}: ${response.statusText})`);
-				}
+					// Nettoyer
+					document.body.removeChild(script);
+					delete window.handleJsonpResponse;
+				};
+
+				// Gérer les erreurs de chargement du script
+				script.onerror = function() {
+					updateStatus('backendStatus', false, 'Impossible d\'accéder au backend via CORS, XDomain ou JSONP');
+					document.body.removeChild(script);
+					delete window.handleJsonpResponse;
+				};
+
+				// Ajouter le script à la page
+				document.body.appendChild(script);
+
 			} catch (error) {
 				updateStatus('backendStatus', false, `Erreur de connexion: ${error.message}`);
 				console.error('Erreur lors du test de connexion au backend:', error);
