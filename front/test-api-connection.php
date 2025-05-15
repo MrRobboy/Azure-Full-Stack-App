@@ -77,6 +77,27 @@ require_once 'templates/base.php';
 		// Test de connexion au backend
 		async function testBackendConnection() {
 			try {
+				// Essayer d'abord notre test CORS dédié
+				const corsResponse = await fetch(appConfig.apiBaseUrl.replace('/api', '') + '/test-cors.php', {
+					method: 'GET',
+					credentials: 'include',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-Requested-With': 'XMLHttpRequest'
+					}
+				});
+
+				if (corsResponse.ok) {
+					const corsData = await corsResponse.json();
+					updateStatus('backendStatus', true, 'Test CORS réussi - Le backend est accessible', corsData);
+					// Si succès, tester la connexion à la base de données
+					testDatabaseConnection();
+					// Et tester les endpoints de l'API
+					testApiEndpoints();
+					return;
+				}
+
+				// Si le test CORS échoue, essayer l'ancien endpoint status
 				const response = await fetch(appConfig.apiBaseUrl + '/status', {
 					method: 'GET',
 					credentials: 'include',

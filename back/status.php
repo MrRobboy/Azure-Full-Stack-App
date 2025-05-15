@@ -1,15 +1,25 @@
 <?php
 // Endpoint de statut pour vérifier la disponibilité du backend et de la base de données
+
+// Gérer les requêtes CORS preflight OPTIONS en priorité
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    // Envoyer les en-têtes CORS pour les requêtes preflight
+    header('Content-Type: application/json');
+    header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
+    header('Access-Control-Allow-Credentials: true');
+    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+    header('Access-Control-Max-Age: 86400');  // Cache for 24 hours
+    http_response_code(200);
+    exit;
+}
+
+// Pour les requêtes normales
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
 
 require_once __DIR__ . '/config/config.php';
 

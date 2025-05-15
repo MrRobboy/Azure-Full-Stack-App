@@ -23,6 +23,8 @@ define('SQL_SERVER', 'sql-esgi-app.database.windows.net'); // Azure SQL Server h
 define('SQL_DATABASE', 'sqldb-esgi-app');
 define('SQL_USER', 'sqladmin'); // Modifiez selon votre configuration
 define('SQL_PASSWORD', 'Cisco123');
+define('APP_ENV', 'production');
+define('CORS_ALLOWED', 'app-frontend-esgi-app.azurewebsite.net'); // Port standard pour SQL Server
 
 // Définition pour la rétrocompatibilité avec le code existant
 define('DB_HOST', SQL_SERVER);
