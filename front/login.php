@@ -11,30 +11,212 @@ if (isset($_SESSION['user']) && !empty($_SESSION['token'])) {
 if (strpos($_SERVER['HTTP_HOST'], 'azurewebsites.net') !== false) {
 	// Sur Azure, vérifier si les fichiers proxy existent
 	$proxy_files = [
-		'simple-proxy.php',
-		'api-bridge.php',
-		'direct-login.php',
-		'local-proxy.php'
+		'simple-proxy.php' => '<?php
+// Simple proxy for Azure - minimal version
+header("Content-Type: application/json");
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+
+if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
+    http_response_code(200);
+    exit;
+}
+
+$endpoint = isset($_GET["endpoint"]) ? $_GET["endpoint"] : "";
+if (empty($endpoint)) {
+    echo json_encode(["error" => "No endpoint specified"]);
+    exit;
+}
+
+$backend_url = "https://app-backend-esgi-app.azurewebsites.net";
+$url = $backend_url . ($endpoint[0] !== "/" ? "/" : "") . $endpoint;
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $_SERVER["REQUEST_METHOD"]);
+if ($_SERVER["REQUEST_METHOD"] === "POST" || $_SERVER["REQUEST_METHOD"] === "PUT") {
+    curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents("php://input"));
+}
+$response = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+http_response_code($httpCode);
+echo $response;',
+
+		'api-bridge.php' => '<?php
+// API Bridge - Last Resort Fallback
+header("Content-Type: application/json");
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+
+if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
+    http_response_code(200);
+    exit;
+}
+
+$endpoint = isset($_GET["endpoint"]) ? $_GET["endpoint"] : "";
+if (empty($endpoint)) {
+    echo json_encode(["error" => "No endpoint specified"]);
+    exit;
+}
+
+$backend_url = "https://app-backend-esgi-app.azurewebsites.net";
+$url = $backend_url . ($endpoint[0] !== "/" ? "/" : "") . $endpoint;
+
+$ch = curl_init($url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $_SERVER["REQUEST_METHOD"]);
+if ($_SERVER["REQUEST_METHOD"] === "POST" || $_SERVER["REQUEST_METHOD"] === "PUT") {
+    curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents("php://input"));
+}
+$response = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+http_response_code($httpCode);
+echo $response;',
+
+		'direct-login.php' => '<?php
+// Direct Login - Se connecter sans proxy
+header("Content-Type: application/json");
+header("Access-Control-Allow-Origin: *");
+
+if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    http_response_code(405);
+    echo json_encode(["error" => "Method not allowed"]);
+    exit;
+}
+
+$data = json_decode(file_get_contents("php://input"), true);
+if (!isset($data["email"]) || !isset($data["password"])) {
+    http_response_code(400);
+    echo json_encode(["error" => "Email and password required"]);
+    exit;
+}
+
+$loginUrl = "https://app-backend-esgi-app.azurewebsites.net/api/auth/login";
+
+$ch = curl_init($loginUrl);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    "Content-Type: application/json",
+    "Accept: application/json"
+]);
+$response = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+http_response_code($httpCode);
+echo $response;',
+
+		'local-proxy.php' => '<?php
+// Proxy ultra-simplifié
+header("Content-Type: application/json");
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+
+if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
+    http_response_code(200);
+    exit;
+}
+
+$endpoint = isset($_GET["endpoint"]) ? $_GET["endpoint"] : "";
+$backend_url = "https://app-backend-esgi-app.azurewebsites.net/";
+echo file_get_contents($backend_url . $endpoint);',
+
+		'status.php' => '<?php
+// Status file
+header("Content-Type: application/json");
+echo json_encode([
+    "success" => true,
+    "status" => "ok",
+    "server" => $_SERVER["SERVER_NAME"],
+    "timestamp" => date("Y-m-d H:i:s"),
+    "environment" => strpos($_SERVER["HTTP_HOST"], "azurewebsites.net") !== false ? "azure" : "local"
+]);'
 	];
 
-	$missing_files = [];
-	foreach ($proxy_files as $file) {
-		if (!file_exists(__DIR__ . '/' . $file)) {
-			$missing_files[] = $file;
+	// Créer les fichiers manquants
+	foreach ($proxy_files as $filename => $content) {
+		// Vérifier et créer dans le répertoire racine
+		if (!file_exists(__DIR__ . '/' . $filename)) {
+			@file_put_contents(__DIR__ . '/' . $filename, $content);
+			error_log("Created proxy file: " . $filename);
+		}
+
+		// Vérifier et créer dans /api/ et /proxy/ si les répertoires existent
+		$extra_dirs = ['/api', '/proxy'];
+		foreach ($extra_dirs as $dir) {
+			if (!is_dir(__DIR__ . $dir)) {
+				@mkdir(__DIR__ . $dir, 0777);
+				error_log("Created directory: " . $dir);
+			}
+
+			if (!file_exists(__DIR__ . $dir . '/' . $filename)) {
+				@file_put_contents(__DIR__ . $dir . '/' . $filename, $content);
+				error_log("Created proxy file in $dir: " . $filename);
+			}
 		}
 	}
 
-	// Si des fichiers sont manquants, exécuter l'auto-déployer
-	if (count($missing_files) > 0) {
-		// Générer les fichiers manquants via auto-deployer.php
-		if (file_exists(__DIR__ . '/auto-deployer.php')) {
-			include_once __DIR__ . '/auto-deployer.php';
-			// Après l'auto-déploiement, continuer normalement
-		} else {
-			// Crée un simple proxy sur place si nécessaire
-			$simple_proxy_content = '<?php header("Content-Type: application/json"); echo file_get_contents("https://app-backend-esgi-app.azurewebsites.net/".($_GET["endpoint"] ?? "status.php"));';
-			@file_put_contents(__DIR__ . '/simple-proxy.php', $simple_proxy_content);
-		}
+	// Vérifier si web.config existe et contient les règles nécessaires
+	if (!file_exists(__DIR__ . '/web.config')) {
+		$web_config_content = '<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <system.webServer>
+        <rewrite>
+            <rules>
+                <rule name="PHP Files" stopProcessing="true">
+                    <match url="^.*\.php$" />
+                    <action type="None" />
+                </rule>
+                
+                <rule name="SimpleProxyAccess" stopProcessing="true">
+                    <match url="^(.*/)?simple-proxy\.php$" />
+                    <action type="Rewrite" url="simple-proxy.php" />
+                </rule>
+                
+                <rule name="API Bridge Access" stopProcessing="true">
+                    <match url="^(.*/)?api-bridge\.php$" />
+                    <action type="Rewrite" url="api-bridge.php" />
+                </rule>
+                
+                <rule name="Local Proxy Access" stopProcessing="true">
+                    <match url="^(.*/)?local-proxy\.php$" />
+                    <action type="Rewrite" url="local-proxy.php" />
+                </rule>
+                
+                <rule name="Direct Login Access" stopProcessing="true">
+                    <match url="^(.*/)?direct-login\.php$" />
+                    <action type="Rewrite" url="direct-login.php" />
+                </rule>
+                
+                <rule name="Status Access" stopProcessing="true">
+                    <match url="^status\.php$" />
+                    <action type="Rewrite" url="status.php" />
+                </rule>
+            </rules>
+        </rewrite>
+        
+        <httpProtocol>
+            <customHeaders>
+                <add name="Access-Control-Allow-Origin" value="*" />
+                <add name="Access-Control-Allow-Methods" value="GET, POST, OPTIONS, PUT, DELETE" />
+                <add name="Access-Control-Allow-Headers" value="Content-Type, Authorization, X-Requested-With" />
+            </customHeaders>
+        </httpProtocol>
+    </system.webServer>
+</configuration>';
+		@file_put_contents(__DIR__ . '/web.config', $web_config_content);
+		error_log("Created web.config");
 	}
 }
 
@@ -89,8 +271,67 @@ ob_start();
 <script src="js/config.js?v=1.9"></script>
 <script src="js/notification-system.js?v=1.1"></script>
 <script>
-	// Vérificateur en ligne pour détecter si les fichiers proxy sont accessibles(function() {    const isAzure = window.location.hostname.includes('azurewebsites.net');    if (!isAzure) return; // Seulement sur Azure    // Tente d'accéder au fichier status.php directement    fetch('status.php').then(response => {        if (response.ok) {            console.log('Le fichier status.php est accessible');        } else {            console.warn('status.php n\'est pas accessible, tentative de génération automatique');            // Essayons de générer le fichier status.php via l'auto-deployer            fetch('auto-deployer.php', {                method: 'POST',                headers: { 'X-Requested-With': 'XMLHttpRequest' }            }).then(deployResponse => {                if (deployResponse.ok) {                    console.log('Auto-deployer exécuté avec succès');                } else {                    console.error('Échec de l\'auto-deployer');                }            }).catch(e => console.error('Erreur lors de l\'exécution de l\'auto-deployer:', e));        }    }).catch(e => console.error('Erreur lors de l\'accès à status.php:', e));})();
+	// Vérificateur en ligne pour détecter si les fichiers proxy sont accessibles
+	(function() {
+		const isAzure = window.location.hostname.includes('azurewebsites.net');
+		if (!isAzure) return; // Seulement sur Azure
+
+		console.log("Vérification de l'accessibilité des proxies sur Azure...");
+
+		// Essayer plusieurs chemins de proxy possibles
+		const pathsToCheck = [
+			'simple-proxy.php',
+			'api-bridge.php',
+			'local-proxy.php',
+			'/simple-proxy.php',
+			'/api/simple-proxy.php',
+			'/proxy/simple-proxy.php'
+		];
+
+		let proxyFound = false;
+
+		// Fonction pour vérifier un fichier proxy
+		async function checkProxy(path) {
+			try {
+				const response = await fetch(`${path}?endpoint=status.php`);
+				if (response.ok) {
+					console.log(`Proxy trouvé et fonctionnel: ${path}`);
+					proxyFound = true;
+					return true;
+				}
+				return false;
+			} catch (e) {
+				console.log(`Erreur lors de l'accès à ${path}:`, e.message);
+				return false;
+			}
+		}
+
+		// Vérifier tous les chemins
+		Promise.all(pathsToCheck.map(path => checkProxy(path)))
+			.then(results => {
+				// Si aucun proxy n'est trouvé, recharger la page pour déclencher la création des fichiers
+				if (!proxyFound) {
+					console.warn("Aucun proxy accessible trouvé. Tentative de création automatique...");
+					// Forcer le rechargement de la page pour déclencher la création de fichiers côté serveur
+					if (!window.localStorage.getItem('proxy_creation_attempted')) {
+						window.localStorage.setItem('proxy_creation_attempted', 'true');
+						console.log("Rechargement de la page pour créer les proxies...");
+						setTimeout(() => window.location.reload(), 1000);
+					} else {
+						console.warn("Une tentative de création a déjà été effectuée, vérifiez les permissions du serveur.");
+						// Montrer une notification
+						if (typeof NotificationSystem !== 'undefined') {
+							NotificationSystem.warning("Impossible d'accéder aux proxies. Contactez l'administrateur.");
+						}
+					}
+				} else {
+					// Réinitialiser le flag si un proxy est trouvé
+					window.localStorage.removeItem('proxy_creation_attempted');
+				}
+			});
+	})();
 </script>
+
 <script>
 	// Utiliser le chemin du proxy depuis la configuration
 	let proxyPath = appConfig.proxyUrl;
@@ -107,26 +348,46 @@ ob_start();
 	async function testProxyPath(path) {
 		try {
 			console.log('Testing proxy path:', path);
-			// Utiliser un endpoint qui existe vraiment sur l'API
-			// On évite status.php qui pourrait ne pas exister, et on préfère directement tester l'API
-			const response = await fetch(`${path}?endpoint=${encodeURIComponent('api/status')}`);
-			const success = response.ok;
-			console.log(`Proxy test ${path}: ${success ? 'SUCCESS' : 'FAILED'} (${response.status})`);
 
-			// Si succès, essayons de lire la réponse pour vérifier que c'est bien du JSON valide
-			if (success) {
+			// Tester avec différents endpoints pour plus de fiabilité
+			const endpointsToTry = [
+				'status.php', // Notre fichier de statut local
+				'api/status', // Endpoint API de statut
+				'api/ping', // Autre endpoint potentiel
+				'health' // Endpoint de santé standard
+			];
+
+			// Essayer chaque endpoint jusqu'à ce qu'un fonctionne
+			for (const endpoint of endpointsToTry) {
 				try {
-					const text = await response.text();
-					console.log(`Proxy ${path} response:`, text);
-					// On vérifie si la réponse est du JSON valide
-					JSON.parse(text);
-				} catch (jsonErr) {
-					console.warn(`Proxy ${path} returned invalid JSON:`, jsonErr);
-					// Mais on ignore cette erreur, tant que la connexion est établie
+					console.log(`Testing ${path} with endpoint: ${endpoint}`);
+					const response = await fetch(`${path}?endpoint=${encodeURIComponent(endpoint)}`);
+
+					if (response.ok) {
+						console.log(`Proxy test ${path} with ${endpoint}: SUCCESS (${response.status})`);
+
+						// Vérifier que la réponse est du JSON valide
+						try {
+							const text = await response.text();
+							console.log(`Proxy ${path} response:`, text);
+							JSON.parse(text);
+						} catch (jsonErr) {
+							console.warn(`Proxy ${path} returned invalid JSON, but connection works:`, jsonErr);
+							// On ignore cette erreur, tant que la connexion est établie
+						}
+
+						return true;
+					}
+
+					console.log(`Proxy test ${path} with ${endpoint}: FAILED (${response.status})`);
+				} catch (endpointErr) {
+					console.log(`Error testing ${path} with ${endpoint}:`, endpointErr.message);
 				}
 			}
 
-			return success;
+			// Si on arrive ici, aucun endpoint n'a fonctionné
+			console.error(`All endpoints failed for proxy path: ${path}`);
+			return false;
 		} catch (err) {
 			console.error(`Proxy test ${path} error:`, err);
 			return false;
@@ -138,13 +399,25 @@ ob_start();
 		// Essayer plusieurs chemins possibles pour trouver le proxy
 		const pathsToTry = [
 			proxyPath,
+			// Chemins relatifs
 			"simple-proxy.php",
+			"api-bridge.php",
+			"local-proxy.php",
+			"proxy/simple-proxy.php",
+			"api/simple-proxy.php",
+			// Chemins absolus
 			"/simple-proxy.php",
-			"local-proxy.php", // Essayer notre nouveau proxy simplifié
+			"/api-bridge.php",
+			"/local-proxy.php",
+			"/proxy/simple-proxy.php",
+			"/api/simple-proxy.php",
+			// Chemins basés sur le chemin actuel
 			window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/')) + "/simple-proxy.php",
+			window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/')) + "/api-bridge.php",
 			window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/')) + "/local-proxy.php"
 		];
 
+		console.log('Testing proxy paths in this order:', pathsToTry);
 		let foundWorkingPath = false;
 
 		for (const path of pathsToTry) {
