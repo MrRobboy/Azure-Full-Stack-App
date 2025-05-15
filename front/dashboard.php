@@ -54,46 +54,88 @@ ob_start();
     // Fonction pour charger les compteurs
     async function loadCounters() {
         try {
-            const [matieresRes, classesRes, examensRes, profsRes, usersRes] = await Promise.all([
-                fetch(getApiUrl('matieres')),
-                fetch(getApiUrl('classes')),
-                fetch(getApiUrl('examens')),
-                fetch(getApiUrl('profs')),
-                fetch(getApiUrl('users'))
-            ]);
+            // Afficher un loader global
+            const loaderId = 'dashboard-loading';
+            NotificationSystem.startLoader(loaderId, 'Chargement des données...');
 
-            const [matieres, classes, examens, profs, users] = await Promise.all([
-                matieresRes.json(),
-                classesRes.json(),
-                examensRes.json(),
-                profsRes.json(),
-                usersRes.json()
-            ]);
+            // Utiliser try/catch individuels pour chaque requête
+            let matieresData, classesData, examensData, profsData, usersData;
 
-            // Mettre à jour les compteurs avec les données de l'API
-            if (matieres.success && matieres.data) {
-                document.getElementById('matieresCount').textContent = matieres.data.length;
+            try {
+                const matieresRes = await fetch(getApiUrl('matieres'));
+                matieresData = await matieresRes.json();
+                if (matieresData.success && matieresData.data) {
+                    document.getElementById('matieresCount').textContent = matieresData.data.length;
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des matières:', error);
+                document.getElementById('matieresCount').textContent = 'Erreur';
             }
-            if (classes.success && classes.data) {
-                document.getElementById('classesCount').textContent = classes.data.length;
+
+            try {
+                const classesRes = await fetch(getApiUrl('classes'));
+                classesData = await classesRes.json();
+                if (classesData.success && classesData.data) {
+                    document.getElementById('classesCount').textContent = classesData.data.length;
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des classes:', error);
+                document.getElementById('classesCount').textContent = 'Erreur';
             }
-            if (examens.success && examens.data) {
-                document.getElementById('examensCount').textContent = examens.data.length;
+
+            try {
+                const examensRes = await fetch(getApiUrl('examens'));
+                examensData = await examensRes.json();
+                if (examensData.success && examensData.data) {
+                    document.getElementById('examensCount').textContent = examensData.data.length;
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des examens:', error);
+                document.getElementById('examensCount').textContent = 'Erreur';
             }
-            if (profs.success && profs.data) {
-                document.getElementById('profsCount').textContent = profs.data.length;
+
+            try {
+                const profsRes = await fetch(getApiUrl('profs'));
+                profsData = await profsRes.json();
+                if (profsData.success && profsData.data) {
+                    document.getElementById('profsCount').textContent = profsData.data.length;
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des professeurs:', error);
+                document.getElementById('profsCount').textContent = 'Erreur';
             }
-            if (users.success && users.data) {
-                document.getElementById('usersCount').textContent = users.data.length;
+
+            try {
+                const usersRes = await fetch(getApiUrl('users'));
+                usersData = await usersRes.json();
+                if (usersData.success && usersData.data) {
+                    document.getElementById('usersCount').textContent = usersData.data.length;
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des utilisateurs:', error);
+                document.getElementById('usersCount').textContent = 'Erreur';
+            }
+
+            // Arrêter le loader
+            if (matieresData?.success && classesData?.success && examensData?.success &&
+                profsData?.success && usersData?.success) {
+                NotificationSystem.stopLoader(loaderId, 'Données chargées avec succès');
+            } else {
+                NotificationSystem.stopLoader(loaderId);
+                NotificationSystem.warning('Certaines données n\'ont pas pu être chargées');
             }
         } catch (error) {
-            console.error('Erreur lors du chargement des compteurs:', error);
-            NotificationSystem.error('Erreur lors du chargement des compteurs');
+            console.error('Erreur globale lors du chargement des données:', error);
+            NotificationSystem.error('Erreur lors du chargement des données: ' + error.message);
         }
     }
 
     // Initialisation
     document.addEventListener('DOMContentLoaded', () => {
+        // Initialiser l'interface
+        NotificationSystem.info('Bienvenue sur le tableau de bord');
+
+        // Charger les données
         loadCounters();
     });
 </script>

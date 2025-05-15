@@ -252,8 +252,24 @@ ob_start();
 	// Fonction pour charger les classes
 	async function loadClasses() {
 		try {
+			console.log('Chargement des classes...');
 			const response = await fetch(getApiUrl('classes'));
-			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
+			}
+
+			const responseText = await response.text();
+			console.log('Réponse classes brute:', responseText);
+
+			let data;
+			try {
+				data = JSON.parse(responseText);
+			} catch (e) {
+				console.error('Erreur de parsing JSON classes:', e);
+				throw new Error('Réponse invalide du serveur: ' + responseText);
+			}
+
 			if (data.success) {
 				const classes = data.data;
 				const classeSelect = document.getElementById('classe');
@@ -268,21 +284,45 @@ ob_start();
 					classeSelect.innerHTML += `<option value="${classe.id_classe}">${classe.nom_classe}</option>`;
 					editClasseSelect.innerHTML += `<option value="${classe.id_classe}">${classe.nom_classe}</option>`;
 				});
+				console.log('Classes chargées:', classes.length);
+			} else {
+				throw new Error(data.message || 'Erreur lors du chargement des classes');
 			}
 		} catch (error) {
 			console.error('Erreur lors du chargement des classes:', error);
-			NotificationSystem.error('Erreur lors du chargement des classes');
+			NotificationSystem.error('Erreur lors du chargement des classes: ' + error.message);
 		}
 	}
 
 	// Fonction pour charger les utilisateurs
 	async function loadUsers() {
 		try {
+			console.log('Chargement des utilisateurs...');
 			const response = await fetch(getApiUrl('users'));
-			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
+			}
+
+			const responseText = await response.text();
+			console.log('Réponse users brute:', responseText);
+
+			let data;
+			try {
+				data = JSON.parse(responseText);
+			} catch (e) {
+				console.error('Erreur de parsing JSON users:', e);
+				throw new Error('Réponse invalide du serveur: ' + responseText);
+			}
+
 			if (data.success) {
 				const tbody = document.getElementById('usersTableBody');
 				tbody.innerHTML = '';
+
+				if (!data.data || data.data.length === 0) {
+					tbody.innerHTML = '<tr><td colspan="6">Aucun utilisateur trouvé</td></tr>';
+					return;
+				}
 
 				data.data.forEach(user => {
 					tbody.innerHTML += `
@@ -299,10 +339,14 @@ ob_start();
 						</tr>
 					`;
 				});
+				console.log('Utilisateurs chargés:', data.data.length);
+				NotificationSystem.success('Utilisateurs chargés avec succès');
+			} else {
+				throw new Error(data.message || 'Erreur lors du chargement des utilisateurs');
 			}
 		} catch (error) {
 			console.error('Erreur lors du chargement des utilisateurs:', error);
-			NotificationSystem.error('Erreur lors du chargement des utilisateurs');
+			NotificationSystem.error('Erreur lors du chargement des utilisateurs: ' + error.message);
 		}
 	}
 

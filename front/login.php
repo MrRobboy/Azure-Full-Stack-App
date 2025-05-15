@@ -49,6 +49,7 @@ ob_start();
 </div>
 
 <script src="js/config.js"></script>
+<script src="js/notification-system.js"></script>
 <script>
 	function toggleErrorDetails() {
 		const details = document.querySelector('.error-details');
@@ -75,6 +76,9 @@ ob_start();
 		errorTrace.textContent = 'Détails: ' + JSON.stringify(error.details || {}, null, 2);
 
 		errorMessage.style.display = 'block';
+
+		// Ajouter la notification via le système de notification
+		NotificationSystem.error(error.message || 'Erreur de connexion');
 	}
 
 	document.getElementById('login-form').addEventListener('submit', async function(e) {
@@ -91,6 +95,9 @@ ob_start();
 		btnText.style.display = 'none';
 		btnLoading.style.display = 'inline-block';
 		errorMessage.style.display = 'none';
+
+		// Notification pour informer l'utilisateur
+		NotificationSystem.info('Tentative de connexion...');
 
 		try {
 			console.log('Tentative de connexion...');
@@ -118,9 +125,14 @@ ob_start();
 			}
 
 			if (response.ok) {
+				NotificationSystem.success('Connexion réussie');
 				window.location.href = 'dashboard.php';
 			} else {
-				displayError(data.error);
+				displayError(data.error || {
+					type: 'Erreur d\'authentification',
+					message: data.message || 'Identifiants incorrects',
+					details: data
+				});
 				console.error('Erreur de connexion:', data);
 			}
 		} catch (error) {
