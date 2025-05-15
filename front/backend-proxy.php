@@ -13,6 +13,39 @@ ini_set('display_errors', 0); // Disable displaying errors directly
 
 // Log access to this proxy with more details
 error_log("Backend proxy accessed: " . $_SERVER['REQUEST_URI']);
+
+// Check if this is a direct URL POST request (from diagnostics tool)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['url'])) {
+	$target_url = $_POST['url'];
+	error_log("Direct URL proxy request to: " . $target_url);
+
+	// Initialize cURL session for the direct target
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, $target_url);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+	curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+	// Execute the request
+	$response = curl_exec($ch);
+	$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+	$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+	curl_close($ch);
+
+	// Send the response back
+	http_response_code($http_code);
+	if ($content_type) {
+		header("Content-Type: $content_type");
+	} else {
+		header('Content-Type: application/json');
+	}
+	echo $response;
+	exit;
+}
+
+// Log raw query string
 error_log("Raw query string: " . $_SERVER['QUERY_STRING']);
 
 // Configuration

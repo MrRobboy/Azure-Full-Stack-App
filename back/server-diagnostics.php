@@ -13,11 +13,28 @@ ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/../logs/diagnostics.log');
 
-// Set appropriate headers for the response
+// CORS handling - Dynamic origin setup
+$allowed_origins = [
+	'https://app-frontend-esgi-app.azurewebsites.net',
+	'http://localhost',
+	'http://127.0.0.1'
+];
+
+// Get the origin header
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+
+// Check if the origin is allowed
+if (in_array($origin, $allowed_origins)) {
+	header("Access-Control-Allow-Origin: $origin");
+} else {
+	// Default fallback - less secure but helpful for testing
+	header('Access-Control-Allow-Origin: *');
+}
+
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Credentials: true');
 
 // Handle OPTIONS requests for CORS
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -28,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // Start logging
 $log = [];
 $log[] = "[" . date('Y-m-d H:i:s') . "] Starting server diagnostics...";
+$log[] = "[" . date('Y-m-d H:i:s') . "] Request origin: " . $origin;
 
 /**
  * Helper Functions

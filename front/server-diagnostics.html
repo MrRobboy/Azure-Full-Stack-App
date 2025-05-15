@@ -98,6 +98,40 @@
 										value="https://app-backend-esgi-app.azurewebsites.net/server-diagnostics.php" />
 								</div>
 								<div
+									class="mb-3 form-check">
+									<input
+										type="checkbox"
+										class="form-check-input"
+										id="use-proxy" />
+									<label
+										class="form-check-label"
+										for="use-proxy"
+										>Use
+										local
+										proxy
+										(to
+										avoid
+										CORS
+										issues)</label
+									>
+									<div
+										class="form-text">
+										If
+										checked,
+										the
+										request
+										will
+										be
+										made
+										through
+										backend-proxy.php
+										to
+										avoid
+										CORS
+										restrictions
+									</div>
+								</div>
+								<div
 									class="d-grid">
 									<button
 										type="submit"
@@ -590,6 +624,10 @@
 								document.getElementById(
 									"backend-url"
 								).value;
+							const useProxy =
+								document.getElementById(
+									"use-proxy"
+								).checked;
 							const loadingIndicator =
 								document.getElementById(
 									"loading"
@@ -612,10 +650,49 @@
 							);
 
 							try {
+								let fetchUrl,
+									fetchOptions;
+
+								if (useProxy) {
+									// Use the backend-proxy.php with the target URL as a parameter
+									fetchUrl =
+										"./backend-proxy.php";
+									fetchOptions =
+										{
+											method: "POST",
+											headers: {
+												"Content-Type":
+													"application/x-www-form-urlencoded"
+											},
+											body: `url=${encodeURIComponent(
+												backendUrl
+											)}`
+										};
+									console.log(
+										"Using proxy to avoid CORS issues"
+									);
+								} else {
+									// Direct fetch with CORS
+									fetchUrl =
+										backendUrl;
+									fetchOptions =
+										{
+											method: "GET",
+											credentials:
+												"include",
+											headers: {
+												Accept: "application/json"
+											},
+											mode: "cors"
+										};
+								}
+
 								const response =
 									await fetch(
-										backendUrl
+										fetchUrl,
+										fetchOptions
 									);
+
 								if (
 									!response.ok
 								) {
@@ -654,9 +731,27 @@
 									"d-none"
 								);
 
-								// Show error message
+								// Create a detailed error message
+								let errorMessage = `Error: ${error.message}`;
+
+								// Check for specific CORS errors
+								if (
+									error.message.includes(
+										"Failed to fetch"
+									)
+								) {
+									errorMessage =
+										"CORS Error: The browser blocked the request due to Cross-Origin Resource Sharing (CORS) policy.\n\n" +
+										"This likely means the backend server is not properly configured to allow requests from this origin. " +
+										"Possible solutions:\n" +
+										"1. Ensure the backend has 'Access-Control-Allow-Origin' header set to include this domain\n" +
+										"2. Check the 'Use local proxy' option to bypass CORS\n" +
+										"3. Try accessing directly from the backend domain";
+								}
+
+								// Show error message with more details
 								alert(
-									`Error running diagnostics: ${error.message}`
+									errorMessage
 								);
 							}
 						}
