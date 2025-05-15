@@ -90,7 +90,9 @@ ob_start();
 			proxyPath,
 			"simple-proxy.php",
 			"/simple-proxy.php",
-			window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/')) + "/simple-proxy.php"
+			"local-proxy.php", // Essayer notre nouveau proxy simplifié
+			window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/')) + "/simple-proxy.php",
+			window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/')) + "/local-proxy.php"
 		];
 
 		let foundWorkingPath = false;
@@ -106,6 +108,9 @@ ob_start();
 
 		if (!foundWorkingPath) {
 			console.error('No working proxy path found! Login may fail.');
+			// Définir un fallback
+			proxyPath = "local-proxy.php";
+			console.log('Using fallback proxy path:', proxyPath);
 		}
 	})();
 
@@ -188,17 +193,14 @@ ob_start();
 			// Endpoint d'authentification
 			const loginEndpoint = 'api/auth/login';
 
-			// S'assurer que nous avons un chemin de proxy qui fonctionne
-			console.log('Preparing login with proxy path:', proxyPath);
+			// Tenter une connexion directe au backend comme solution de contournement
+			console.log('Tentative de connexion directe au backend (contournement du proxy)');
 
-			// Construire l'URL complète
-			const proxyUrl = `${proxyPath}?endpoint=${encodeURIComponent(loginEndpoint)}`;
-			console.log('URL de connexion:', proxyUrl);
+			// URL du backend
+			const directBackendUrl = `${appConfig.backendBaseUrl}/${loginEndpoint}`;
+			console.log('URL directe au backend:', directBackendUrl);
 
-			// Afficher un message explicatif à l'utilisateur
-			NotificationSystem.info("Connexion en cours... Veuillez patienter");
-
-			// Options de requête avec retry
+			// Options de requête pour la connexion directe
 			const fetchOptions = {
 				method: 'POST',
 				headers: {
@@ -208,41 +210,70 @@ ob_start();
 					email,
 					password
 				}),
-				credentials: 'include'
+				credentials: 'include',
+				mode: 'cors' // Explicitement demander le mode CORS
 			};
 
-			// Fonction pour réessayer avec un autre chemin
-			async function attemptLoginWithPath(path) {
-				const url = `${path}?endpoint=${encodeURIComponent(loginEndpoint)}`;
-				console.log(`Attempting login with path: ${url}`);
-				return fetch(url, fetchOptions);
-			}
-
-			// Essayer d'abord avec le chemin principal
+			// Essayer la connexion directe
 			let response;
 			try {
-				response = await attemptLoginWithPath(proxyPath);
-				if (!response.ok && response.status === 404) {
-					// Si 404, essayer d'autres chemins
-					console.log("First proxy path returned 404, trying alternatives...");
-					for (const altPath of ["simple-proxy.php", "/simple-proxy.php"]) {
-						if (altPath === proxyPath) continue; // Skip if same as already tried
-						try {
-							console.log(`Trying alternative path: ${altPath}`);
-							const altResponse = await attemptLoginWithPath(altPath);
-							if (altResponse.ok || altResponse.status !== 404) {
-								response = altResponse;
-								console.log(`Alternative path ${altPath} worked!`);
-								break;
-							}
-						} catch (altErr) {
-							console.error(`Alternative path ${altPath} failed:`, altErr);
-						}
-					}
+				console.log('Envoi de la requête au backend...');
+				NotificationSystem.info("Tentative de connexion directe au backend...");
+
+				response = await fetch(directBackendUrl, fetchOptions);
+				console.log('Réponse directe reçue:', response);
+
+				// Si la réponse directe échoue à cause de CORS, alors on essaie un fallback
+				if (!response.ok && (response.status === 0 || response.type === 'opaque')) {
+					console.log('Erreur CORS détectée, tentative avec iframe ou formdata...');
+					// On pourrait implémenter une solution de fallback ici
+					// Mais pour l'instant, on affiche juste l'erreur
+					throw new Error('Erreur CORS - connexion directe impossible');
 				}
 			} catch (fetchErr) {
-				console.error("All login attempts failed:", fetchErr);
-				throw new Error("Impossible de contacter le serveur: " + fetchErr.message);
+				console.error("Erreur de connexion directe:", fetchErr);
+
+				// Comme solution de dernier recours, on peut utiliser une iframe cachée
+				try {
+					console.log('Tentative avec solution alternative...');
+					NotificationSystem.info("Tentative avec méthode alternative...");
+
+					// Créer une forme de proxy côté client avec un iframe caché
+					const iframe = document.createElement('iframe');
+					iframe.style.display = 'none';
+					document.body.appendChild(iframe);
+
+					// On utilise une promesse pour attendre la réponse
+					response = await new Promise((resolve, reject) => {
+						// Timeout de sécurité après 10 secondes
+						const timeout = setTimeout(() => {
+							reject(new Error('Timeout de la requête'));
+						}, 10000);
+
+						// Créer un ID unique pour cette requête
+						const requestId = 'req_' + Math.random().toString(36).substring(2, 15);
+
+						// Écouter les messages de l'iframe
+						window.addEventListener('message', function responseHandler(event) {
+							if (event.data && event.data.requestId === requestId) {
+								clearTimeout(timeout);
+								window.removeEventListener('message', responseHandler);
+								resolve(event.data.response);
+							}
+						});
+
+						// Naviguer vers le backend dans l'iframe avec les credentials
+						iframe.src = `${appConfig.backendBaseUrl}/auth-bridge.html?requestId=${requestId}&endpoint=${loginEndpoint}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`;
+					});
+
+					// Supprimer l'iframe une fois terminé
+					document.body.removeChild(iframe);
+
+					console.log('Réponse alternative reçue:', response);
+				} catch (altErr) {
+					console.error("Toutes les tentatives ont échoué:", altErr);
+					throw new Error("Impossible de communiquer avec le backend: " + altErr.message);
+				}
 			}
 
 			console.log('Réponse reçue:', response);

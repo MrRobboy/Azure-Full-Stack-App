@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<title>Auth Bridge</title>
+		<script>
+			// Fonction pour obtenir les paramètres depuis l'URL
+			function getQueryParams() {
+				const params = {};
+				const queryString =
+					window.location.search.substring(1);
+				const pairs = queryString.split("&");
+
+				for (const pair of pairs) {
+					const [key, value] = pair.split("=");
+					params[decodeURIComponent(key)] =
+						decodeURIComponent(value || "");
+				}
+
+				return params;
+			}
+
+			// Fonction principale
+			async function processRequest() {
+				try {
+					// Récupérer les paramètres de la requête
+					const params = getQueryParams();
+					const requestId = params.requestId;
+					const endpoint = params.endpoint;
+
+					if (!requestId || !endpoint) {
+						throw new Error(
+							"Paramètres manquants"
+						);
+					}
+
+					// Récupérer les données envoyées dans le body
+					const responseData = {
+						success: true,
+						requestId: requestId,
+						message: "Requête traitée avec succès"
+					};
+
+					// Appeler l'API du backend
+					try {
+						const response = await fetch(
+							endpoint,
+							{
+								method: "POST",
+								headers: {
+									"Content-Type":
+										"application/json"
+								},
+								body: JSON.stringify(
+									{
+										email:
+											params.email ||
+											"test@example.com",
+										password:
+											params.password ||
+											"password123"
+									}
+								),
+								credentials:
+									"include"
+							}
+						);
+
+						// Récupérer la réponse
+						const data =
+							await response.json();
+						responseData.response = data;
+						responseData.status =
+							response.status;
+					} catch (apiError) {
+						responseData.success = false;
+						responseData.error =
+							apiError.message;
+					}
+
+					// Envoyer la réponse au parent
+					if (window.parent) {
+						window.parent.postMessage(
+							responseData,
+							"*"
+						);
+					}
+				} catch (error) {
+					console.error(
+						"Erreur dans le traitement:",
+						error
+					);
+
+					// Envoyer l'erreur au parent
+					if (window.parent) {
+						window.parent.postMessage(
+							{
+								success: false,
+								error: error.message,
+								requestId: getQueryParams()
+									.requestId
+							},
+							"*"
+						);
+					}
+				}
+			}
+
+			// Exécuter lorsque la page est chargée
+			window.addEventListener(
+				"DOMContentLoaded",
+				processRequest
+			);
+		</script>
+	</head>
+	<body>
+		<h1>Authentification en cours...</h1>
+		<p>
+			Cette page fait partie du système d'authentification. Ne
+			pas fermer.
+		</p>
+	</body>
+</html>
