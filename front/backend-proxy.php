@@ -44,116 +44,108 @@ if (strpos($endpoint, '../') !== false || strpos($endpoint, '..\\') !== false) {
 	exit;
 }
 
+// Handle direct access to PHP files vs API endpoints
+if (stripos($endpoint, '.php') !== false) {
+	// This is a direct script access, not an API endpoint
+	$isDirectScript = true;
+} else {
+	// This is likely an API endpoint
+	$isDirectScript = false;
+}
+
+// Generate URL variants to try
+$urlVariants = [];
+
 // Handle special case for URLs with query parameters
 if (strpos($endpoint, '?') !== false) {
 	// For endpoints like "azure-cors.php?resource=classes"
-	$url = $api_base_url . '/' . $endpoint;
+	$baseUrl = $api_base_url . '/' . $endpoint;
 
 	// Add any additional query params from the proxy request
 	if (!empty($queryParams)) {
-		$url .= (strpos($url, '?') !== false ? '&' : '?') . http_build_query($queryParams);
+		$baseUrl .= (strpos($baseUrl, '?') !== false ? '&' : '?') . http_build_query($queryParams);
 	}
+
+	$urlVariants[] = $baseUrl;
 } else {
-	// Normal case - separate path and query
-	$url = $api_base_url . '/' . $endpoint;
+	// If it's a direct script, just use the direct URL
+	if ($isDirectScript) {
+		$baseUrl = $api_base_url . '/' . $endpoint;
 
-	// Add query string if we have parameters
-	if (!empty($queryParams)) {
-		$url .= '?' . http_build_query($queryParams);
+		// Add query string if we have parameters
+		if (!empty($queryParams)) {
+			$baseUrl .= '?' . http_build_query($queryParams);
+		}
+
+		$urlVariants[] = $baseUrl;
+	} else {
+		// For API endpoints, try multiple routing patterns
+
+		// 1. Direct endpoint without api/ prefix
+		$directUrl = $api_base_url . '/' . $endpoint;
+		if (!empty($queryParams)) {
+			$directUrl .= '?' . http_build_query($queryParams);
+		}
+		$urlVariants[] = $directUrl;
+
+		// 2. With api/ prefix
+		$apiUrl = $api_base_url . '/api/' . $endpoint;
+		if (!empty($queryParams)) {
+			$apiUrl .= '?' . http_build_query($queryParams);
+		}
+		$urlVariants[] = $apiUrl;
+
+		// 3. Using the API router directly with resource parameter
+		$routerUrl = $api_base_url . '/routes/api.php?resource=' . $endpoint;
+		if (!empty($queryParams)) {
+			$routerUrl .= '&' . http_build_query($queryParams);
+		}
+		$urlVariants[] = $routerUrl;
+
+		// 4. Using status.php directly for status endpoints
+		if ($endpoint === 'status' || $endpoint === 'db-status') {
+			$statusUrl = $api_base_url . '/status.php';
+			if ($endpoint === 'db-status') {
+				$statusUrl .= '?type=db';
+			}
+			if (!empty($queryParams)) {
+				$statusUrl .= (strpos($statusUrl, '?') !== false ? '&' : '?') . http_build_query($queryParams);
+			}
+			$urlVariants[] = $statusUrl;
+		}
 	}
 }
 
-// Check API URL format - try different variations
-$originalUrl = $url;
-
-// Try alternate URL formats if this is an API call
-if (strpos($endpoint, 'api/') === 0) {
-	// Log detected API call
-	error_log("API call detected: " . $endpoint);
-
-	// Try removing the 'api/' prefix
-	$alternateEndpoint = substr($endpoint, 4);  // Remove 'api/'
-	$alternateUrl = $api_base_url . '/' . $alternateEndpoint;
-
-	// Also try with query params if present
-	if (!empty($queryParams)) {
-		$alternateUrl .= '?' . http_build_query($queryParams);
-	}
-
-	error_log("Will try alternate URL format if primary fails: " . $alternateUrl);
-}
+// Log the URL variants we're going to try
+error_log("URL variants to try: " . print_r($urlVariants, true));
 
 // Get the HTTP method
 $method = $_SERVER['REQUEST_METHOD'];
 
-// Debug log
-error_log("Proxy forwarding to: $url (Method: $method)");
+// Try each URL variant in sequence
+$response = null;
+$http_code = 0;
+$content_type = null;
+$successful_url = null;
+$verbose_logs = [];
 
-// Initialize cURL session
-$ch = curl_init();
+foreach ($urlVariants as $url) {
+	// Debug log
+	error_log("Trying URL: $url (Method: $method)");
 
-// Set cURL options
-curl_setopt($ch, CURLOPT_URL, $url);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Disable SSL verification for testing
-curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // Disable SSL host verification for testing
-curl_setopt($ch, CURLOPT_VERBOSE, true); // Enable verbose output
-
-// Set the appropriate HTTP method
-if ($method === 'POST') {
-	curl_setopt($ch, CURLOPT_POST, true);
-	curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents("php://input"));
-} elseif ($method === 'PUT') {
-	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
-	curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents("php://input"));
-} elseif ($method === 'DELETE') {
-	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
-} elseif ($method === 'OPTIONS') {
-	// Handle OPTIONS requests
-	header('HTTP/1.1 200 OK');
-	header('Access-Control-Allow-Origin: *');
-	header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-	header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-	exit;
-}
-
-// Forward all HTTP headers
-$headers = [];
-foreach (getallheaders() as $name => $value) {
-	if ($name !== 'Host') { // Skip the Host header
-		$headers[] = "$name: $value";
-	}
-}
-curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-// Create a temporary file to store verbose output
-$verbose = fopen('php://temp', 'w+');
-curl_setopt($ch, CURLOPT_STDERR, $verbose);
-
-// Execute the cURL request
-$response = curl_exec($ch);
-$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-
-// Try alternate URL if primary fails with 404
-if (isset($alternateUrl) && $http_code == 404) {
-	error_log("Primary URL failed with 404, trying alternate URL: $alternateUrl");
-
-	// Reset cURL session for alternate URL
-	curl_close($ch);
+	// Initialize cURL session
 	$ch = curl_init();
 
-	curl_setopt($ch, CURLOPT_URL, $alternateUrl);
+	// Set cURL options
+	curl_setopt($ch, CURLOPT_URL, $url);
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 	curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-	curl_setopt($ch, CURLOPT_VERBOSE, true);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Disable SSL verification for testing
+	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // Disable SSL host verification for testing
+	curl_setopt($ch, CURLOPT_VERBOSE, true); // Enable verbose output
 
-	// Re-apply HTTP method
+	// Set the appropriate HTTP method
 	if ($method === 'POST') {
 		curl_setopt($ch, CURLOPT_POST, true);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents("php://input"));
@@ -162,44 +154,63 @@ if (isset($alternateUrl) && $http_code == 404) {
 		curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents("php://input"));
 	} elseif ($method === 'DELETE') {
 		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+	} elseif ($method === 'OPTIONS') {
+		// Handle OPTIONS requests
+		header('HTTP/1.1 200 OK');
+		header('Access-Control-Allow-Origin: *');
+		header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+		header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+		exit;
 	}
 
-	// Re-apply headers
+	// Forward all HTTP headers
+	$headers = [];
+	foreach (getallheaders() as $name => $value) {
+		if ($name !== 'Host') { // Skip the Host header
+			$headers[] = "$name: $value";
+		}
+	}
 	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
-	// Execute the alternate request
-	$response = curl_exec($ch);
-	$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-	$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-}
+	// Create a temporary file to store verbose output
+	$verbose = fopen('php://temp', 'w+');
+	curl_setopt($ch, CURLOPT_STDERR, $verbose);
 
-// Get verbose information
-rewind($verbose);
-$verboseLog = stream_get_contents($verbose);
-error_log("Verbose cURL log: " . $verboseLog);
+	// Execute the cURL request
+	$current_response = curl_exec($ch);
+	$current_http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+	$current_content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 
-// Check for cURL errors
-if ($response === false) {
-	$error = curl_error($ch);
+	// Get verbose information
+	rewind($verbose);
+	$verboseLog = stream_get_contents($verbose);
+	$verbose_logs[$url] = substr($verboseLog, 0, 500); // Keep only first 500 chars to avoid huge logs
+
+	// Close the cURL session
 	curl_close($ch);
 
-	header('HTTP/1.1 500 Internal Server Error');
-	header('Content-Type: application/json');
-	echo json_encode([
-		'error' => 'Proxy error',
-		'message' => $error,
-		'url' => $url,
-		'method' => $method,
-		'verbose' => $verboseLog
-	]);
-	exit;
+	// Check if this attempt was successful
+	if ($current_http_code >= 200 && $current_http_code < 300) {
+		$response = $current_response;
+		$http_code = $current_http_code;
+		$content_type = $current_content_type;
+		$successful_url = $url;
+		error_log("Success with URL: $url (Status: $http_code)");
+		break; // Stop trying more URLs
+	} else {
+		error_log("Failed with URL: $url (Status: $current_http_code)");
+
+		// If this is our first attempt and it failed, save the response for possible use if all attempts fail
+		if ($response === null) {
+			$response = $current_response;
+			$http_code = $current_http_code;
+			$content_type = $current_content_type;
+		}
+	}
 }
 
-// Debug log the response
-error_log("Proxy response: HTTP $http_code, Content-Type: $content_type");
-
-// Close the cURL session
-curl_close($ch);
+// Debug log the final response
+error_log("Final response: HTTP $http_code, Content-Type: $content_type, Successful URL: " . ($successful_url ?? 'None'));
 
 // Forward the HTTP status code
 http_response_code($http_code);
@@ -211,19 +222,20 @@ if ($content_type) {
 	header('Content-Type: application/json');
 }
 
-// If we got a 401 or 404, provide additional debug info
-if ($http_code == 401 || $http_code == 404) {
-	error_log("Proxy error details: HTTP $http_code for URL: $url");
+// If we got an error, provide additional debug info
+if ($http_code >= 400) {
+	error_log("Proxy error details: HTTP $http_code");
+
 	// Append debug info to the response
 	$debug_info = [
 		'proxy_debug' => [
 			'original_status' => $http_code,
-			'requested_url' => $url,
 			'original_endpoint' => $endpoint,
-			'original_url' => $originalUrl,
+			'tried_urls' => $urlVariants,
+			'successful_url' => $successful_url,
 			'method' => $method,
 			'timestamp' => date('Y-m-d H:i:s'),
-			'verbose_log' => substr($verboseLog, 0, 1000) // Truncate to avoid too large response
+			'verbose_logs' => $verbose_logs
 		]
 	];
 

@@ -67,6 +67,21 @@ require_once 'templates/base.php';
 					</div>
 				</div>
 			</div>
+
+			<div class="card mb-4">
+				<div class="card-header bg-warning text-white">
+					<h3 class="mb-0">Endpoints alternatifs</h3>
+				</div>
+				<div class="card-body">
+					<div class="d-grid gap-2">
+						<button id="btnApiTest" class="btn btn-outline-warning">api-test.php</button>
+						<button id="btnPureCors" class="btn btn-outline-warning">pure-cors-test.php</button>
+						<button id="btnAzureCors" class="btn btn-outline-warning">azure-cors.php</button>
+						<button id="btnCorsTest" class="btn btn-outline-warning">test-cors.php</button>
+						<button id="btnDirectStatus" class="btn btn-outline-warning">status.php</button>
+					</div>
+				</div>
+			</div>
 		</div>
 
 		<div class="col-md-6">
@@ -277,24 +292,112 @@ require_once 'templates/base.php';
 			apiTestForm.dispatchEvent(new Event('submit'));
 		});
 
+		// Tests avec les endpoints directs
+		document.getElementById('btnApiTest').addEventListener('click', () => {
+			document.getElementById('apiEndpoint').value = 'api-test.php';
+			document.getElementById('urlFormat').value = 'direct';
+			apiTestForm.dispatchEvent(new Event('submit'));
+		});
+
+		document.getElementById('btnPureCors').addEventListener('click', () => {
+			document.getElementById('apiEndpoint').value = 'pure-cors-test.php';
+			document.getElementById('urlFormat').value = 'direct';
+			apiTestForm.dispatchEvent(new Event('submit'));
+		});
+
+		document.getElementById('btnAzureCors').addEventListener('click', () => {
+			document.getElementById('apiEndpoint').value = 'azure-cors.php';
+			document.getElementById('urlFormat').value = 'direct';
+			apiTestForm.dispatchEvent(new Event('submit'));
+		});
+
+		document.getElementById('btnCorsTest').addEventListener('click', () => {
+			document.getElementById('apiEndpoint').value = 'test-cors.php';
+			document.getElementById('urlFormat').value = 'direct';
+			apiTestForm.dispatchEvent(new Event('submit'));
+		});
+
+		document.getElementById('btnDirectStatus').addEventListener('click', () => {
+			document.getElementById('apiEndpoint').value = 'status.php';
+			document.getElementById('urlFormat').value = 'direct';
+			apiTestForm.dispatchEvent(new Event('submit'));
+		});
+
 		// Auto-découverte d'URL
 		document.getElementById('btnDiscovery').addEventListener('click', async function() {
 			const discovery = document.getElementById('discoveryResults');
 			discovery.innerHTML = '<div class="alert alert-info">Découverte en cours...</div>';
 
-			const endpointsToTest = ['classes', 'matieres', 'examens', 'notes', 'profs', 'status', 'db-status'];
+			// Test regular API endpoints both with and without api/ prefix
+			const apiEndpointsToTest = ['classes', 'matieres', 'examens', 'notes', 'profs', 'status', 'db-status'];
+
+			// Test direct script endpoints
+			const directScriptsToTest = [
+				'api-test.php',
+				'pure-cors-test.php',
+				'azure-cors.php',
+				'test-cors.php',
+				'status.php',
+				'index.php',
+				'info.php'
+			];
+
+			// Test URL formats for Azure rewrite patterns
+			const rewritePatternsToTest = [
+				'routes/api.php?resource=classes',
+				'api/routes/classes',
+				'api.php?resource=classes'
+			];
+
 			const results = {
 				success: [],
 				failed: []
 			};
 
-			// Tester chaque endpoint
-			for (const endpoint of endpointsToTest) {
+			// 1. Test regular API endpoints with both formats
+			discovery.innerHTML = '<div class="alert alert-info">Test des endpoints API standards...</div>';
+			for (const endpoint of apiEndpointsToTest) {
 				const result = await testApiEndpoint(endpoint, 'both', 'GET', true);
 				if (result.success) {
 					results.success.push({
 						endpoint,
 						format: result.data.format,
+						status: result.data.status
+					});
+				} else {
+					results.failed.push({
+						endpoint,
+						error: result.error || `Status ${result.data.status}`
+					});
+				}
+			}
+
+			// 2. Test direct script endpoints
+			discovery.innerHTML = '<div class="alert alert-info">Test des scripts directs...</div>';
+			for (const endpoint of directScriptsToTest) {
+				const result = await testApiEndpoint(endpoint, 'direct', 'GET', true);
+				if (result.success) {
+					results.success.push({
+						endpoint,
+						format: 'direct',
+						status: result.data.status
+					});
+				} else {
+					results.failed.push({
+						endpoint,
+						error: result.error || `Status ${result.data.status}`
+					});
+				}
+			}
+
+			// 3. Test rewrite patterns
+			discovery.innerHTML = '<div class="alert alert-info">Test des modèles de réécriture...</div>';
+			for (const endpoint of rewritePatternsToTest) {
+				const result = await testApiEndpoint(endpoint, 'direct', 'GET', true);
+				if (result.success) {
+					results.success.push({
+						endpoint,
+						format: 'direct',
 						status: result.data.status
 					});
 				} else {
@@ -328,6 +431,18 @@ require_once 'templates/base.php';
                     </li>`;
 				});
 				html += '</ul>';
+			}
+
+			// Conclusion et recommandations
+			if (results.success.length > 0) {
+				const formats = results.success.map(item => item.format);
+				const preferredFormat = formats.includes('direct') ? 'direct' : 'api/';
+
+				html += `<div class="alert alert-info mt-3">
+					<h5>Recommandation:</h5>
+					<p>Basé sur les résultats, le format d'URL recommandé est: <strong>${preferredFormat}</strong></p>
+					<p>Modifiez votre fichier config.js pour utiliser ce format.</p>
+				</div>`;
 			}
 
 			discovery.innerHTML = html;
