@@ -7,8 +7,13 @@
  * by making the requests from the same domain.
  */
 
-// Log access to this proxy
+// Set error reporting
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// Log access to this proxy with more details
 error_log("Backend proxy accessed: " . $_SERVER['REQUEST_URI']);
+error_log("Raw query string: " . $_SERVER['QUERY_STRING']);
 
 // Configuration
 $api_base_url = 'https://app-backend-esgi-app.azurewebsites.net';
@@ -22,6 +27,9 @@ if (empty($endpoint)) {
 	echo json_encode(['error' => 'No endpoint specified']);
 	exit;
 }
+
+// Log original endpoint and query string
+error_log("Original endpoint requested: " . $endpoint);
 
 // Remove endpoint from the query parameters to avoid duplication
 $queryParams = $_GET;
@@ -55,6 +63,26 @@ if (strpos($endpoint, '?') !== false) {
 	}
 }
 
+// Check API URL format - try different variations
+$originalUrl = $url;
+
+// Try alternate URL formats if this is an API call
+if (strpos($endpoint, 'api/') === 0) {
+	// Log detected API call
+	error_log("API call detected: " . $endpoint);
+
+	// Try removing the 'api/' prefix
+	$alternateEndpoint = substr($endpoint, 4);  // Remove 'api/'
+	$alternateUrl = $api_base_url . '/' . $alternateEndpoint;
+
+	// Also try with query params if present
+	if (!empty($queryParams)) {
+		$alternateUrl .= '?' . http_build_query($queryParams);
+	}
+
+	error_log("Will try alternate URL format if primary fails: " . $alternateUrl);
+}
+
 // Get the HTTP method
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -71,6 +99,7 @@ curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Disable SSL verification for testing
 curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // Disable SSL host verification for testing
+curl_setopt($ch, CURLOPT_VERBOSE, true); // Enable verbose output
 
 // Set the appropriate HTTP method
 if ($method === 'POST') {
@@ -99,10 +128,55 @@ foreach (getallheaders() as $name => $value) {
 }
 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
+// Create a temporary file to store verbose output
+$verbose = fopen('php://temp', 'w+');
+curl_setopt($ch, CURLOPT_STDERR, $verbose);
+
 // Execute the cURL request
 $response = curl_exec($ch);
 $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+
+// Try alternate URL if primary fails with 404
+if (isset($alternateUrl) && $http_code == 404) {
+	error_log("Primary URL failed with 404, trying alternate URL: $alternateUrl");
+
+	// Reset cURL session for alternate URL
+	curl_close($ch);
+	$ch = curl_init();
+
+	curl_setopt($ch, CURLOPT_URL, $alternateUrl);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+	curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+	curl_setopt($ch, CURLOPT_VERBOSE, true);
+
+	// Re-apply HTTP method
+	if ($method === 'POST') {
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents("php://input"));
+	} elseif ($method === 'PUT') {
+		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+		curl_setopt($ch, CURLOPT_POSTFIELDS, file_get_contents("php://input"));
+	} elseif ($method === 'DELETE') {
+		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+	}
+
+	// Re-apply headers
+	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+	// Execute the alternate request
+	$response = curl_exec($ch);
+	$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+	$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+}
+
+// Get verbose information
+rewind($verbose);
+$verboseLog = stream_get_contents($verbose);
+error_log("Verbose cURL log: " . $verboseLog);
 
 // Check for cURL errors
 if ($response === false) {
@@ -115,7 +189,8 @@ if ($response === false) {
 		'error' => 'Proxy error',
 		'message' => $error,
 		'url' => $url,
-		'method' => $method
+		'method' => $method,
+		'verbose' => $verboseLog
 	]);
 	exit;
 }
@@ -144,8 +219,11 @@ if ($http_code == 401 || $http_code == 404) {
 		'proxy_debug' => [
 			'original_status' => $http_code,
 			'requested_url' => $url,
+			'original_endpoint' => $endpoint,
+			'original_url' => $originalUrl,
 			'method' => $method,
-			'timestamp' => date('Y-m-d H:i:s')
+			'timestamp' => date('Y-m-d H:i:s'),
+			'verbose_log' => substr($verboseLog, 0, 1000) // Truncate to avoid too large response
 		]
 	];
 

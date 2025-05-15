@@ -4,20 +4,21 @@ const appConfig = {
 	backendBaseUrl: "https://app-backend-esgi-app.azurewebsites.net",
 	useProxy: true, // Activer le proxy par défaut pour éviter les problèmes CORS
 	proxyUrl: "backend-proxy.php", // URL du proxy local
-	version: "1.4"
+	version: "1.5"
 };
 
 // Fonction pour obtenir l'URL de l'API
 function getApiUrl(endpoint) {
 	if (appConfig.useProxy) {
-		// Utiliser le proxy local - gérer correctement l'endpoint API
-		const apiPath = `api/${endpoint}`;
+		// Utiliser le proxy local - essayer les deux formats avec et sans "api/"
+		// Le proxy tentera les deux formats
 		return `${appConfig.proxyUrl}?endpoint=${encodeURIComponent(
-			apiPath
+			endpoint
 		)}`;
 	} else {
-		// Appel direct à l'API
-		return `${appConfig.apiBaseUrl}/${endpoint}`;
+		// Appel direct à l'API - utiliser l'URL complète sans api/ préfixe
+		// puisque l'API semble ne pas utiliser ce préfixe
+		return `${appConfig.backendBaseUrl}/${endpoint}`;
 	}
 }
 
