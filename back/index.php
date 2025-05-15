@@ -9,7 +9,22 @@ ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/../logs/php_errors.log');
 
 // CORS Headers - Add at entry point to handle preflight requests
-header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
+// Allow both Azure frontend and local development environments
+$allowedOrigins = [
+	'https://app-frontend-esgi-app.azurewebsites.net',
+	'http://localhost',
+	'http://127.0.0.1'
+];
+
+// Check if the origin is in the allowed list
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+if (in_array($origin, $allowedOrigins) || strpos($origin, 'localhost') !== false || strpos($origin, '127.0.0.1') !== false) {
+	header("Access-Control-Allow-Origin: $origin");
+} else {
+	// Default to the production frontend
+	header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
+}
+
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept, Authorization');
 header('Access-Control-Allow-Credentials: true');
@@ -25,6 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 error_log("Request URI: " . $_SERVER['REQUEST_URI']);
 error_log("Request Method: " . $_SERVER['REQUEST_METHOD']);
 error_log("Query String: " . $_SERVER['QUERY_STRING']);
+error_log("Origin: " . ($origin ?: 'Not set'));
 
 // Parse the request URI
 $uri = $_SERVER['REQUEST_URI'];

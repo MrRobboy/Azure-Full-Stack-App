@@ -54,13 +54,28 @@ $cookieParams = session_get_cookie_params();
 
 // On vérifie si la session est déjà active avant de modifier les paramètres
 if (session_status() == PHP_SESSION_NONE) {
+	// Obtenir l'origine de la requête
+	$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+	$domain = '';
+
+	// Configurer le domaine en fonction de l'environnement
+	if (strpos($origin, 'azurewebsites.net') !== false) {
+		// En production sur Azure, utiliser .azurewebsites.net pour partager les cookies
+		$domain = '.azurewebsites.net';
+	} elseif (strpos($origin, 'localhost') !== false || strpos($origin, '127.0.0.1') !== false) {
+		// En développement local, laisser le domaine vide pour que ça fonctionne sur localhost
+		$domain = '';
+	}
+
+	error_log("Configuration session cookie - Origin: $origin, Domain: " . ($domain ?: 'Default'));
+
 	session_set_cookie_params([
 		'lifetime' => $cookieParams['lifetime'],
 		'path' => '/',
-		'domain' => '.azurewebsites.net', // Domaine partagé pour les cookies
-		'secure' => true,
+		'domain' => $domain,
+		'secure' => $domain !== '', // Secure uniquement si pas en local
 		'httponly' => true,
-		'samesite' => 'None'
+		'samesite' => $domain !== '' ? 'None' : 'Lax' // None pour cross-domain, Lax pour local
 	]);
 
 	// Démarrer la session après avoir configuré les paramètres
@@ -227,10 +242,12 @@ try {
 			$result = $authController->login($data['email'], $data['password']);
 			error_log("Réponse du contrôleur: " . print_r($result, true));
 
+			// Renvoyer directement le résultat complet du contrôleur
 			if ($result['success']) {
-				sendResponse(['message' => $result['message']]);
+				// Le format adapté au frontend avec token et user
+				sendResponse($result);
 			} else {
-				sendResponse(['error' => $result['error']], $result['code']);
+				sendResponse(['success' => false, 'message' => $result['message']], $result['code'] ?? 401);
 			}
 		} elseif ($method === 'POST' && $segments[1] === 'logout') {
 			error_log("Traitement de la requête de logout");

@@ -5,7 +5,22 @@
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     // Envoyer les en-têtes CORS pour les requêtes preflight
     header('Content-Type: application/json');
-    header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
+
+    // Récupérer l'origine de la requête
+    $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '*';
+    $allowed_origins = [
+        'https://app-frontend-esgi-app.azurewebsites.net',
+        'http://localhost',
+        'http://127.0.0.1'
+    ];
+
+    // Vérifier si l'origine est autorisée
+    if (in_array($origin, $allowed_origins) || strpos($origin, 'localhost') !== false || strpos($origin, '127.0.0.1') !== false) {
+        header("Access-Control-Allow-Origin: $origin");
+    } else {
+        header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
+    }
+
     header('Access-Control-Allow-Credentials: true');
     header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
@@ -16,12 +31,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Pour les requêtes normales
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
+
+// Même logique pour l'origine que pour les requêtes OPTIONS
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '*';
+$allowed_origins = [
+    'https://app-frontend-esgi-app.azurewebsites.net',
+    'http://localhost',
+    'http://127.0.0.1'
+];
+
+if (in_array($origin, $allowed_origins) || strpos($origin, 'localhost') !== false || strpos($origin, '127.0.0.1') !== false) {
+    header("Access-Control-Allow-Origin: $origin");
+} else {
+    header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
+}
+
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
 require_once __DIR__ . '/config/config.php';
+
+// Récupérer toutes les informations des headers
+$headers = getallheaders();
+$request_cookies = $_COOKIE;
 
 // Récupérer les informations système pour le status
 $status = [
@@ -32,6 +65,23 @@ $status = [
     'api_base_url' => API_BASE_URL,
     'php_version' => phpversion(),
     'server_info' => $_SERVER['SERVER_SOFTWARE'] ?? 'Inconnu',
+    'request' => [
+        'method' => $_SERVER['REQUEST_METHOD'],
+        'uri' => $_SERVER['REQUEST_URI'],
+        'origin' => $origin,
+        'headers' => $headers,
+        'cookies' => $request_cookies
+    ],
+    'session' => [
+        'status' => session_status(),
+        'id' => session_id() ?: 'Aucune session',
+        'cookie_params' => session_get_cookie_params()
+    ],
+    'cors' => [
+        'allowed_origins' => $allowed_origins,
+        'current_origin' => $origin,
+        'is_allowed' => in_array($origin, $allowed_origins) || strpos($origin, 'localhost') !== false || strpos($origin, '127.0.0.1') !== false
+    ],
     'database' => [
         'type' => defined('DB_TYPE') ? DB_TYPE : 'sqlsrv',
         'host' => defined('SQL_SERVER') ? SQL_SERVER : 'Non défini',
@@ -64,7 +114,10 @@ if (strpos($requestPath, '/db-status') !== false) {
                 'db_name' => defined('SQL_DATABASE') ? SQL_DATABASE : 'Non défini',
                 'tables_count' => count($tables),
                 'tables' => $tables
-            ]
+            ],
+            'request' => $status['request'],
+            'session' => $status['session'],
+            'cors' => $status['cors']
         ]);
     } catch (Exception $e) {
         echo json_encode([
@@ -75,7 +128,10 @@ if (strpos($requestPath, '/db-status') !== false) {
                 'db_type' => defined('DB_TYPE') ? DB_TYPE : 'sqlsrv',
                 'db_host' => defined('SQL_SERVER') ? SQL_SERVER : 'Non défini',
                 'db_name' => defined('SQL_DATABASE') ? SQL_DATABASE : 'Non défini'
-            ]
+            ],
+            'request' => $status['request'],
+            'session' => $status['session'],
+            'cors' => $status['cors']
         ]);
     }
     exit;

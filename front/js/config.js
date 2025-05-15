@@ -11,14 +11,44 @@ const appConfig = {
 const isAzure =
 	typeof window !== "undefined" &&
 	window.location &&
-	window.location.hostname.includes("azurewebsites.net");
+	(window.location.hostname.includes("azurewebsites.net") ||
+		window.location.hostname ===
+			"app-frontend-esgi-app.azurewebsites.net");
+
 if (isAzure) {
 	// On Azure, use absolute paths from root
 	appConfig.proxyUrl = "/simple-proxy.php";
 	console.log("Running on Azure, using absolute paths");
+
+	// Make sure we're communicating with the right backend
+	appConfig.backendBaseUrl =
+		"https://app-backend-esgi-app.azurewebsites.net";
+	appConfig.apiBaseUrl =
+		"https://app-backend-esgi-app.azurewebsites.net/api";
 } else {
 	console.log("Running locally, using relative paths");
+
+	// Check if we're on localhost with a specific port, adjust accordingly
+	const port = window.location.port;
+	if (port) {
+		appConfig.proxyUrl =
+			window.location.protocol +
+			"//" +
+			window.location.hostname +
+			":" +
+			port +
+			"/simple-proxy.php";
+	}
 }
+
+// Force proxy to always be true
+appConfig.useProxy = true;
+
+// Log configuration for debugging
+console.log("App config:", appConfig);
+console.log("Is Azure environment:", isAzure);
+console.log("Proxy URL:", appConfig.proxyUrl);
+console.log("API Base URL:", appConfig.apiBaseUrl);
 
 // List of possible backend URLs to try
 const possibleBackendUrls = [

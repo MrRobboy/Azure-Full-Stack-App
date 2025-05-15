@@ -13,6 +13,35 @@ class AuthController
 		}
 	}
 
+	// Fonction pour générer un token JWT simple
+	private function generateJWT($userId, $email)
+	{
+		// Header
+		$header = json_encode([
+			'typ' => 'JWT',
+			'alg' => 'HS256'
+		]);
+
+		// Payload
+		$payload = json_encode([
+			'sub' => $userId,
+			'email' => $email,
+			'iat' => time(),
+			'exp' => time() + (60 * 60 * 24) // 24 heures
+		]);
+
+		// Encoder header et payload en Base64Url
+		$base64UrlHeader = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
+		$base64UrlPayload = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($payload));
+
+		// Signature simplifiée
+		$signature = hash_hmac('sha256', $base64UrlHeader . "." . $base64UrlPayload, 'esgi_azure_secret_key', true);
+		$base64UrlSignature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
+
+		// Token complet
+		return $base64UrlHeader . "." . $base64UrlPayload . "." . $base64UrlSignature;
+	}
+
 	public function login($email, $password)
 	{
 		try {
@@ -37,15 +66,21 @@ class AuthController
 				$_SESSION['prof_prenom'] = $prof['prenom'];
 				$_SESSION['prof_email'] = $prof['email'];
 
+				// Générer un token JWT
+				$token = $this->generateJWT($prof['id_prof'], $prof['email']);
+				error_log("Token JWT généré pour l'utilisateur: " . $email);
+
+				// Structure de réponse adaptée au front-end
 				return [
 					'success' => true,
 					'message' => 'Connexion réussie',
-					'data' => [
+					'user' => [
 						'id' => $prof['id_prof'],
 						'nom' => $prof['nom'],
 						'prenom' => $prof['prenom'],
 						'email' => $prof['email']
-					]
+					],
+					'token' => $token
 				];
 			} else {
 				throw new Exception("Email ou mot de passe incorrect", 401);
