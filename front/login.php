@@ -193,14 +193,15 @@ ob_start();
 			// Endpoint d'authentification
 			const loginEndpoint = 'api/auth/login';
 
-			// Tenter une connexion directe au backend comme solution de contournement
-			console.log('Tentative de connexion directe au backend (contournement du proxy)');
+			// Utiliser le proxy qui est déjà testé et fonctionne
+			console.log('Utilisation du proxy pour la connexion: ' + proxyPath);
+			NotificationSystem.info("Connexion via proxy...");
 
-			// URL du backend
-			const directBackendUrl = `${appConfig.backendBaseUrl}/${loginEndpoint}`;
-			console.log('URL directe au backend:', directBackendUrl);
+			// Construire l'URL d'API en utilisant le proxy
+			const loginUrl = `${proxyPath}?endpoint=${encodeURIComponent(loginEndpoint)}`;
+			console.log('URL de connexion via proxy:', loginUrl);
 
-			// Options de requête pour la connexion directe
+			// Options de requête
 			const fetchOptions = {
 				method: 'POST',
 				headers: {
@@ -210,69 +211,58 @@ ob_start();
 					email,
 					password
 				}),
-				credentials: 'include',
-				mode: 'cors' // Explicitement demander le mode CORS
+				credentials: 'include'
 			};
 
-			// Essayer la connexion directe
+			// Faire la requête via le proxy
 			let response;
 			try {
-				console.log('Envoi de la requête au backend...');
-				NotificationSystem.info("Tentative de connexion directe au backend...");
+				console.log('Envoi de la requête via proxy...');
 
-				response = await fetch(directBackendUrl, fetchOptions);
-				console.log('Réponse directe reçue:', response);
+				response = await fetch(loginUrl, fetchOptions);
+				console.log('Réponse du proxy reçue:', response);
 
-				// Si la réponse directe échoue à cause de CORS, alors on essaie un fallback
-				if (!response.ok && (response.status === 0 || response.type === 'opaque')) {
-					console.log('Erreur CORS détectée, tentative avec iframe ou formdata...');
-					// On pourrait implémenter une solution de fallback ici
-					// Mais pour l'instant, on affiche juste l'erreur
-					throw new Error('Erreur CORS - connexion directe impossible');
+				if (!response.ok) {
+					// Si le proxy principal échoue, essayer l'API bridge comme solution de secours
+					throw new Error('Échec de la requête via proxy: ' + response.status);
 				}
-			} catch (fetchErr) {
-				console.error("Erreur de connexion directe:", fetchErr);
+			} catch (proxyErr) {
+				console.error("Erreur de connexion via proxy:", proxyErr);
 
-				// Comme solution de dernier recours, on peut utiliser une iframe cachée
+				// Essayer avec l'api-bridge comme solution de dernier recours
 				try {
-					console.log('Tentative avec solution alternative...');
-					NotificationSystem.info("Tentative avec méthode alternative...");
+					console.log('Tentative avec api-bridge...');
+					NotificationSystem.info("Tentative avec api-bridge...");
 
-					// Créer une forme de proxy côté client avec un iframe caché
-					const iframe = document.createElement('iframe');
-					iframe.style.display = 'none';
-					document.body.appendChild(iframe);
+					// Utiliser le api-bridge qui fait une requête côté serveur
+					const bridgeUrl = 'api-bridge.php?endpoint=' + encodeURIComponent(loginEndpoint);
+					console.log('URL bridge:', bridgeUrl);
 
-					// On utilise une promesse pour attendre la réponse
-					response = await new Promise((resolve, reject) => {
-						// Timeout de sécurité après 10 secondes
-						const timeout = setTimeout(() => {
-							reject(new Error('Timeout de la requête'));
-						}, 10000);
+					response = await fetch(bridgeUrl, fetchOptions);
+					console.log('Réponse api-bridge reçue:', response);
 
-						// Créer un ID unique pour cette requête
-						const requestId = 'req_' + Math.random().toString(36).substring(2, 15);
+					if (!response.ok) {
+						throw new Error('Échec de la requête api-bridge: ' + response.status);
+					}
+				} catch (bridgeErr) {
+					console.error("Erreur avec api-bridge:", bridgeErr);
 
-						// Écouter les messages de l'iframe
-						window.addEventListener('message', function responseHandler(event) {
-							if (event.data && event.data.requestId === requestId) {
-								clearTimeout(timeout);
-								window.removeEventListener('message', responseHandler);
-								resolve(event.data.response);
-							}
-						});
+					// Solution de dernier recours - utiliser direct-login.php
+					try {
+						console.log('Tentative avec direct-login.php...');
+						NotificationSystem.info("Tentative avec solution de secours...");
 
-						// Naviguer vers le backend dans l'iframe avec les credentials
-						iframe.src = `${appConfig.backendBaseUrl}/auth-bridge.html?requestId=${requestId}&endpoint=${loginEndpoint}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`;
-					});
+						// direct-login.php fait la requête côté serveur avec PHP
+						response = await fetch('direct-login.php', fetchOptions);
+						console.log('Réponse direct-login reçue:', response);
 
-					// Supprimer l'iframe une fois terminé
-					document.body.removeChild(iframe);
-
-					console.log('Réponse alternative reçue:', response);
-				} catch (altErr) {
-					console.error("Toutes les tentatives ont échoué:", altErr);
-					throw new Error("Impossible de communiquer avec le backend: " + altErr.message);
+						if (!response.ok) {
+							throw new Error('Toutes les tentatives ont échoué');
+						}
+					} catch (directErr) {
+						console.error("Toutes les tentatives ont échoué:", directErr);
+						throw new Error("Impossible de communiquer avec le backend: " + directErr.message);
+					}
 				}
 			}
 
