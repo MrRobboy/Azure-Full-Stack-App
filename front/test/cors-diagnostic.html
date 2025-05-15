@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0" />
+		<title>CORS & API Connection Diagnostic Tool</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				line-height: 1.6;
+				margin: 0;
+				padding: 20px;
+				color: #333;
+			}
+			h1,
+			h2,
+			h3 {
+				color: #0066cc;
+			}
+			.container {
+				max-width: 1200px;
+				margin: 0 auto;
+			}
+			.test-card {
+				background-color: #f9f9f9;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				padding: 15px;
+				margin-bottom: 15px;
+			}
+			.test-card h3 {
+				margin-top: 0;
+			}
+			.button-group {
+				margin-bottom: 20px;
+			}
+			button {
+				background-color: #0066cc;
+				color: white;
+				border: none;
+				padding: 8px 15px;
+				border-radius: 4px;
+				cursor: pointer;
+				margin-right: 10px;
+				margin-bottom: 10px;
+			}
+			button:hover {
+				background-color: #0055aa;
+			}
+			.success {
+				color: green;
+				font-weight: bold;
+			}
+			.error {
+				color: red;
+				font-weight: bold;
+			}
+			.warning {
+				color: orange;
+				font-weight: bold;
+			}
+			pre {
+				background-color: #f4f4f4;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				padding: 10px;
+				overflow: auto;
+				white-space: pre-wrap;
+				max-height: 300px;
+			}
+			#configStatus {
+				margin-bottom: 20px;
+			}
+			label {
+				display: block;
+				margin-bottom: 5px;
+				font-weight: bold;
+			}
+			input,
+			select {
+				width: 100%;
+				padding: 8px;
+				margin-bottom: 15px;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+			}
+			.toggle-switch {
+				position: relative;
+				display: inline-block;
+				width: 60px;
+				height: 34px;
+				margin-right: 10px;
+			}
+			.toggle-switch input {
+				opacity: 0;
+				width: 0;
+				height: 0;
+			}
+			.slider {
+				position: absolute;
+				cursor: pointer;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				background-color: #ccc;
+				transition: 0.4s;
+				border-radius: 34px;
+			}
+			.slider:before {
+				position: absolute;
+				content: "";
+				height: 26px;
+				width: 26px;
+				left: 4px;
+				bottom: 4px;
+				background-color: white;
+				transition: 0.4s;
+				border-radius: 50%;
+			}
+			input:checked + .slider {
+				background-color: #0066cc;
+			}
+			input:checked + .slider:before {
+				transform: translateX(26px);
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>CORS & API Connection Diagnostic Tool</h1>
+
+			<div id="configStatus" class="test-card">
+				<h3>Current Configuration</h3>
+				<div id="configInfo"></div>
+				<div class="button-group">
+					<label class="toggle-switch">
+						<input
+							type="checkbox"
+							id="toggleProxy" />
+						<span class="slider"></span>
+					</label>
+					<span id="proxyStatus"
+						>Use Proxy: Off</span
+					>
+				</div>
+			</div>
+
+			<div class="button-group">
+				<button onclick="runAllTests()">
+					Run All Tests
+				</button>
+				<button onclick="testOptionsRequest()">
+					Test OPTIONS Request
+				</button>
+				<button onclick="testDirectAPI()">
+					Test Direct API
+				</button>
+				<button onclick="testProxyAPI()">
+					Test Proxy API
+				</button>
+				<button onclick="testLogin()">
+					Test Login
+				</button>
+				<button onclick="checkCORSHeaders()">
+					Check CORS Headers
+				</button>
+			</div>
+
+			<div id="testResults"></div>
+
+			<div class="test-card">
+				<h3>Custom Test</h3>
+				<div>
+					<label for="requestMethod"
+						>Method:</label
+					>
+					<select id="requestMethod">
+						<option value="GET">GET</option>
+						<option value="POST">
+							POST
+						</option>
+						<option value="OPTIONS">
+							OPTIONS
+						</option>
+						<option value="PUT">PUT</option>
+						<option value="DELETE">
+							DELETE
+						</option>
+					</select>
+
+					<label for="endpoint">Endpoint:</label>
+					<input
+						type="text"
+						id="endpoint"
+						value="status"
+						placeholder="Enter endpoint (e.g. status, auth/login)" />
+
+					<label for="requestBody"
+						>Request Body (JSON):</label
+					>
+					<textarea
+						id="requestBody"
+						rows="4"
+						style="width: 100%"
+						placeholder='{"key": "value"}'></textarea>
+
+					<button onclick="runCustomTest()">
+						Run Custom Test
+					</button>
+				</div>
+			</div>
+		</div>
+
+		<script src="../js/config.js"></script>
+		<script>
+			// Initialize
+			document.addEventListener(
+				"DOMContentLoaded",
+				function () {
+					// Load config
+					updateConfigDisplay();
+
+					// Set up proxy toggle
+					document.getElementById(
+						"toggleProxy"
+					).checked = appConfig.useProxy;
+					document.getElementById(
+						"proxyStatus"
+					).textContent = `Use Proxy: ${
+						appConfig.useProxy
+							? "On"
+							: "Off"
+					}`;
+
+					document.getElementById(
+						"toggleProxy"
+					).addEventListener(
+						"change",
+						function () {
+							appConfig.useProxy =
+								this.checked;
+							document.getElementById(
+								"proxyStatus"
+							).textContent = `Use Proxy: ${
+								appConfig.useProxy
+									? "On"
+									: "Off"
+							}`;
+							updateConfigDisplay();
+						}
+					);
+				}
+			);
+
+			function updateConfigDisplay() {
+				const configInfo =
+					document.getElementById("configInfo");
+				configInfo.innerHTML = `
+                <p><strong>API Base URL:</strong> ${appConfig.apiBaseUrl}</p>
+                <p><strong>Backend Base URL:</strong> ${
+			appConfig.backendBaseUrl
+		}</p>
+                <p><strong>Proxy URL:</strong> ${appConfig.proxyUrl}</p>
+                <p><strong>Use Proxy:</strong> ${
+			appConfig.useProxy ? "Yes" : "No"
+		}</p>
+                <p><strong>Version:</strong> ${appConfig.version}</p>
+            `;
+			}
+
+			function displayResult(
+				title,
+				result,
+				status,
+				details = null
+			) {
+				const resultsContainer =
+					document.getElementById("testResults");
+				const resultElement =
+					document.createElement("div");
+				resultElement.className = "test-card";
+
+				let statusClass = "";
+				if (status === "success")
+					statusClass = "success";
+				else if (status === "error")
+					statusClass = "error";
+				else if (status === "warning")
+					statusClass = "warning";
+
+				let detailsHtml = "";
+				if (details) {
+					if (typeof details === "object") {
+						detailsHtml = `<pre>${JSON.stringify(
+							details,
+							null,
+							2
+						)}</pre>`;
+					} else {
+						detailsHtml = `<pre>${details}</pre>`;
+					}
+				}
+
+				resultElement.innerHTML = `
+                <h3>${title}</h3>
+                <p class="${statusClass}">${result}</p>
+                ${detailsHtml}
+                <p><small>Timestamp: ${new Date().toLocaleTimeString()}</small></p>
+            `;
+
+				resultsContainer.prepend(resultElement);
+			}
+
+			async function testOptionsRequest() {
+				try {
+					const endpoint = "status";
+					let url;
+
+					if (appConfig.useProxy) {
+						url = `${
+							appConfig.proxyUrl
+						}?endpoint=${encodeURIComponent(
+							endpoint
+						)}`;
+					} else {
+						url = `${appConfig.apiBaseUrl}/${endpoint}`;
+					}
+
+					const response = await fetch(url, {
+						method: "OPTIONS",
+						headers: {
+							Accept: "application/json",
+							"Content-Type":
+								"application/json"
+						}
+					});
+
+					const headers = {};
+					for (const [
+						key,
+						value
+					] of response.headers.entries()) {
+						headers[key] = value;
+					}
+
+					const corsHeadersPresent =
+						headers[
+							"access-control-allow-origin"
+						] ||
+						headers[
+							"access-control-allow-methods"
+						] ||
+						headers[
+							"access-control-allow-headers"
+						];
+
+					if (response.ok && corsHeadersPresent) {
+						displayResult(
+							"OPTIONS Request Test",
+							"SUCCESS: Server responded to OPTIONS request with CORS headers",
+							"success",
+							{
+								status: response.status,
+								headers
+							}
+						);
+					} else if (response.ok) {
+						displayResult(
+							"OPTIONS Request Test",
+							"WARNING: Server responded but CORS headers are missing",
+							"warning",
+							{
+								status: response.status,
+								headers
+							}
+						);
+					} else {
+						displayResult(
+							"OPTIONS Request Test",
+							`ERROR: Server returned status ${response.status}`,
+							"error",
+							{
+								status: response.status,
+								headers
+							}
+						);
+					}
+				} catch (error) {
+					displayResult(
+						"OPTIONS Request Test",
+						`ERROR: ${error.message}`,
+						"error",
+						{
+							error: error.toString(),
+							stack: error.stack
+						}
+					);
+				}
+			}
+
+			async function testDirectAPI() {
+				try {
+					// Save current proxy setting
+					const originalProxySetting =
+						appConfig.useProxy;
+
+					// Force direct API call
+					appConfig.useProxy = false;
+
+					const url = getApiUrl("status");
+					console.log(
+						`Testing direct API URL: ${url}`
+					);
+
+					const response = await fetch(url, {
+						method: "GET",
+						headers: {
+							Accept: "application/json"
+						}
+					});
+
+					const headers = {};
+					for (const [
+						key,
+						value
+					] of response.headers.entries()) {
+						headers[key] = value;
+					}
+
+					let responseData;
+					try {
+						const text =
+							await response.text();
+						try {
+							responseData =
+								JSON.parse(
+									text
+								);
+						} catch (e) {
+							responseData = text;
+						}
+					} catch (e) {
+						responseData =
+							"Could not read response body";
+					}
+
+					if (response.ok) {
+						displayResult(
+							"Direct API Test",
+							"SUCCESS: Direct API communication works",
+							"success",
+							{
+								url,
+								status: response.status,
+								headers,
+								response: responseData
+							}
+						);
+					} else {
+						displayResult(
+							"Direct API Test",
+							`ERROR: Server returned status ${response.status}`,
+							"error",
+							{
+								url,
+								status: response.status,
+								headers,
+								response: responseData
+							}
+						);
+					}
+
+					// Restore original proxy setting
+					appConfig.useProxy =
+						originalProxySetting;
+				} catch (error) {
+					// Restore original proxy setting in case of error
+					appConfig.useProxy =
+						originalProxySetting;
+
+					displayResult(
+						"Direct API Test",
+						`ERROR: ${error.message}`,
+						"error",
+						{
+							error: error.toString(),
+							stack: error.stack
+						}
+					);
+				}
+			}
+
+			async function testProxyAPI() {
+				try {
+					// Save current proxy setting
+					const originalProxySetting =
+						appConfig.useProxy;
+
+					// Force proxy API call
+					appConfig.useProxy = true;
+
+					const url = getApiUrl("status");
+					console.log(
+						`Testing proxy API URL: ${url}`
+					);
+
+					const response = await fetch(url, {
+						method: "GET",
+						headers: {
+							Accept: "application/json"
+						}
+					});
+
+					const headers = {};
+					for (const [
+						key,
+						value
+					] of response.headers.entries()) {
+						headers[key] = value;
+					}
+
+					let responseData;
+					try {
+						const text =
+							await response.text();
+						try {
+							responseData =
+								JSON.parse(
+									text
+								);
+						} catch (e) {
+							responseData = text;
+						}
+					} catch (e) {
+						responseData =
+							"Could not read response body";
+					}
+
+					if (response.ok) {
+						displayResult(
+							"Proxy API Test",
+							"SUCCESS: Proxy API communication works",
+							"success",
+							{
+								url,
+								status: response.status,
+								headers,
+								response: responseData
+							}
+						);
+					} else {
+						displayResult(
+							"Proxy API Test",
+							`ERROR: Server returned status ${response.status}`,
+							"error",
+							{
+								url,
+								status: response.status,
+								headers,
+								response: responseData
+							}
+						);
+					}
+
+					// Restore original proxy setting
+					appConfig.useProxy =
+						originalProxySetting;
+				} catch (error) {
+					// Restore original proxy setting in case of error
+					appConfig.useProxy =
+						originalProxySetting;
+
+					displayResult(
+						"Proxy API Test",
+						`ERROR: ${error.message}`,
+						"error",
+						{
+							error: error.toString(),
+							stack: error.stack
+						}
+					);
+				}
+			}
+
+			async function testLogin() {
+				try {
+					const credentials = {
+						email: "admin@test.com",
+						password: "password123"
+					};
+
+					const url = getApiUrl("auth/login");
+					console.log(
+						`Testing login URL: ${url}`
+					);
+
+					const response = await fetch(url, {
+						method: "POST",
+						headers: {
+							"Content-Type":
+								"application/json"
+						},
+						body: JSON.stringify(
+							credentials
+						),
+						credentials: "include"
+					});
+
+					const headers = {};
+					for (const [
+						key,
+						value
+					] of response.headers.entries()) {
+						headers[key] = value;
+					}
+
+					let responseData;
+					try {
+						const text =
+							await response.text();
+						try {
+							responseData =
+								JSON.parse(
+									text
+								);
+						} catch (e) {
+							responseData = text;
+						}
+					} catch (e) {
+						responseData =
+							"Could not read response body";
+					}
+
+					// Note: We're not checking for response.ok here because a failed login
+					// with wrong credentials would still be a successful test of the login endpoint
+					displayResult(
+						"Login Test",
+						`API responded with status ${response.status}`,
+						response.status < 500
+							? "success"
+							: "error",
+						{
+							url,
+							status: response.status,
+							headers,
+							response: responseData
+						}
+					);
+				} catch (error) {
+					displayResult(
+						"Login Test",
+						`ERROR: ${error.message}`,
+						"error",
+						{
+							error: error.toString(),
+							stack: error.stack
+						}
+					);
+				}
+			}
+
+			async function checkCORSHeaders() {
+				try {
+					// We'll test both with and without proxy
+					const originalProxySetting =
+						appConfig.useProxy;
+
+					// Test without proxy first
+					appConfig.useProxy = false;
+					const directUrl = getApiUrl("status");
+
+					try {
+						const response = await fetch(
+							directUrl,
+							{
+								method: "GET",
+								headers: {
+									Accept: "application/json"
+								}
+							}
+						);
+
+						const corsHeaders = {
+							"Access-Control-Allow-Origin":
+								response.headers.get(
+									"access-control-allow-origin"
+								),
+							"Access-Control-Allow-Methods":
+								response.headers.get(
+									"access-control-allow-methods"
+								),
+							"Access-Control-Allow-Headers":
+								response.headers.get(
+									"access-control-allow-headers"
+								),
+							"Access-Control-Allow-Credentials":
+								response.headers.get(
+									"access-control-allow-credentials"
+								)
+						};
+
+						const allHeadersPresent =
+							corsHeaders[
+								"Access-Control-Allow-Origin"
+							] &&
+							corsHeaders[
+								"Access-Control-Allow-Methods"
+							] &&
+							corsHeaders[
+								"Access-Control-Allow-Headers"
+							];
+
+						if (allHeadersPresent) {
+							displayResult(
+								"CORS Headers Check (Direct)",
+								"SUCCESS: All required CORS headers are present",
+								"success",
+								corsHeaders
+							);
+						} else {
+							displayResult(
+								"CORS Headers Check (Direct)",
+								"WARNING: Some CORS headers are missing",
+								"warning",
+								corsHeaders
+							);
+						}
+					} catch (error) {
+						displayResult(
+							"CORS Headers Check (Direct)",
+							`ERROR: ${error.message}`,
+							"error",
+							{
+								error: error.toString()
+							}
+						);
+					}
+
+					// Test with proxy
+					appConfig.useProxy = true;
+					const proxyUrl = getApiUrl("status");
+
+					try {
+						const response = await fetch(
+							proxyUrl,
+							{
+								method: "GET",
+								headers: {
+									Accept: "application/json"
+								}
+							}
+						);
+
+						// Proxy doesn't need CORS headers since it's same-origin
+						displayResult(
+							"CORS Headers Check (Proxy)",
+							"SUCCESS: Proxy works without needing CORS headers",
+							"success",
+							{
+								status: response.status
+							}
+						);
+					} catch (error) {
+						displayResult(
+							"CORS Headers Check (Proxy)",
+							`ERROR: ${error.message}`,
+							"error",
+							{
+								error: error.toString()
+							}
+						);
+					}
+
+					// Restore original setting
+					appConfig.useProxy =
+						originalProxySetting;
+				} catch (error) {
+					displayResult(
+						"CORS Headers Check",
+						`ERROR: ${error.message}`,
+						"error",
+						{
+							error: error.toString(),
+							stack: error.stack
+						}
+					);
+				}
+			}
+
+			async function runCustomTest() {
+				try {
+					const method =
+						document.getElementById(
+							"requestMethod"
+						).value;
+					const endpoint =
+						document.getElementById(
+							"endpoint"
+						).value;
+					let body =
+						document.getElementById(
+							"requestBody"
+						).value;
+
+					// Parse JSON body if provided and not empty
+					if (body.trim() !== "") {
+						try {
+							body = JSON.parse(body);
+						} catch (e) {
+							displayResult(
+								"Custom Test",
+								"ERROR: Invalid JSON in request body",
+								"error",
+								{
+									error: e.toString()
+								}
+							);
+							return;
+						}
+					} else {
+						body = null;
+					}
+
+					const url = getApiUrl(endpoint);
+					console.log(
+						`Running custom test: ${method} ${url}`
+					);
+
+					const requestOptions = {
+						method: method,
+						headers: {
+							Accept: "application/json",
+							"Content-Type":
+								"application/json"
+						},
+						credentials: "include"
+					};
+
+					if (
+						body &&
+						method !== "GET" &&
+						method !== "HEAD"
+					) {
+						requestOptions.body =
+							JSON.stringify(body);
+					}
+
+					const response = await fetch(
+						url,
+						requestOptions
+					);
+
+					const headers = {};
+					for (const [
+						key,
+						value
+					] of response.headers.entries()) {
+						headers[key] = value;
+					}
+
+					let responseData;
+					try {
+						const text =
+							await response.text();
+						try {
+							responseData =
+								JSON.parse(
+									text
+								);
+						} catch (e) {
+							responseData = text;
+						}
+					} catch (e) {
+						responseData =
+							"Could not read response body";
+					}
+
+					displayResult(
+						`Custom Test (${method} ${endpoint})`,
+						`Status: ${response.status} ${response.statusText}`,
+						response.ok
+							? "success"
+							: "error",
+						{
+							url,
+							method,
+							requestBody: body,
+							status: response.status,
+							headers,
+							response: responseData
+						}
+					);
+				} catch (error) {
+					displayResult(
+						"Custom Test",
+						`ERROR: ${error.message}`,
+						"error",
+						{
+							error: error.toString(),
+							stack: error.stack
+						}
+					);
+				}
+			}
+
+			async function runAllTests() {
+				// Clear previous results
+				document.getElementById(
+					"testResults"
+				).innerHTML = "";
+
+				// Run all tests
+				await testOptionsRequest();
+				await testDirectAPI();
+				await testProxyAPI();
+				await checkCORSHeaders();
+				await testLogin();
+			}
+		</script>
+	</body>
+</html>

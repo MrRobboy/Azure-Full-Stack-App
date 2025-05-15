@@ -2,9 +2,9 @@
 const appConfig = {
 	apiBaseUrl: "https://app-backend-esgi-app.azurewebsites.net/api",
 	backendBaseUrl: "https://app-backend-esgi-app.azurewebsites.net",
-	useProxy: false, // Désactiver le proxy pour les appels directs à l'API Azure
+	useProxy: true, // Enable proxy by default to ensure login works
 	proxyUrl: "backend-proxy.php", // URL du proxy local
-	version: "1.6"
+	version: "1.7"
 };
 
 // Fonction pour obtenir l'URL de l'API
@@ -68,35 +68,97 @@ function getFullUrl(fullPath) {
 // Fonction pour vérifier si l'API est disponible
 async function checkApiAvailability() {
 	try {
-		const response = await fetch(
-			`${appConfig.backendBaseUrl}/azure-cors.php`,
+		// First try using the proxy to see if it works
+		const proxyResponse = await fetch(
+			`${appConfig.proxyUrl}?endpoint=status`,
 			{
 				method: "GET",
 				credentials: "include",
 				headers: {
-					"Content-Type": "application/json",
-					"X-Requested-With": "XMLHttpRequest"
+					Accept: "application/json"
 				}
 			}
 		);
 
-		if (response.ok) {
-			// API directe fonctionne, désactiver le proxy
-			appConfig.useProxy = false;
-			console.log(
-				"API direct access working, proxy disabled"
-			);
-		} else {
-			// Problème avec l'API directe, activer le proxy
+		if (proxyResponse.ok) {
+			console.log("Proxy is working correctly");
 			appConfig.useProxy = true;
+
+			// Now try direct access to see if CORS is fixed
+			try {
+				const directResponse = await fetch(
+					`${appConfig.backendBaseUrl}/azure-cors.php`,
+					{
+						method: "GET",
+						credentials: "include",
+						headers: {
+							"Content-Type":
+								"application/json",
+							"X-Requested-With":
+								"XMLHttpRequest"
+						}
+					}
+				);
+
+				if (directResponse.ok) {
+					console.log(
+						"Direct API access is working but keeping proxy for now"
+					);
+					// Keep using proxy for stability (comment out the line below to use direct access)
+					// appConfig.useProxy = false;
+				} else {
+					console.log(
+						"Direct API access failed, using proxy"
+					);
+					appConfig.useProxy = true;
+				}
+			} catch (directError) {
+				console.log(
+					"Direct API access error:",
+					directError
+				);
+				appConfig.useProxy = true;
+			}
+		} else {
 			console.log(
-				"API direct access failed, switching to proxy"
+				"Proxy not working correctly, trying direct access"
 			);
+			try {
+				const directResponse = await fetch(
+					`${appConfig.backendBaseUrl}/azure-cors.php`,
+					{
+						method: "GET",
+						credentials: "include",
+						headers: {
+							"Content-Type":
+								"application/json",
+							"X-Requested-With":
+								"XMLHttpRequest"
+						}
+					}
+				);
+
+				if (directResponse.ok) {
+					console.log(
+						"Direct API access working, using direct access"
+					);
+					appConfig.useProxy = false;
+				} else {
+					console.error(
+						"Both proxy and direct access failed"
+					);
+					appConfig.useProxy = true; // Default to proxy
+				}
+			} catch (directError) {
+				console.error(
+					"Both proxy and direct access failed with errors"
+				);
+				appConfig.useProxy = true; // Default to proxy
+			}
 		}
 	} catch (error) {
-		// Erreur de connexion, activer le proxy
-		appConfig.useProxy = true;
-		console.log("API connection error, switching to proxy", error);
+		console.error("API connection check error:", error);
+		appConfig.useProxy = true; // Default to proxy on any error
 	}
 }
 
