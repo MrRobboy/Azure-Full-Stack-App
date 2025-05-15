@@ -85,7 +85,7 @@ if (preg_match('~^([^/]+)/(\d+)$~', $endpoint, $matches)) {
 }
 
 // If the backend is down or unreachable, we can mock the response for testing
-$mock_data = true; // Set to true to enable mocking
+$mock_data = false; // Set to false to disable mocking and use real backend
 
 if ($mock_data) {
 	// Map of mock data endpoints
