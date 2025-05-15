@@ -208,16 +208,22 @@ ob_start();
 	</div>
 </div>
 
-<script src="js/notification-system.js"></script>
+<script src="js/notification-system.js?v=1.1"></script>
 <script src="js/error-messages.js"></script>
-<script src="js/config.js"></script>
+<script src="js/config.js?v=1.1"></script>
 <script>
 	// Fonction pour charger les professeurs
 	async function loadProfs() {
 		try {
 			console.log('Chargement des professeurs...');
 			const loaderId = 'loading-profs';
-			NotificationSystem.startLoader(loaderId, 'Chargement des professeurs...');
+
+			// Vérifier si startLoader est disponible
+			if (typeof NotificationSystem.startLoader === 'function') {
+				NotificationSystem.startLoader(loaderId, 'Chargement des professeurs...');
+			} else {
+				NotificationSystem.info('Chargement des professeurs...');
+			}
 
 			const response = await fetch(getApiUrl('profs'));
 
@@ -246,7 +252,13 @@ ob_start();
 
 			if (!result.data || result.data.length === 0) {
 				tbody.innerHTML = '<tr><td colspan="4">Aucun professeur trouvé</td></tr>';
-				NotificationSystem.stopLoader(loaderId, 'Aucun professeur trouvé');
+
+				// Vérifier si stopLoader est disponible
+				if (typeof NotificationSystem.stopLoader === 'function') {
+					NotificationSystem.stopLoader(loaderId, 'Aucun professeur trouvé');
+				} else {
+					NotificationSystem.warning('Aucun professeur trouvé');
+				}
 				return;
 			}
 
@@ -264,7 +276,12 @@ ob_start();
 				tbody.appendChild(tr);
 			});
 
-			NotificationSystem.stopLoader(loaderId, `${result.data.length} professeurs chargés avec succès`);
+			// Vérifier si stopLoader est disponible
+			if (typeof NotificationSystem.stopLoader === 'function') {
+				NotificationSystem.stopLoader(loaderId, `${result.data.length} professeurs chargés avec succès`);
+			} else {
+				NotificationSystem.success(`${result.data.length} professeurs chargés avec succès`);
+			}
 		} catch (error) {
 			console.error('Erreur lors du chargement des professeurs:', error);
 			NotificationSystem.error(error.message || 'Erreur lors du chargement des professeurs');
@@ -289,7 +306,13 @@ ob_start();
 		try {
 			console.log('Envoi des données pour ajout de professeur:', formData);
 			const loaderId = 'adding-prof';
-			NotificationSystem.startLoader(loaderId, 'Ajout du professeur en cours...');
+
+			// Vérifier si startLoader est disponible
+			if (typeof NotificationSystem.startLoader === 'function') {
+				NotificationSystem.startLoader(loaderId, 'Ajout du professeur en cours...');
+			} else {
+				NotificationSystem.info('Ajout du professeur en cours...');
+			}
 
 			const response = await fetch(getApiUrl('profs'), {
 				method: 'POST',
@@ -321,7 +344,14 @@ ob_start();
 			}
 
 			document.getElementById('addProfForm').reset();
-			NotificationSystem.stopLoader(loaderId, 'Le professeur a été ajouté avec succès');
+
+			// Vérifier si stopLoader est disponible
+			if (typeof NotificationSystem.stopLoader === 'function') {
+				NotificationSystem.stopLoader(loaderId, 'Le professeur a été ajouté avec succès');
+			} else {
+				NotificationSystem.success('Le professeur a été ajouté avec succès');
+			}
+
 			loadProfs();
 		} catch (error) {
 			console.error('Erreur lors de l\'ajout du professeur:', error);

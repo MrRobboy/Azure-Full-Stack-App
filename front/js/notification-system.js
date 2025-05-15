@@ -5,6 +5,46 @@ const NotificationSystem = {
 		console.log("Initialisation du système de notification...");
 		this.createContainer();
 		this.loaders = {};
+
+		// Marquer le système comme initialisé
+		this.initialized = true;
+
+		// Tester si le système est correctement chargé
+		this.verifyLoaded();
+	},
+
+	// Vérifier que le système est correctement chargé
+	verifyLoaded() {
+		const requiredFunctions = [
+			"show",
+			"error",
+			"success",
+			"info",
+			"warning",
+			"startLoader",
+			"stopLoader"
+		];
+		const missingFunctions = [];
+
+		requiredFunctions.forEach((func) => {
+			if (typeof this[func] !== "function") {
+				missingFunctions.push(func);
+			}
+		});
+
+		if (missingFunctions.length > 0) {
+			console.error(
+				`NotificationSystem: Fonctions manquantes: ${missingFunctions.join(
+					", "
+				)}`
+			);
+			return false;
+		}
+
+		console.log(
+			"NotificationSystem: Toutes les fonctions requises sont chargées"
+		);
+		return true;
 	},
 
 	// Créer le conteneur de notifications

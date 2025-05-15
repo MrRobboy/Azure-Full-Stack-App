@@ -47,16 +47,21 @@ ob_start();
     </div>
 </div>
 
-<script src="js/notification-system.js"></script>
+<script src="js/cache-buster.js"></script>
+<script src="js/notification-system.js?v=1.1"></script>
 <script src="js/error-messages.js"></script>
-<script src="js/config.js"></script>
+<script src="js/config.js?v=1.1"></script>
 <script>
     // Fonction pour charger les compteurs
     async function loadCounters() {
         try {
-            // Afficher un loader global
+            // Afficher un loader global ou un message d'information selon les capacités
             const loaderId = 'dashboard-loading';
-            NotificationSystem.startLoader(loaderId, 'Chargement des données...');
+            if (typeof NotificationSystem.startLoader === 'function') {
+                NotificationSystem.startLoader(loaderId, 'Chargement des données...');
+            } else {
+                NotificationSystem.info('Chargement des données...');
+            }
 
             // Utiliser try/catch individuels pour chaque requête
             let matieresData, classesData, examensData, profsData, usersData;
@@ -116,12 +121,18 @@ ob_start();
                 document.getElementById('usersCount').textContent = 'Erreur';
             }
 
-            // Arrêter le loader
+            // Arrêter le loader ou afficher le résultat
             if (matieresData?.success && classesData?.success && examensData?.success &&
                 profsData?.success && usersData?.success) {
-                NotificationSystem.stopLoader(loaderId, 'Données chargées avec succès');
+                if (typeof NotificationSystem.stopLoader === 'function') {
+                    NotificationSystem.stopLoader(loaderId, 'Données chargées avec succès');
+                } else {
+                    NotificationSystem.success('Données chargées avec succès');
+                }
             } else {
-                NotificationSystem.stopLoader(loaderId);
+                if (typeof NotificationSystem.stopLoader === 'function') {
+                    NotificationSystem.stopLoader(loaderId);
+                }
                 NotificationSystem.warning('Certaines données n\'ont pas pu être chargées');
             }
         } catch (error) {

@@ -62,7 +62,9 @@ require_once 'templates/base.php';
 	</div>
 </div>
 
-<script src="js/notification-system.js"></script>
+<script src="js/notification-system.js?v=1.1"></script>
+<script src="js/error-messages.js"></script>
+<script src="js/config.js?v=1.1"></script>
 <script>
 	// Vérifier que le système de notification est bien chargé
 	console.log('Système de notification disponible:', typeof NotificationSystem !== 'undefined');

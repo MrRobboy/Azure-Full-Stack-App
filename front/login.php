@@ -48,8 +48,9 @@ ob_start();
 	</div>
 </div>
 
-<script src="js/config.js"></script>
-<script src="js/notification-system.js"></script>
+<script src="js/cache-buster.js"></script>
+<script src="js/config.js?v=1.1"></script>
+<script src="js/notification-system.js?v=1.1"></script>
 <script>
 	function toggleErrorDetails() {
 		const details = document.querySelector('.error-details');
