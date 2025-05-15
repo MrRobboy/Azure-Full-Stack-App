@@ -62,12 +62,25 @@ header('Content-Type: text/html; charset=UTF-8');
 		.error {
 			color: red;
 		}
+
+		.info {
+			background-color: #e7f3fe;
+			border-left: 6px solid #2196F3;
+			padding: 10px;
+			margin-bottom: 15px;
+		}
 	</style>
 </head>
 
 <body>
 	<h1>API Test Page</h1>
 	<p>This page tests both the proxy and direct API connections.</p>
+
+	<div class="info">
+		<p><strong>Note:</strong> This page detects if you're running on Azure or locally and adjusts the proxy path accordingly.</p>
+		<p><strong>Current environment:</strong> <span id="environment"></span></p>
+		<p><strong>Detected proxy path:</strong> <span id="proxy-path"></span></p>
+	</div>
 
 	<div class="test-section">
 		<h2>Test Proxy Status</h2>
@@ -87,14 +100,31 @@ header('Content-Type: text/html; charset=UTF-8');
 		<div id="login-result"></div>
 	</div>
 
+	<div class="test-section">
+		<h2>Test Original Backend Proxy</h2>
+		<button onclick="testOriginalProxy()">Test Original Proxy</button>
+		<div id="original-proxy-result"></div>
+	</div>
+
 	<script>
+		// Determine if we're on Azure or local environment
+		const isAzure = window.location.hostname.includes('azurewebsites.net');
+
+		// Set proxy paths based on environment
+		const simpleProxyPath = isAzure ? '/simple-proxy.php' : 'simple-proxy.php';
+		const originalProxyPath = isAzure ? '/backend-proxy.php' : 'backend-proxy.php';
+
+		// Update environment info
+		document.getElementById('environment').textContent = isAzure ? 'Azure' : 'Local';
+		document.getElementById('proxy-path').textContent = simpleProxyPath;
+
 		// Test the status endpoint via proxy
 		async function testProxyStatus() {
 			const resultDiv = document.getElementById('proxy-result');
 			resultDiv.innerHTML = '<p>Testing...</p>';
 
 			try {
-				const response = await fetch('simple-proxy.php?endpoint=status.php');
+				const response = await fetch(simpleProxyPath + '?endpoint=status.php');
 				const status = response.status;
 				let text = await response.text();
 				let data;
@@ -163,7 +193,7 @@ header('Content-Type: text/html; charset=UTF-8');
 					password: 'password123'
 				};
 
-				const response = await fetch('simple-proxy.php?endpoint=api/auth/login', {
+				const response = await fetch(simpleProxyPath + '?endpoint=api/auth/login', {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json'
@@ -172,6 +202,38 @@ header('Content-Type: text/html; charset=UTF-8');
 					credentials: 'include'
 				});
 
+				const status = response.status;
+				let text = await response.text();
+				let data;
+
+				try {
+					data = JSON.parse(text);
+					text = JSON.stringify(data, null, 2);
+				} catch (e) {
+					// Text is not JSON, keep as is
+				}
+
+				resultDiv.innerHTML = `
+                    <p class="${status === 200 ? 'success' : 'error'}">
+                        Status: ${status}
+                    </p>
+                    <pre>${text}</pre>
+                `;
+			} catch (error) {
+				resultDiv.innerHTML = `
+                    <p class="error">Error: ${error.message}</p>
+                    <pre>${error.stack}</pre>
+                `;
+			}
+		}
+
+		// Test the original backend proxy
+		async function testOriginalProxy() {
+			const resultDiv = document.getElementById('original-proxy-result');
+			resultDiv.innerHTML = '<p>Testing...</p>';
+
+			try {
+				const response = await fetch(originalProxyPath + '?endpoint=status.php');
 				const status = response.status;
 				let text = await response.text();
 				let data;

@@ -49,9 +49,15 @@ ob_start();
 </div>
 
 <script src="js/cache-buster.js"></script>
-<script src="js/config.js?v=1.8"></script>
+<script src="js/config.js?v=1.9"></script>
 <script src="js/notification-system.js?v=1.1"></script>
 <script>
+	// Determine if we're on Azure or local environment and set proxy path
+	const isAzure = window.location.hostname.includes('azurewebsites.net');
+	const proxyPath = isAzure ? '/simple-proxy.php' : appConfig.proxyUrl;
+	console.log('Environment:', isAzure ? 'Azure' : 'Local');
+	console.log('Using proxy path:', proxyPath);
+
 	function toggleErrorDetails() {
 		const details = document.querySelector('.error-details');
 		const button = document.querySelector('.toggle-details');
@@ -108,7 +114,7 @@ ob_start();
 
 			// Using the direct proxy URL for reliability
 			const loginEndpoint = 'api/auth/login';
-			const proxyUrl = `${appConfig.proxyUrl}?endpoint=${encodeURIComponent(loginEndpoint)}`;
+			const proxyUrl = `${proxyPath}?endpoint=${encodeURIComponent(loginEndpoint)}`;
 
 			console.log('URL de connexion:', proxyUrl);
 
@@ -154,7 +160,8 @@ ob_start();
 				details: {
 					errorMessage: error.message,
 					useProxy: appConfig.useProxy,
-					proxyUrl: appConfig.proxyUrl
+					proxyUrl: proxyPath,
+					isAzure: isAzure
 				}
 			});
 			console.error('Erreur:', error);

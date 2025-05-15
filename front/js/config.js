@@ -3,9 +3,22 @@ const appConfig = {
 	apiBaseUrl: "https://app-backend-esgi-app.azurewebsites.net/api",
 	backendBaseUrl: "https://app-backend-esgi-app.azurewebsites.net",
 	useProxy: true, // Always use proxy since direct communication has CORS issues
-	proxyUrl: "simple-proxy.php", // Using the simplified proxy
-	version: "1.8"
+	proxyUrl: "simple-proxy.php", // Default path for local development
+	version: "1.9"
 };
+
+// Detect if we're on Azure and adjust paths
+const isAzure =
+	typeof window !== "undefined" &&
+	window.location &&
+	window.location.hostname.includes("azurewebsites.net");
+if (isAzure) {
+	// On Azure, use absolute paths from root
+	appConfig.proxyUrl = "/simple-proxy.php";
+	console.log("Running on Azure, using absolute paths");
+} else {
+	console.log("Running locally, using relative paths");
+}
 
 // Fonction pour obtenir l'URL de l'API
 function getApiUrl(endpoint) {
