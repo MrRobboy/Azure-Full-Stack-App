@@ -1,9 +1,20 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['prof_id'])) {
+// Check if user is logged in
+if (!isset($_SESSION['user']) || !isset($_SESSION['token'])) {
 	header('Location: login.php');
-	exit();
+	exit;
+}
+
+// Get user data
+$user = $_SESSION['user'];
+
+// Check if user has admin role
+if ($user['role'] !== 'admin') {
+	// Redirect non-admin users
+	header('Location: dashboard.php');
+	exit;
 }
 
 $pageTitle = "Gestion des Matières";
@@ -193,8 +204,13 @@ ob_start();
 
 <script src="js/notification-system.js?v=1.1"></script>
 <script src="js/error-messages.js"></script>
-<script src="js/config.js?v=1.1"></script>
+<script src="js/config.js?v=1.9"></script>
 <script>
+	// Function to get API endpoint with proxy support
+	function getApiEndpoint(endpoint) {
+		return `${appConfig.proxyUrl}?endpoint=${encodeURIComponent(endpoint)}`;
+	}
+
 	// Vérifier que les scripts sont chargés
 	console.log('Vérification du chargement des scripts...');
 	console.log('NotificationSystem:', typeof NotificationSystem);
@@ -212,7 +228,7 @@ ob_start();
 	async function loadMatieres() {
 		try {
 			console.log('Chargement des matières...');
-			const response = await fetch(getApiUrl('matieres'));
+			const response = await fetch(getApiEndpoint('matieres'));
 			const result = await response.json();
 			console.log('Résultat matières:', result);
 
@@ -256,7 +272,7 @@ ob_start();
 		}
 
 		try {
-			const response = await fetch(getApiUrl('matieres'), {
+			const response = await fetch(getApiEndpoint('matieres'), {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -315,7 +331,7 @@ ob_start();
 			}
 
 			try {
-				const response = await fetch(`${getApiUrl('matieres')}/${id}`, {
+				const response = await fetch(getApiEndpoint(`matieres/${id}`), {
 					method: 'PUT',
 					headers: {
 						'Content-Type': 'application/json'
@@ -357,7 +373,7 @@ ob_start();
 
 		try {
 			console.log('Tentative de suppression de la matière:', id);
-			const response = await fetch(`${getApiUrl('matieres')}/${id}`, {
+			const response = await fetch(getApiEndpoint(`matieres/${id}`), {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json'

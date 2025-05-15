@@ -93,186 +93,654 @@ if ($mock_data) {
 		},
 
 		'classes' => function () {
-			// Mock data for classes based on SQL structure
-			echo json_encode([
-				'success' => true,
-				'message' => 'Classes retrieved successfully (mocked)',
-				'data' => [
-					[
-						'id_classe' => 1,
-						'nom_classe' => '2A1',
-						'niveau' => '2ème Année',
-						'rythme' => 'Alternance',
-						'numero' => '1'
-					],
-					[
-						'id_classe' => 3,
-						'nom_classe' => '2A2',
-						'niveau' => '2ème Année',
-						'rythme' => 'Alternance',
-						'numero' => '2'
-					],
-					[
-						'id_classe' => 4,
-						'nom_classe' => '2A3',
-						'niveau' => '2ème Année',
-						'rythme' => 'Alternance',
-						'numero' => '3'
-					],
-					[
-						'id_classe' => 6,
-						'nom_classe' => '2A5 (aka la classe bien guez)',
-						'niveau' => '2ème Année',
-						'rythme' => 'Alternance',
-						'numero' => '5'
-					],
-					[
-						'id_classe' => 7,
-						'nom_classe' => '1A2',
-						'niveau' => '1ère Année',
-						'rythme' => 'Alternance',
-						'numero' => '2'
-					]
+			// Check if this is a GET, POST, PUT or DELETE request
+			$method = $_SERVER['REQUEST_METHOD'];
+
+			// Base mock data for classes
+			$classes = [
+				[
+					'id_classe' => 1,
+					'nom_classe' => '2A1',
+					'niveau' => '2ème Année',
+					'rythme' => 'Alternance',
+					'numero' => '1'
+				],
+				[
+					'id_classe' => 3,
+					'nom_classe' => '2A2',
+					'niveau' => '2ème Année',
+					'rythme' => 'Alternance',
+					'numero' => '2'
+				],
+				[
+					'id_classe' => 4,
+					'nom_classe' => '2A3',
+					'niveau' => '2ème Année',
+					'rythme' => 'Alternance',
+					'numero' => '3'
+				],
+				[
+					'id_classe' => 6,
+					'nom_classe' => '2A5 (aka la classe bien guez)',
+					'niveau' => '2ème Année',
+					'rythme' => 'Alternance',
+					'numero' => '5'
+				],
+				[
+					'id_classe' => 7,
+					'nom_classe' => '1A2',
+					'niveau' => '1ère Année',
+					'rythme' => 'Alternance',
+					'numero' => '2'
 				]
-			]);
+			];
+
+			switch ($method) {
+				case 'GET':
+					// Check if there's a specific ID in the request
+					$path_parts = explode('/', $_SERVER['REQUEST_URI']);
+					$id = null;
+					foreach ($path_parts as $index => $part) {
+						if ($part === 'classes' && isset($path_parts[$index + 1]) && is_numeric($path_parts[$index + 1])) {
+							$id = $path_parts[$index + 1];
+							break;
+						}
+					}
+
+					if ($id) {
+						// Return a specific class
+						$found = false;
+						foreach ($classes as $class) {
+							if ($class['id_classe'] == $id) {
+								echo json_encode([
+									'success' => true,
+									'message' => 'Class retrieved successfully (mocked)',
+									'data' => $class
+								]);
+								$found = true;
+								break;
+							}
+						}
+
+						if (!$found) {
+							http_response_code(404);
+							echo json_encode([
+								'success' => false,
+								'message' => 'Class not found (mocked)'
+							]);
+						}
+					} else {
+						// Return all classes
+						echo json_encode([
+							'success' => true,
+							'message' => 'Classes retrieved successfully (mocked)',
+							'data' => $classes
+						]);
+					}
+					break;
+
+				case 'POST':
+					// Create a new class
+					$raw_post = file_get_contents("php://input");
+					$class_data = json_decode($raw_post, true);
+
+					if (!$class_data) {
+						http_response_code(400);
+						echo json_encode([
+							'success' => false,
+							'message' => 'Invalid class data (mocked)'
+						]);
+						break;
+					}
+
+					// Generate a new ID
+					$new_id = max(array_column($classes, 'id_classe')) + 1;
+
+					// Create new class with data
+					$new_class = array_merge([
+						'id_classe' => $new_id
+					], $class_data);
+
+					echo json_encode([
+						'success' => true,
+						'message' => 'Class created successfully (mocked)',
+						'data' => $new_class
+					]);
+					break;
+
+				case 'PUT':
+					// Update a class
+					$path_parts = explode('/', $_SERVER['REQUEST_URI']);
+					$id = null;
+					foreach ($path_parts as $index => $part) {
+						if ($part === 'classes' && isset($path_parts[$index + 1]) && is_numeric($path_parts[$index + 1])) {
+							$id = $path_parts[$index + 1];
+							break;
+						}
+					}
+
+					if (!$id) {
+						http_response_code(400);
+						echo json_encode([
+							'success' => false,
+							'message' => 'Class ID is required (mocked)'
+						]);
+						break;
+					}
+
+					$raw_post = file_get_contents("php://input");
+					$class_data = json_decode($raw_post, true);
+
+					if (!$class_data) {
+						http_response_code(400);
+						echo json_encode([
+							'success' => false,
+							'message' => 'Invalid class data (mocked)'
+						]);
+						break;
+					}
+
+					// Find the class
+					$found = false;
+					foreach ($classes as &$class) {
+						if ($class['id_classe'] == $id) {
+							$found = true;
+							break;
+						}
+					}
+
+					if (!$found) {
+						http_response_code(404);
+						echo json_encode([
+							'success' => false,
+							'message' => 'Class not found (mocked)'
+						]);
+						break;
+					}
+
+					echo json_encode([
+						'success' => true,
+						'message' => 'Class updated successfully (mocked)',
+						'data' => array_merge(['id_classe' => (int)$id], $class_data)
+					]);
+					break;
+
+				case 'DELETE':
+					// Delete a class
+					$path_parts = explode('/', $_SERVER['REQUEST_URI']);
+					$id = null;
+					foreach ($path_parts as $index => $part) {
+						if ($part === 'classes' && isset($path_parts[$index + 1]) && is_numeric($path_parts[$index + 1])) {
+							$id = $path_parts[$index + 1];
+							break;
+						}
+					}
+
+					if (!$id) {
+						http_response_code(400);
+						echo json_encode([
+							'success' => false,
+							'message' => 'Class ID is required (mocked)'
+						]);
+						break;
+					}
+
+					echo json_encode([
+						'success' => true,
+						'message' => 'Class deleted successfully (mocked)'
+					]);
+					break;
+
+				default:
+					http_response_code(405);
+					echo json_encode([
+						'success' => false,
+						'message' => 'Method not allowed (mocked)'
+					]);
+			}
 		},
 
 		'matieres' => function () {
-			// Mock data for subjects based on SQL structure
-			echo json_encode([
-				'success' => true,
-				'message' => 'Matières retrieved successfully (mocked)',
-				'data' => [
-					[
-						'id_matiere' => 1,
-						'nom' => 'Mathématiques'
-					],
-					[
-						'id_matiere' => 2,
-						'nom' => 'Français'
-					],
-					[
-						'id_matiere' => 16,
-						'nom' => 'Docker'
-					],
-					[
-						'id_matiere' => 17,
-						'nom' => 'Azure'
-					]
+			// Check if this is a GET, POST, PUT or DELETE request
+			$method = $_SERVER['REQUEST_METHOD'];
+
+			// Base mock data for subjects
+			$matieres = [
+				[
+					'id_matiere' => 1,
+					'nom' => 'Mathématiques'
+				],
+				[
+					'id_matiere' => 2,
+					'nom' => 'Français'
+				],
+				[
+					'id_matiere' => 16,
+					'nom' => 'Docker'
+				],
+				[
+					'id_matiere' => 17,
+					'nom' => 'Azure'
 				]
-			]);
+			];
+
+			// Handle different HTTP methods similar to the classes endpoint
+			switch ($method) {
+				case 'GET':
+					// Return all subjects or a specific one by ID
+					$path_parts = explode('/', $_SERVER['REQUEST_URI']);
+					$id = null;
+					foreach ($path_parts as $index => $part) {
+						if ($part === 'matieres' && isset($path_parts[$index + 1]) && is_numeric($path_parts[$index + 1])) {
+							$id = $path_parts[$index + 1];
+							break;
+						}
+					}
+
+					if ($id) {
+						$found = false;
+						foreach ($matieres as $matiere) {
+							if ($matiere['id_matiere'] == $id) {
+								echo json_encode([
+									'success' => true,
+									'message' => 'Subject retrieved successfully (mocked)',
+									'data' => $matiere
+								]);
+								$found = true;
+								break;
+							}
+						}
+
+						if (!$found) {
+							http_response_code(404);
+							echo json_encode([
+								'success' => false,
+								'message' => 'Subject not found (mocked)'
+							]);
+						}
+					} else {
+						echo json_encode([
+							'success' => true,
+							'message' => 'Subjects retrieved successfully (mocked)',
+							'data' => $matieres
+						]);
+					}
+					break;
+
+				case 'POST':
+					// Create a new subject
+					$raw_post = file_get_contents("php://input");
+					$matiere_data = json_decode($raw_post, true);
+
+					if (!$matiere_data) {
+						http_response_code(400);
+						echo json_encode([
+							'success' => false,
+							'message' => 'Invalid subject data (mocked)'
+						]);
+						break;
+					}
+
+					// Generate a new ID
+					$new_id = max(array_column($matieres, 'id_matiere')) + 1;
+
+					// Create new subject
+					$new_matiere = array_merge([
+						'id_matiere' => $new_id
+					], $matiere_data);
+
+					echo json_encode([
+						'success' => true,
+						'message' => 'Subject created successfully (mocked)',
+						'data' => $new_matiere
+					]);
+					break;
+
+				case 'PUT':
+					// Update a subject
+					$path_parts = explode('/', $_SERVER['REQUEST_URI']);
+					$id = null;
+					foreach ($path_parts as $index => $part) {
+						if ($part === 'matieres' && isset($path_parts[$index + 1]) && is_numeric($path_parts[$index + 1])) {
+							$id = $path_parts[$index + 1];
+							break;
+						}
+					}
+
+					if (!$id) {
+						http_response_code(400);
+						echo json_encode([
+							'success' => false,
+							'message' => 'Subject ID is required (mocked)'
+						]);
+						break;
+					}
+
+					$raw_post = file_get_contents("php://input");
+					$matiere_data = json_decode($raw_post, true);
+
+					echo json_encode([
+						'success' => true,
+						'message' => 'Subject updated successfully (mocked)',
+						'data' => array_merge(['id_matiere' => (int)$id], $matiere_data)
+					]);
+					break;
+
+				case 'DELETE':
+					// Delete a subject
+					$path_parts = explode('/', $_SERVER['REQUEST_URI']);
+					$id = null;
+					foreach ($path_parts as $index => $part) {
+						if ($part === 'matieres' && isset($path_parts[$index + 1]) && is_numeric($path_parts[$index + 1])) {
+							$id = $path_parts[$index + 1];
+							break;
+						}
+					}
+
+					if (!$id) {
+						http_response_code(400);
+						echo json_encode([
+							'success' => false,
+							'message' => 'Subject ID is required (mocked)'
+						]);
+						break;
+					}
+
+					echo json_encode([
+						'success' => true,
+						'message' => 'Subject deleted successfully (mocked)'
+					]);
+					break;
+
+				default:
+					http_response_code(405);
+					echo json_encode([
+						'success' => false,
+						'message' => 'Method not allowed (mocked)'
+					]);
+			}
 		},
 
 		'examens' => function () {
-			// Mock data for exams based on SQL structure
-			echo json_encode([
-				'success' => true,
-				'message' => 'Examens retrieved successfully (mocked)',
-				'data' => [
-					[
-						'id_exam' => 1,
-						'titre' => 'Analyse de texte',
-						'matiere' => 2,
-						'classe' => 3,
-						'date' => '2025-05-10',
-						'matiere_nom' => 'Français',
-						'classe_nom' => '2A2'
-					],
-					[
-						'id_exam' => 10,
-						'titre' => 'TEST POSITIONNEMENT',
-						'matiere' => 1,
-						'classe' => 3,
-						'date' => '2025-05-20',
-						'matiere_nom' => 'Mathématiques',
-						'classe_nom' => '2A2'
-					],
-					[
-						'id_exam' => 12,
-						'titre' => 'Examen Docker',
-						'matiere' => 16,
-						'classe' => 3,
-						'date' => '2025-05-16',
-						'matiere_nom' => 'Docker',
-						'classe_nom' => '2A2'
-					]
+			// Check if this is a GET, POST, PUT or DELETE request
+			$method = $_SERVER['REQUEST_METHOD'];
+
+			// Base mock data for exams
+			$examens = [
+				[
+					'id_exam' => 1,
+					'titre' => 'Analyse de texte',
+					'matiere' => 2,
+					'classe' => 3,
+					'date' => '2025-05-10',
+					'matiere_nom' => 'Français',
+					'classe_nom' => '2A2'
+				],
+				[
+					'id_exam' => 10,
+					'titre' => 'TEST POSITIONNEMENT',
+					'matiere' => 1,
+					'classe' => 3,
+					'date' => '2025-05-20',
+					'matiere_nom' => 'Mathématiques',
+					'classe_nom' => '2A2'
+				],
+				[
+					'id_exam' => 12,
+					'titre' => 'Examen Docker',
+					'matiere' => 16,
+					'classe' => 3,
+					'date' => '2025-05-16',
+					'matiere_nom' => 'Docker',
+					'classe_nom' => '2A2'
 				]
-			]);
+			];
+
+			// Handle CRUD operations similar to classes endpoint
+			switch ($method) {
+				case 'GET':
+					echo json_encode([
+						'success' => true,
+						'message' => 'Exams retrieved successfully (mocked)',
+						'data' => $examens
+					]);
+					break;
+
+				case 'POST':
+					$raw_post = file_get_contents("php://input");
+					$exam_data = json_decode($raw_post, true);
+
+					if (!$exam_data) {
+						http_response_code(400);
+						echo json_encode([
+							'success' => false,
+							'message' => 'Invalid exam data (mocked)'
+						]);
+						break;
+					}
+
+					// Generate a new ID
+					$new_id = max(array_column($examens, 'id_exam')) + 1;
+
+					// Lookup mock data for matiere and classe names
+					$matiere_nom = 'Unknown';
+					$classe_nom = 'Unknown';
+
+					if (isset($exam_data['matiere'])) {
+						if ($exam_data['matiere'] == 1) $matiere_nom = 'Mathématiques';
+						if ($exam_data['matiere'] == 2) $matiere_nom = 'Français';
+						if ($exam_data['matiere'] == 16) $matiere_nom = 'Docker';
+						if ($exam_data['matiere'] == 17) $matiere_nom = 'Azure';
+					}
+
+					if (isset($exam_data['classe'])) {
+						if ($exam_data['classe'] == 1) $classe_nom = '2A1';
+						if ($exam_data['classe'] == 3) $classe_nom = '2A2';
+						if ($exam_data['classe'] == 4) $classe_nom = '2A3';
+						if ($exam_data['classe'] == 6) $classe_nom = '2A5';
+						if ($exam_data['classe'] == 7) $classe_nom = '1A2';
+					}
+
+					$new_exam = array_merge([
+						'id_exam' => $new_id,
+						'matiere_nom' => $matiere_nom,
+						'classe_nom' => $classe_nom
+					], $exam_data);
+
+					echo json_encode([
+						'success' => true,
+						'message' => 'Exam created successfully (mocked)',
+						'data' => $new_exam
+					]);
+					break;
+
+				case 'PUT':
+				case 'DELETE':
+					echo json_encode([
+						'success' => true,
+						'message' => 'Operation completed successfully (mocked)'
+					]);
+					break;
+
+				default:
+					http_response_code(405);
+					echo json_encode([
+						'success' => false,
+						'message' => 'Method not allowed (mocked)'
+					]);
+			}
 		},
 
 		'profs' => function () {
-			// Mock data for professors based on SQL structure
-			echo json_encode([
-				'success' => true,
-				'message' => 'Professeurs retrieved successfully (mocked)',
-				'data' => [
-					[
-						'id_prof' => 1,
-						'nom' => 'El Attar',
-						'prenom' => 'Ahmed',
-						'email' => 'mr.ahmed.elattar.pro@gmail.com',
-						'matiere' => 1,
-						'matiere_nom' => 'Mathématiques'
-					],
-					[
-						'id_prof' => 2,
-						'nom' => 'Ngo',
-						'prenom' => 'Mathis',
-						'email' => 'mathis.ngoo@gmail.com',
-						'matiere' => null,
-						'matiere_nom' => null
-					]
+			// Check if this is a GET, POST, PUT or DELETE request
+			$method = $_SERVER['REQUEST_METHOD'];
+
+			// Base mock data for professors
+			$profs = [
+				[
+					'id_prof' => 1,
+					'nom' => 'El Attar',
+					'prenom' => 'Ahmed',
+					'email' => 'mr.ahmed.elattar.pro@gmail.com',
+					'matiere' => 1,
+					'matiere_nom' => 'Mathématiques'
+				],
+				[
+					'id_prof' => 2,
+					'nom' => 'Ngo',
+					'prenom' => 'Mathis',
+					'email' => 'mathis.ngoo@gmail.com',
+					'matiere' => null,
+					'matiere_nom' => null
 				]
-			]);
+			];
+
+			// Handle CRUD operations similar to the other endpoints
+			switch ($method) {
+				case 'GET':
+					echo json_encode([
+						'success' => true,
+						'message' => 'Professors retrieved successfully (mocked)',
+						'data' => $profs
+					]);
+					break;
+
+				case 'POST':
+				case 'PUT':
+				case 'DELETE':
+					echo json_encode([
+						'success' => true,
+						'message' => 'Operation completed successfully (mocked)'
+					]);
+					break;
+
+				default:
+					http_response_code(405);
+					echo json_encode([
+						'success' => false,
+						'message' => 'Method not allowed (mocked)'
+					]);
+			}
 		},
 
 		'users' => function () {
-			// Mock data for users based on SQL structure
+			// Check if this is a GET, POST, PUT or DELETE request
+			$method = $_SERVER['REQUEST_METHOD'];
+
+			// Base mock data for users
+			$users = [
+				[
+					'id_user' => 1,
+					'nom' => 'Pelcat',
+					'prenom' => 'Arthur',
+					'email' => 'apelcat@myges.fr',
+					'classe' => 3,
+					'classe_nom' => '2A2'
+				],
+				[
+					'id_user' => 2,
+					'nom' => 'Sage',
+					'prenom' => 'William',
+					'email' => 'wsage@myges.fr',
+					'classe' => 3,
+					'classe_nom' => '2A2'
+				],
+				[
+					'id_user' => 3,
+					'nom' => 'Theo',
+					'prenom' => 'Przybylski',
+					'email' => 'tprzybylski@myges.fr',
+					'classe' => 4,
+					'classe_nom' => '2A3'
+				],
+				[
+					'id_user' => 4,
+					'nom' => 'El Attar',
+					'prenom' => 'Ahmed',
+					'email' => 'aelattar@myges.fr',
+					'classe' => 3,
+					'classe_nom' => '2A2'
+				],
+				[
+					'id_user' => 5,
+					'nom' => 'Ngo',
+					'prenom' => 'Mathis',
+					'email' => 'mngo4@myges.fr',
+					'classe' => 3,
+					'classe_nom' => '2A2'
+				]
+			];
+
+			// Handle CRUD operations
+			switch ($method) {
+				case 'GET':
+					echo json_encode([
+						'success' => true,
+						'message' => 'Users retrieved successfully (mocked)',
+						'data' => $users
+					]);
+					break;
+
+				case 'POST':
+				case 'PUT':
+				case 'DELETE':
+					echo json_encode([
+						'success' => true,
+						'message' => 'Operation completed successfully (mocked)'
+					]);
+					break;
+
+				default:
+					http_response_code(405);
+					echo json_encode([
+						'success' => false,
+						'message' => 'Method not allowed (mocked)'
+					]);
+			}
+		},
+
+		'notes' => function () {
+			// Mock data for grades
+			$notes = [
+				[
+					'id_note' => 1,
+					'note' => 13.00,
+					'student_id' => 1,
+					'student_nom' => 'Pelcat Arthur',
+					'exam' => 10,
+					'exam_titre' => 'TEST POSITIONNEMENT'
+				],
+				[
+					'id_note' => 2,
+					'note' => 14.00,
+					'student_id' => 2,
+					'student_nom' => 'Sage William',
+					'exam' => 10,
+					'exam_titre' => 'TEST POSITIONNEMENT'
+				],
+				[
+					'id_note' => 4,
+					'note' => 13.00,
+					'student_id' => 2,
+					'student_nom' => 'Sage William',
+					'exam' => 12,
+					'exam_titre' => 'Examen Docker'
+				],
+				[
+					'id_note' => 5,
+					'note' => 18.00,
+					'student_id' => 4,
+					'student_nom' => 'El Attar Ahmed',
+					'exam' => 12,
+					'exam_titre' => 'Examen Docker'
+				]
+			];
+
+			// Always return the mock data for now
 			echo json_encode([
 				'success' => true,
-				'message' => 'Users retrieved successfully (mocked)',
-				'data' => [
-					[
-						'id_user' => 1,
-						'nom' => 'Pelcat',
-						'prenom' => 'Arthur',
-						'email' => 'apelcat@myges.fr',
-						'classe' => 3,
-						'classe_nom' => '2A2'
-					],
-					[
-						'id_user' => 2,
-						'nom' => 'Sage',
-						'prenom' => 'William',
-						'email' => 'wsage@myges.fr',
-						'classe' => 3,
-						'classe_nom' => '2A2'
-					],
-					[
-						'id_user' => 3,
-						'nom' => 'Theo',
-						'prenom' => 'Przybylski',
-						'email' => 'tprzybylski@myges.fr',
-						'classe' => 4,
-						'classe_nom' => '2A3'
-					],
-					[
-						'id_user' => 4,
-						'nom' => 'El Attar',
-						'prenom' => 'Ahmed',
-						'email' => 'aelattar@myges.fr',
-						'classe' => 3,
-						'classe_nom' => '2A2'
-					],
-					[
-						'id_user' => 5,
-						'nom' => 'Ngo',
-						'prenom' => 'Mathis',
-						'email' => 'mngo4@myges.fr',
-						'classe' => 3,
-						'classe_nom' => '2A2'
-					]
-				]
+				'message' => 'Grades retrieved successfully (mocked)',
+				'data' => $notes
 			]);
 		}
 	];

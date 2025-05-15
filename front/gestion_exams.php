@@ -1,9 +1,20 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['prof_id'])) {
+// Check if user is logged in
+if (!isset($_SESSION['user']) || !isset($_SESSION['token'])) {
 	header('Location: login.php');
-	exit();
+	exit;
+}
+
+// Get user data
+$user = $_SESSION['user'];
+
+// Check if user has admin role
+if ($user['role'] !== 'admin') {
+	// Redirect non-admin users
+	header('Location: dashboard.php');
+	exit;
 }
 
 $pageTitle = "Gestion des Examens";
@@ -334,7 +345,7 @@ ob_start();
 
 <script src="js/notification-system.js?v=1.1"></script>
 <script src="js/error-messages.js"></script>
-<script src="js/config.js?v=1.1"></script>
+<script src="js/config.js?v=1.9"></script>
 <script>
 	// Vérifier que les scripts sont chargés
 	console.log('Vérification du chargement des scripts...');
@@ -349,44 +360,9 @@ ob_start();
 		console.error('Le script notification-system.js n\'est pas chargé correctement');
 	}
 
-	// Fonction utilitaire pour logger les requêtes et réponses
-	async function fetchWithLogging(url, options = {}) {
-		console.log('🌐 Requête API:', url);
-		console.log('Options:', options);
-
-		try {
-			const response = await fetch(url, {
-				...options,
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-					...options.headers
-				},
-				credentials: 'include'
-			});
-
-			console.log('Status:', response.status);
-			console.log('Headers:', Object.fromEntries(response.headers.entries()));
-
-			const contentType = response.headers.get('content-type');
-			if (!contentType || !contentType.includes('application/json')) {
-				throw new Error(`Réponse invalide: ${contentType}`);
-			}
-
-			const data = await response.json();
-			console.log('Réponse:', data);
-
-			if (!response.ok) {
-				throw new Error(data.message || `Erreur ${response.status}`);
-			}
-
-			return {
-				data
-			};
-		} catch (error) {
-			console.error('Erreur:', error);
-			throw error;
-		}
+	// Function to get API endpoint with proxy support
+	function getApiEndpoint(endpoint) {
+		return `${appConfig.proxyUrl}?endpoint=${encodeURIComponent(endpoint)}`;
 	}
 
 	// Fonction pour charger les matières
@@ -395,7 +371,7 @@ ob_start();
 			console.log('Chargement des matières...');
 			const {
 				data: result
-			} = await fetchWithLogging(getApiUrl('matieres'));
+			} = await fetchWithLogging(getApiEndpoint('matieres'));
 			console.log('Résultat matières:', result);
 
 			if (!result.success) {
@@ -423,7 +399,7 @@ ob_start();
 			console.log('Chargement des classes...');
 			const {
 				data: result
-			} = await fetchWithLogging(getApiUrl('classes'));
+			} = await fetchWithLogging(getApiEndpoint('classes'));
 			console.log('Résultat classes:', result);
 
 			if (!result.success) {
@@ -451,7 +427,7 @@ ob_start();
 			console.log('Chargement des examens...');
 			const {
 				data: result
-			} = await fetchWithLogging(getApiUrl('examens'));
+			} = await fetchWithLogging(getApiEndpoint('examens'));
 			console.log('Résultat examens:', result);
 
 			if (!result.success) {
@@ -535,7 +511,7 @@ ob_start();
 
 		try {
 			console.log('Envoi de la requête...');
-			const response = await fetch(getApiUrl('examens'), {
+			const response = await fetch(getApiEndpoint('examens'), {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -625,7 +601,7 @@ ob_start();
 			}
 
 			try {
-				const response = await fetch(`${getApiUrl('examens')}/${id_examen}`, {
+				const response = await fetch(getApiEndpoint(`examens/${id_examen}`), {
 					method: 'PUT',
 					headers: {
 						'Content-Type': 'application/json'
@@ -652,7 +628,7 @@ ob_start();
 	// Fonction pour charger les matières dans le modal d'édition
 	async function loadMatieresForEdit(selectedMatiere) {
 		try {
-			const response = await fetch(getApiUrl('matieres'));
+			const response = await fetch(getApiEndpoint('matieres'));
 			const result = await response.json();
 
 			if (!result.success) {
@@ -677,7 +653,7 @@ ob_start();
 	// Fonction pour charger les classes dans le modal d'édition
 	async function loadClassesForEdit(selectedClasse) {
 		try {
-			const response = await fetch(getApiUrl('classes'));
+			const response = await fetch(getApiEndpoint('classes'));
 			const result = await response.json();
 
 			if (!result.success) {
@@ -715,7 +691,7 @@ ob_start();
 
 		try {
 			console.log('Tentative de suppression de l\'examen:', id_examen);
-			const response = await fetch(`${getApiUrl('examens')}/${id_examen}`, {
+			const response = await fetch(getApiEndpoint(`examens/${id_examen}`), {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json'

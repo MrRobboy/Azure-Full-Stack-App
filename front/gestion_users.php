@@ -1,9 +1,20 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['prof_id'])) {
+// Check if user is logged in
+if (!isset($_SESSION['user']) || !isset($_SESSION['token'])) {
 	header('Location: login.php');
-	exit();
+	exit;
+}
+
+// Get user data
+$user = $_SESSION['user'];
+
+// Check if user has admin role
+if ($user['role'] !== 'admin') {
+	// Redirect non-admin users
+	header('Location: dashboard.php');
+	exit;
 }
 
 $pageTitle = "Gestion des Utilisateurs";
@@ -246,14 +257,18 @@ ob_start();
 </div>
 
 <script src="js/notification-system.js?v=1.1"></script>
-<script src="js/error-messages.js"></script>
-<script src="js/config.js?v=1.1"></script>
+<script src="js/config.js?v=1.9"></script>
 <script>
+	// Function to get API endpoint with proxy support
+	function getApiEndpoint(endpoint) {
+		return `${appConfig.proxyUrl}?endpoint=${encodeURIComponent(endpoint)}`;
+	}
+
 	// Fonction pour charger les classes
 	async function loadClasses() {
 		try {
 			console.log('Chargement des classes...');
-			const response = await fetch(getApiUrl('classes'));
+			const response = await fetch(getApiEndpoint('classes'));
 
 			if (!response.ok) {
 				throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
@@ -298,7 +313,7 @@ ob_start();
 	async function loadUsers() {
 		try {
 			console.log('Chargement des utilisateurs...');
-			const response = await fetch(getApiUrl('users'));
+			const response = await fetch(getApiEndpoint('users'));
 
 			if (!response.ok) {
 				throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
@@ -331,7 +346,7 @@ ob_start();
 							<td>${user.nom}</td>
 							<td>${user.prenom}</td>
 							<td>${user.email}</td>
-							<td>${user.nom_classe || 'Non assigné'}</td>
+							<td>${user.classe_nom || 'Non assigné'}</td>
 							<td>
 								<button class="btn btn-edit" onclick="openEditModal(${JSON.stringify(user).replace(/"/g, '&quot;')})">Modifier</button>
 								<button class="btn btn-danger" onclick="deleteUser(${user.id_user})">Supprimer</button>
@@ -363,7 +378,7 @@ ob_start();
 		};
 
 		try {
-			const response = await fetch(getApiUrl('users'), {
+			const response = await fetch(getApiEndpoint('users'), {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -419,7 +434,7 @@ ob_start();
 		}
 
 		try {
-			const response = await fetch(`${getApiUrl('users')}/${userId}`, {
+			const response = await fetch(`${getApiEndpoint('users')}/${userId}`, {
 				method: 'PUT',
 				headers: {
 					'Content-Type': 'application/json'
@@ -448,7 +463,7 @@ ob_start();
 		}
 
 		try {
-			const response = await fetch(`${getApiUrl('users')}/${userId}`, {
+			const response = await fetch(`${getApiEndpoint('users')}/${userId}`, {
 				method: 'DELETE'
 			});
 

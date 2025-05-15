@@ -1,9 +1,20 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['prof_id'])) {
+// Check if user is logged in
+if (!isset($_SESSION['user']) || !isset($_SESSION['token'])) {
 	header('Location: login.php');
-	exit();
+	exit;
+}
+
+// Get user data
+$user = $_SESSION['user'];
+
+// Check if user has admin role
+if ($user['role'] !== 'admin') {
+	// Redirect non-admin users
+	header('Location: dashboard.php');
+	exit;
 }
 
 $pageTitle = "Gestion des Professeurs";
@@ -210,8 +221,13 @@ ob_start();
 
 <script src="js/notification-system.js?v=1.1"></script>
 <script src="js/error-messages.js"></script>
-<script src="js/config.js?v=1.1"></script>
+<script src="js/config.js?v=1.9"></script>
 <script>
+	// Function to get API endpoint with proxy support
+	function getApiEndpoint(endpoint) {
+		return `${appConfig.proxyUrl}?endpoint=${encodeURIComponent(endpoint)}`;
+	}
+
 	// Fonction pour charger les professeurs
 	async function loadProfs() {
 		try {
@@ -225,7 +241,7 @@ ob_start();
 				NotificationSystem.info('Chargement des professeurs...');
 			}
 
-			const response = await fetch(getApiUrl('profs'));
+			const response = await fetch(getApiEndpoint('profs'));
 
 			if (!response.ok) {
 				throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
@@ -314,7 +330,7 @@ ob_start();
 				NotificationSystem.info('Ajout du professeur en cours...');
 			}
 
-			const response = await fetch(getApiUrl('profs'), {
+			const response = await fetch(getApiEndpoint('profs'), {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -413,7 +429,7 @@ ob_start();
 			}
 
 			try {
-				const response = await fetch(`${getApiUrl('profs')}/${id}`, {
+				const response = await fetch(getApiEndpoint(`profs/${id}`), {
 					method: 'PUT',
 					headers: {
 						'Content-Type': 'application/json'
@@ -453,7 +469,7 @@ ob_start();
 
 		try {
 			console.log('Tentative de suppression du professeur:', id);
-			const response = await fetch(`${getApiUrl('profs')}/${id}`, {
+			const response = await fetch(getApiEndpoint(`profs/${id}`), {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json'
