@@ -66,6 +66,28 @@ const ErrorMessages = {
 			ERROR: "Erreur lors de la suppression de la classe",
 			NOT_FOUND: "La classe à supprimer n'existe pas"
 		}
+	},
+
+	// Messages pour les notes et privilèges
+	NOTES: {
+		CREATE: {
+			SUCCESS: "La note a été ajoutée avec succès",
+			ERROR: "Erreur lors de l'ajout de la note",
+			DUPLICATE: "Cet étudiant a déjà une note pour cet examen"
+		},
+		UPDATE: {
+			SUCCESS: "La note a été mise à jour avec succès",
+			ERROR: "Erreur lors de la mise à jour de la note",
+			NOT_FOUND: "La note à mettre à jour n'existe pas"
+		},
+		DELETE: {
+			SUCCESS: "La note a été supprimée avec succès",
+			ERROR: "Erreur lors de la suppression de la note",
+			NOT_FOUND: "La note à supprimer n'existe pas"
+		},
+		PRIVILEGE: {
+			MIN_NOTE: "Cet étudiant ne peut pas avoir une note inférieure à"
+		}
 	}
 };
 

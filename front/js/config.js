@@ -9,11 +9,17 @@ const API_CONFIG = {
 		matieres: "/matieres",
 		notes: "/notes",
 		examens: "/examens",
-		auth: "/auth"
+		auth: "/auth",
+		profs: "/profs",
+		users: "/users"
 	}
 };
 
 // Fonction utilitaire pour construire les URLs de l'API
 function getApiUrl(endpoint) {
+	if (!endpoint || !API_CONFIG.endpoints[endpoint]) {
+		console.error(`Endpoint API invalide: ${endpoint}`);
+		return API_CONFIG.baseUrl + "/unknown-endpoint";
+	}
 	return API_CONFIG.baseUrl + API_CONFIG.endpoints[endpoint];
 }

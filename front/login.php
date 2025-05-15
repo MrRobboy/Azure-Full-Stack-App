@@ -48,6 +48,9 @@ ob_start();
 	</div>
 </div>
 
+<script src="js/cache-buster.js"></script>
+<script src="js/config.js?v=1.1"></script>
+<script src="js/notification-system.js?v=1.1"></script>
 <script>
 	function toggleErrorDetails() {
 		const details = document.querySelector('.error-details');
@@ -74,6 +77,9 @@ ob_start();
 		errorTrace.textContent = 'Détails: ' + JSON.stringify(error.details || {}, null, 2);
 
 		errorMessage.style.display = 'block';
+
+		// Ajouter la notification via le système de notification
+		NotificationSystem.error(error.message || 'Erreur de connexion');
 	}
 
 	document.getElementById('login-form').addEventListener('submit', async function(e) {
@@ -91,9 +97,12 @@ ob_start();
 		btnLoading.style.display = 'inline-block';
 		errorMessage.style.display = 'none';
 
+		// Notification pour informer l'utilisateur
+		NotificationSystem.info('Tentative de connexion...');
+
 		try {
 			console.log('Tentative de connexion...');
-			const response = await fetch('/api/auth/login', {
+			const response = await fetch(getApiUrl('auth') + '/login', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -117,9 +126,14 @@ ob_start();
 			}
 
 			if (response.ok) {
+				NotificationSystem.success('Connexion réussie');
 				window.location.href = 'dashboard.php';
 			} else {
-				displayError(data.error);
+				displayError(data.error || {
+					type: 'Erreur d\'authentification',
+					message: data.message || 'Identifiants incorrects',
+					details: data
+				});
 				console.error('Erreur de connexion:', data);
 			}
 		} catch (error) {

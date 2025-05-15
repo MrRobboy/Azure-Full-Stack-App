@@ -191,9 +191,9 @@ ob_start();
 	</div>
 </div>
 
-<script src="js/notification-system.js"></script>
+<script src="js/notification-system.js?v=1.1"></script>
 <script src="js/error-messages.js"></script>
-<script src="js/config.js"></script>
+<script src="js/config.js?v=1.1"></script>
 <script>
 	// Vérifier que les scripts sont chargés
 	console.log('Vérification du chargement des scripts...');

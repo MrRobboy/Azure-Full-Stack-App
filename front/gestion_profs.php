@@ -208,31 +208,57 @@ ob_start();
 	</div>
 </div>
 
-<script src="js/notification-system.js"></script>
+<script src="js/notification-system.js?v=1.1"></script>
 <script src="js/error-messages.js"></script>
-<script src="js/config.js"></script>
+<script src="js/config.js?v=1.1"></script>
 <script>
-	// Fonction pour obtenir l'URL de l'API
-	function getApiUrl(endpoint) {
-		return `api/${endpoint}`;
-	}
-
 	// Fonction pour charger les professeurs
 	async function loadProfs() {
 		try {
 			console.log('Chargement des professeurs...');
+			const loaderId = 'loading-profs';
+
+			// Vérifier si startLoader est disponible
+			if (typeof NotificationSystem.startLoader === 'function') {
+				NotificationSystem.startLoader(loaderId, 'Chargement des professeurs...');
+			} else {
+				NotificationSystem.info('Chargement des professeurs...');
+			}
+
 			const response = await fetch(getApiUrl('profs'));
-			const result = await response.json();
+
+			if (!response.ok) {
+				throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
+			}
+
+			const responseText = await response.text();
+			console.log('Réponse brute:', responseText);
+
+			let result;
+			try {
+				result = JSON.parse(responseText);
+			} catch (e) {
+				console.error('Erreur de parsing JSON:', e);
+				throw new Error('Réponse invalide du serveur: ' + responseText);
+			}
 
 			if (!result.success) {
 				throw new Error(result.message || 'Erreur lors du chargement des professeurs');
 			}
 
+			console.log('Données des professeurs:', result.data);
 			const tbody = document.querySelector('#profsTable tbody');
 			tbody.innerHTML = '';
 
 			if (!result.data || result.data.length === 0) {
 				tbody.innerHTML = '<tr><td colspan="4">Aucun professeur trouvé</td></tr>';
+
+				// Vérifier si stopLoader est disponible
+				if (typeof NotificationSystem.stopLoader === 'function') {
+					NotificationSystem.stopLoader(loaderId, 'Aucun professeur trouvé');
+				} else {
+					NotificationSystem.warning('Aucun professeur trouvé');
+				}
 				return;
 			}
 
@@ -249,9 +275,16 @@ ob_start();
 				`;
 				tbody.appendChild(tr);
 			});
+
+			// Vérifier si stopLoader est disponible
+			if (typeof NotificationSystem.stopLoader === 'function') {
+				NotificationSystem.stopLoader(loaderId, `${result.data.length} professeurs chargés avec succès`);
+			} else {
+				NotificationSystem.success(`${result.data.length} professeurs chargés avec succès`);
+			}
 		} catch (error) {
 			console.error('Erreur lors du chargement des professeurs:', error);
-			NotificationSystem.error(error.message);
+			NotificationSystem.error(error.message || 'Erreur lors du chargement des professeurs');
 		}
 	}
 
@@ -271,6 +304,16 @@ ob_start();
 		}
 
 		try {
+			console.log('Envoi des données pour ajout de professeur:', formData);
+			const loaderId = 'adding-prof';
+
+			// Vérifier si startLoader est disponible
+			if (typeof NotificationSystem.startLoader === 'function') {
+				NotificationSystem.startLoader(loaderId, 'Ajout du professeur en cours...');
+			} else {
+				NotificationSystem.info('Ajout du professeur en cours...');
+			}
+
 			const response = await fetch(getApiUrl('profs'), {
 				method: 'POST',
 				headers: {
@@ -279,19 +322,40 @@ ob_start();
 				body: JSON.stringify(formData)
 			});
 
-			const result = await response.json();
+			if (!response.ok) {
+				throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
+			}
+
+			const responseText = await response.text();
+			console.log('Réponse brute:', responseText);
+
+			let result;
+			try {
+				result = JSON.parse(responseText);
+			} catch (e) {
+				console.error('Erreur de parsing JSON:', e);
+				throw new Error('Réponse invalide du serveur: ' + responseText);
+			}
+
 			console.log('Résultat de la création:', result);
 
 			if (!result.success) {
-				throw new Error(result.error || 'Erreur lors de l\'ajout du professeur');
+				throw new Error(result.message || 'Erreur lors de l\'ajout du professeur');
 			}
 
 			document.getElementById('addProfForm').reset();
-			NotificationSystem.success('Le professeur a été ajouté avec succès');
+
+			// Vérifier si stopLoader est disponible
+			if (typeof NotificationSystem.stopLoader === 'function') {
+				NotificationSystem.stopLoader(loaderId, 'Le professeur a été ajouté avec succès');
+			} else {
+				NotificationSystem.success('Le professeur a été ajouté avec succès');
+			}
+
 			loadProfs();
 		} catch (error) {
 			console.error('Erreur lors de l\'ajout du professeur:', error);
-			NotificationSystem.error(error.message);
+			NotificationSystem.error(error.message || 'Erreur lors de l\'ajout du professeur');
 		}
 	});
 

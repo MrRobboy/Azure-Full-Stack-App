@@ -1,212 +1,285 @@
-class ErrorHandler {
-	static showError(
-		message,
-		type = "error",
-		context = "",
-		suggestion = ""
-	) {
-		// Supprimer les messages existants
-		this.clearMessages();
+// Gestionnaire d'erreurs global
+const ErrorHandler = {
+	// Initialiser le gestionnaire d'erreurs
+	init() {
+		console.log("Initialisation du gestionnaire d'erreurs...");
+		this.setupGlobalErrorHandling();
+	},
 
-		// Créer le conteneur de message
-		const messageContainer = document.createElement("div");
-		messageContainer.className = `message-container ${type}`;
+	// Configurer la gestion globale des erreurs
+	setupGlobalErrorHandling() {
+		// Intercepter les erreurs non gérées
+		window.addEventListener("error", (event) => {
+			console.error("Erreur non gérée:", event.error);
+			this.displayError({
+				type: "Erreur JavaScript",
+				message: event.message,
+				details: {
+					filename: event.filename,
+					lineno: event.lineno,
+					colno: event.colno,
+					stack: event.error?.stack
+				}
+			});
 
-		// Créer le message
-		const messageElement = document.createElement("div");
-		messageElement.className = "message";
+			// Afficher la notification si le système est disponible
+			if (window.NotificationSystem) {
+				NotificationSystem.error(
+					`Erreur: ${event.message}`
+				);
+			}
+		});
 
-		// Ajouter le contexte si présent
-		if (context) {
-			const contextElement = document.createElement("div");
-			contextElement.className = "error-context";
-			contextElement.textContent = context;
-			messageElement.appendChild(contextElement);
-		}
+		// Intercepter les rejets de promesses non gérés
+		window.addEventListener("unhandledrejection", (event) => {
+			console.error(
+				"Promesse rejetée non gérée:",
+				event.reason
+			);
+			this.displayError({
+				type: "Promesse rejetée",
+				message:
+					event.reason?.message ||
+					"Erreur asynchrone non gérée",
+				details: {
+					stack: event.reason?.stack,
+					reason: event.reason
+				}
+			});
 
-		// Ajouter le message principal
-		const messageText = document.createElement("div");
-		messageText.className = "error-message";
-		messageText.textContent = message;
-		messageElement.appendChild(messageText);
+			// Afficher la notification si le système est disponible
+			if (window.NotificationSystem) {
+				NotificationSystem.error(
+					`Erreur asynchrone: ${
+						event.reason?.message ||
+						"Erreur inconnue"
+					}`
+				);
+			}
+		});
+	},
 
-		// Ajouter la suggestion si présente
-		if (suggestion) {
-			const suggestionElement = document.createElement("div");
-			suggestionElement.className = "error-suggestion";
-			suggestionElement.textContent = suggestion;
-			messageElement.appendChild(suggestionElement);
-		}
-
-		// Ajouter le bouton de fermeture
-		const closeButton = document.createElement("button");
-		closeButton.className = "close-button";
-		closeButton.innerHTML = "&times;";
-		closeButton.onclick = () => this.clearMessages();
-
-		// Assembler les éléments
-		messageContainer.appendChild(messageElement);
-		messageContainer.appendChild(closeButton);
-
-		// Ajouter le conteneur au début du main-content
-		const mainContent = document.querySelector(".main-content");
-		mainContent.insertBefore(
-			messageContainer,
-			mainContent.firstChild
+	// Gérer les erreurs réseau (fetch)
+	async handleFetchError(response, url) {
+		console.error(
+			`Erreur HTTP: ${response.status} - ${response.statusText}`,
+			url
 		);
 
-		// Supprimer automatiquement après 5 secondes
-		setTimeout(() => this.clearMessages(), 5000);
-	}
-
-	static clearMessages() {
-		const existingMessages =
-			document.querySelectorAll(".message-container");
-		existingMessages.forEach((message) => message.remove());
-	}
-
-	static handleApiError(error, context = "") {
-		console.error("Erreur API:", error);
-
-		if (error.response) {
-			// Erreur avec réponse du serveur
-			const status = error.response.status;
-			const data = error.response.data;
-			let errorCode = "";
-			let suggestion = "";
-
-			switch (status) {
-				case 400:
-					errorCode = "ERR-400";
-					suggestion =
-						"Vérifiez les données saisies et réessayez.";
-					this.showError(
-						data.message ||
-							"Données invalides",
-						"error",
-						`${
-							context ||
-							"Erreur de validation"
-						} [${errorCode}]`,
-						suggestion
-					);
-					break;
-				case 401:
-					errorCode = "ERR-401";
-					suggestion =
-						"Veuillez vous reconnecter.";
-					this.showError(
-						"Vous devez être connecté pour effectuer cette action",
-						"error",
-						`${
-							context ||
-							"Erreur d'authentification"
-						} [${errorCode}]`,
-						suggestion
-					);
-					break;
-				case 403:
-					errorCode = "ERR-403";
-					suggestion =
-						"Contactez votre administrateur pour obtenir les permissions nécessaires.";
-					this.showError(
-						"Vous n'avez pas les permissions nécessaires",
-						"error",
-						`${
-							context ||
-							"Erreur d'autorisation"
-						} [${errorCode}]`,
-						suggestion
-					);
-					break;
-				case 404:
-					errorCode = "ERR-404";
-					suggestion =
-						"Vérifiez que la ressource existe et que l'URL est correcte.";
-					this.showError(
-						"Ressource non trouvée",
-						"error",
-						`${
-							context ||
-							"Erreur de ressource"
-						} [${errorCode}]`,
-						suggestion
-					);
-					break;
-				case 500:
-					errorCode = "ERR-500";
-					suggestion =
-						"Veuillez réessayer dans quelques instants. Si le problème persiste, contactez le support.";
-					this.showError(
-						"Erreur serveur. Veuillez réessayer plus tard",
-						"error",
-						`${
-							context ||
-							"Erreur serveur"
-						} [${errorCode}]`,
-						suggestion
-					);
-					break;
-				default:
-					errorCode = "ERR-000";
-					suggestion =
-						"Contactez le support technique en mentionnant le code d'erreur.";
-					this.showError(
-						data.message ||
-							"Une erreur est survenue",
-						"error",
-						`${
-							context ||
-							"Erreur inconnue"
-						} [${errorCode}]`,
-						suggestion
-					);
+		let errorData = {
+			type: `Erreur HTTP ${response.status}`,
+			message: response.statusText,
+			details: {
+				status: response.status,
+				url: url
 			}
-		} else if (error.request) {
-			// Erreur de requête (pas de réponse)
-			errorCode = "ERR-NET";
-			suggestion =
-				"Vérifiez votre connexion internet et réessayez.";
-			this.showError(
-				"Impossible de se connecter au serveur",
-				"error",
-				`${
-					context || "Erreur de connexion"
-				} [${errorCode}]`,
-				suggestion
-			);
-		} else {
-			// Erreur lors de la configuration de la requête
-			errorCode = "ERR-CFG";
-			suggestion =
-				"Veuillez rafraîchir la page. Si le problème persiste, contactez le support.";
-			this.showError(
-				"Erreur lors de la préparation de la requête",
-				"error",
-				`${
-					context || "Erreur de configuration"
-				} [${errorCode}]`,
-				suggestion
+		};
+
+		// Tenter de récupérer les détails de l'erreur depuis la réponse JSON
+		try {
+			const contentType =
+				response.headers.get("content-type");
+			if (
+				contentType &&
+				contentType.includes("application/json")
+			) {
+				const data = await response.json();
+				errorData.message =
+					data.message || errorData.message;
+				errorData.details.response = data;
+			} else {
+				const text = await response.text();
+				errorData.details.response = text;
+			}
+		} catch (e) {
+			console.error(
+				"Erreur lors de la lecture de la réponse:",
+				e
 			);
 		}
+
+		this.displayError(errorData);
+
+		// Afficher la notification si le système est disponible
+		if (window.NotificationSystem) {
+			NotificationSystem.error(
+				`Erreur serveur: ${errorData.message}`
+			);
+		}
+
+		return errorData;
+	},
+
+	// Gérer les erreurs de connexion réseau
+	handleNetworkError(error, url) {
+		console.error("Erreur réseau:", error, url);
+
+		const errorData = {
+			type: "Erreur réseau",
+			message:
+				error.message ||
+				"Impossible de contacter le serveur",
+			details: {
+				name: error.name,
+				stack: error.stack,
+				url: url
+			}
+		};
+
+		this.displayError(errorData);
+
+		// Afficher la notification si le système est disponible
+		if (window.NotificationSystem) {
+			NotificationSystem.error(
+				`Erreur réseau: ${errorData.message}`
+			);
+		}
+
+		return errorData;
+	},
+
+	// Afficher l'erreur dans l'interface
+	displayError(error) {
+		// Chercher un conteneur d'erreur existant, ou en créer un nouveau
+		let errorContainer = document.getElementById("error-container");
+
+		if (!errorContainer) {
+			errorContainer = document.createElement("div");
+			errorContainer.id = "error-container";
+			errorContainer.className = "error-container";
+			document.body.appendChild(errorContainer);
+		}
+
+		// Créer l'élément d'erreur
+		const errorElement = document.createElement("div");
+		errorElement.className = "error-message";
+
+		errorElement.innerHTML = `
+			<div class="error-header">
+				<i class="fas fa-exclamation-circle"></i>
+				<span>${error.type || "Erreur"}</span>
+				<button class="close-btn">&times;</button>
+			</div>
+			<div class="error-content">
+				<p>${error.message || "Une erreur inconnue est survenue"}</p>
+				<div class="error-details">
+					<pre>${JSON.stringify(error.details, null, 2)}</pre>
+				</div>
+			</div>
+		`;
+
+		// Ajouter l'erreur au conteneur
+		errorContainer.appendChild(errorElement);
+
+		// Configurer le bouton de fermeture
+		errorElement
+			.querySelector(".close-btn")
+			.addEventListener("click", () => {
+				errorElement.remove();
+				if (errorContainer.children.length === 0) {
+					errorContainer.remove();
+				}
+			});
+	},
+
+	// Fonction utilitaire pour effectuer des requêtes fetch avec gestion des erreurs
+	async fetchWithErrorHandling(url, options = {}) {
+		try {
+			const response = await fetch(url, options);
+
+			if (!response.ok) {
+				// Gérer les erreurs HTTP
+				const errorData = await this.handleFetchError(
+					response,
+					url
+				);
+				throw new Error(errorData.message);
+			}
+
+			return response;
+		} catch (error) {
+			// Vérifier si c'est une erreur réseau (non-HTTP)
+			if (error.name === "TypeError" || !error.status) {
+				this.handleNetworkError(error, url);
+			}
+			throw error;
+		}
+	}
+};
+
+// Initialiser le gestionnaire d'erreurs
+ErrorHandler.init();
+
+// Ajouter des styles CSS pour l'affichage des erreurs
+const style = document.createElement("style");
+style.textContent = `
+	.error-container {
+		position: fixed;
+		right: 20px;
+		bottom: 20px;
+		max-width: 400px;
+		z-index: 9999;
 	}
 
-	static showSuccess(message, context = "") {
-		this.showError(message, "success", context);
+	.error-message {
+		background-color: #fff;
+		border: 1px solid #dc3545;
+		border-left: 5px solid #dc3545;
+		border-radius: 4px;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+		margin-bottom: 10px;
+		overflow: hidden;
 	}
 
-	static showWarning(message, context = "") {
-		this.showError(message, "warning", context);
+	.error-header {
+		background-color: #dc3545;
+		color: white;
+		padding: 10px 15px;
+		display: flex;
+		align-items: center;
 	}
 
-	// Méthodes spécifiques pour la gestion des classes
-	static handleClasseError(error, action) {
-		const context = `Gestion des classes - ${action}`;
-		this.handleApiError(error, context);
+	.error-header i {
+		margin-right: 10px;
 	}
 
-	static showClasseSuccess(message, action) {
-		const context = `Gestion des classes - ${action}`;
-		this.showSuccess(message, context);
+	.error-header span {
+		flex-grow: 1;
+		font-weight: bold;
 	}
-}
+
+	.close-btn {
+		background: none;
+		border: none;
+		color: white;
+		font-size: 18px;
+		cursor: pointer;
+	}
+
+	.error-content {
+		padding: 15px;
+	}
+
+	.error-content p {
+		margin-top: 0;
+	}
+
+	.error-details {
+		margin-top: 10px;
+		background-color: #f8f9fa;
+		padding: 10px;
+		border-radius: 4px;
+		font-size: 12px;
+		overflow: auto;
+		max-height: 200px;
+	}
+
+	.error-details pre {
+		margin: 0;
+		white-space: pre-wrap;
+	}
+`;
+document.head.appendChild(style);
+
+// Exposer le gestionnaire d'erreurs globalement
+window.ErrorHandler = ErrorHandler;
