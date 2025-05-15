@@ -15,34 +15,77 @@ ini_set('display_errors', 0); // Disable displaying errors directly
 error_log("Backend proxy accessed: " . $_SERVER['REQUEST_URI']);
 
 // Check if this is a direct URL POST request (from diagnostics tool)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['url'])) {
-	$target_url = $_POST['url'];
-	error_log("Direct URL proxy request to: " . $target_url);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['url']) || !empty(file_get_contents("php://input")))) {
+	$target_url = '';
 
-	// Initialize cURL session for the direct target
-	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, $target_url);
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-	curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-
-	// Execute the request
-	$response = curl_exec($ch);
-	$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-	$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-	curl_close($ch);
-
-	// Send the response back
-	http_response_code($http_code);
-	if ($content_type) {
-		header("Content-Type: $content_type");
+	// Handle both application/x-www-form-urlencoded and raw JSON request bodies
+	if (isset($_POST['url'])) {
+		$target_url = $_POST['url'];
+		error_log("Direct URL proxy request via POST form: " . $target_url);
 	} else {
-		header('Content-Type: application/json');
+		// Try to parse as JSON
+		$input = file_get_contents("php://input");
+		$json_data = json_decode($input, true);
+
+		if ($json_data && isset($json_data['url'])) {
+			$target_url = $json_data['url'];
+			error_log("Direct URL proxy request via JSON body: " . $target_url);
+		} else {
+			// Try to parse as URL encoded
+			parse_str($input, $data);
+			if (isset($data['url'])) {
+				$target_url = $data['url'];
+				error_log("Direct URL proxy request via raw POST body: " . $target_url);
+			}
+		}
 	}
-	echo $response;
-	exit;
+
+	if (!empty($target_url)) {
+		// Initialize cURL session for the direct target
+		$ch = curl_init();
+		curl_setopt($ch, CURLOPT_URL, $target_url);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+		curl_setopt($ch, CURLOPT_VERBOSE, true);
+
+		// Create a temporary file to store verbose output
+		$verbose = fopen('php://temp', 'w+');
+		curl_setopt($ch, CURLOPT_STDERR, $verbose);
+
+		// Execute the request
+		$response = curl_exec($ch);
+		$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		$content_type = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+
+		// Get verbose information for debugging
+		rewind($verbose);
+		$verboseLog = stream_get_contents($verbose);
+		error_log("Proxy verbose log: " . substr($verboseLog, 0, 500));
+
+		curl_close($ch);
+
+		// Log detailed information about the response
+		error_log("Proxy response: HTTP $http_code, Content-Type: $content_type, Response length: " . strlen($response));
+
+		// Send the response back
+		http_response_code($http_code);
+		if ($content_type) {
+			header("Content-Type: $content_type");
+		} else {
+			header('Content-Type: application/json');
+		}
+		echo $response;
+		exit;
+	} else {
+		// No URL was provided
+		http_response_code(400);
+		header('Content-Type: application/json');
+		echo json_encode(['error' => 'No target URL specified in the request body']);
+		exit;
+	}
 }
 
 // Log raw query string

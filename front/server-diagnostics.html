@@ -733,6 +733,8 @@
 
 								// Create a detailed error message
 								let errorMessage = `Error: ${error.message}`;
+								let suggestProxy =
+									!useProxy; // Only suggest proxy if not already using it
 
 								// Check for specific CORS errors
 								if (
@@ -747,6 +749,28 @@
 										"1. Ensure the backend has 'Access-Control-Allow-Origin' header set to include this domain\n" +
 										"2. Check the 'Use local proxy' option to bypass CORS\n" +
 										"3. Try accessing directly from the backend domain";
+
+									if (
+										suggestProxy
+									) {
+										// Suggest using the proxy option and offer to try again with it
+										if (
+											confirm(
+												"CORS error detected. Would you like to try again using the proxy option to avoid this error?"
+											)
+										) {
+											document.getElementById(
+												"use-proxy"
+											).checked = true;
+											// Resubmit the form
+											diagnosticsForm.dispatchEvent(
+												new Event(
+													"submit"
+												)
+											);
+											return; // Skip showing the error dialog
+										}
+									}
 								}
 
 								// Show error message with more details
@@ -768,125 +792,222 @@
 							2
 						);
 
+						// Handle potential proxy response structure
+						// Check if data is wrapped in a proxy debug structure
+						if (
+							data.proxy_debug &&
+							!data.server_info
+						) {
+							console.log(
+								"Proxy debug data detected, unwrapping response"
+							);
+							alert(
+								"The data was received through a proxy and may be incomplete. Please check the raw data tab for complete information."
+							);
+						}
+
 						// Server summary
 						const serverSummary =
 							document.getElementById(
 								"server-summary"
 							);
-						serverSummary.innerHTML = `
+						try {
+							if (data.server_info) {
+								serverSummary.innerHTML = `
                     <ul class="list-group">
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             Server Type
-                            <span class="badge bg-info">${data.server_info.webserver_type}</span>
+                            <span class="badge bg-info">${
+					data.server_info.webserver_type ||
+					"Unknown"
+				}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             PHP Version
-                            <span class="badge bg-info">${data.server_info.php_version}</span>
+                            <span class="badge bg-info">${
+					data.server_info.php_version ||
+					"Unknown"
+				}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             Server Software
-                            <span class="badge bg-info">${data.server_info.server_software}</span>
+                            <span class="badge bg-info">${
+					data.server_info.server_software ||
+					"Unknown"
+				}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             Time
-                            <span class="badge bg-info">${data.timestamp}</span>
+                            <span class="badge bg-info">${
+					data.timestamp || "Unknown"
+				}</span>
                         </li>
                     </ul>
                 `;
+							} else {
+								serverSummary.innerHTML = `
+                    <div class="alert alert-warning">
+                        <strong>Server information not available</strong><br>
+                        The diagnostics response doesn't include server information.
+                    </div>
+                `;
+							}
+						} catch (error) {
+							console.error(
+								"Error rendering server summary:",
+								error
+							);
+							serverSummary.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error rendering server information</strong><br>
+                    ${error.message}
+                </div>
+            `;
+						}
 
 						// Config summary
 						const configSummary =
 							document.getElementById(
 								"config-summary"
 							);
-						const configItems = [];
-						for (const [
-							file,
-							info
-						] of Object.entries(
-							data.config_files
-						)) {
-							const status =
-								info.exists
-									? info.readable
-										? "success"
-										: "warning"
-									: "danger";
-							const statusText =
-								info.exists
-									? info.readable
-										? "OK"
-										: "Not Readable"
-									: "Missing";
+						try {
+							if (data.config_files) {
+								const configItems =
+									[];
+								for (const [
+									file,
+									info
+								] of Object.entries(
+									data.config_files
+								)) {
+									const status =
+										info.exists
+											? info.readable
+												? "success"
+												: "warning"
+											: "danger";
+									const statusText =
+										info.exists
+											? info.readable
+												? "OK"
+												: "Not Readable"
+											: "Missing";
 
-							configItems.push(`
+									configItems.push(`
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             ${file}
                             <span class="badge bg-${status}">${statusText}</span>
                         </li>
                     `);
+								}
+								configSummary.innerHTML = `<ul class="list-group">${configItems.join(
+									""
+								)}</ul>`;
+							} else {
+								configSummary.innerHTML = `
+                    <div class="alert alert-warning">
+                        <strong>Configuration information not available</strong><br>
+                        The diagnostics response doesn't include configuration files information.
+                    </div>
+                `;
+							}
+						} catch (error) {
+							console.error(
+								"Error rendering config summary:",
+								error
+							);
+							configSummary.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error rendering configuration information</strong><br>
+                    ${error.message}
+                </div>
+            `;
 						}
-						configSummary.innerHTML = `<ul class="list-group">${configItems.join(
-							""
-						)}</ul>`;
 
 						// API endpoints summary
 						const apiSummary =
 							document.getElementById(
 								"api-summary"
 							);
-						const apiItems = [];
-						for (const [
-							name,
-							info
-						] of Object.entries(
-							data.endpoints
-						)) {
-							const status =
-								info.status_code >=
-									200 &&
-								info.status_code <
-									300
-									? "success"
-									: info.status_code ===
-									  401
-									? "warning"
-									: "danger";
+						try {
+							if (data.endpoints) {
+								const apiItems =
+									[];
+								for (const [
+									name,
+									info
+								] of Object.entries(
+									data.endpoints
+								)) {
+									const status =
+										info.status_code >=
+											200 &&
+										info.status_code <
+											300
+											? "success"
+											: info.status_code ===
+											  401
+											? "warning"
+											: "danger";
 
-							apiItems.push(`
+									apiItems.push(`
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             ${name}
                             <span class="badge bg-${status} endpoint-badge">${info.status_code}</span>
                         </li>
                     `);
+								}
+								apiSummary.innerHTML = `<ul class="list-group">${apiItems.join(
+									""
+								)}</ul>`;
+							} else {
+								apiSummary.innerHTML = `
+                    <div class="alert alert-warning">
+                        <strong>API endpoint information not available</strong><br>
+                        The diagnostics response doesn't include API endpoint data.
+                    </div>
+                `;
+							}
+						} catch (error) {
+							console.error(
+								"Error rendering API summary:",
+								error
+							);
+							apiSummary.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error rendering API endpoint information</strong><br>
+                    ${error.message}
+                </div>
+            `;
 						}
-						apiSummary.innerHTML = `<ul class="list-group">${apiItems.join(
-							""
-						)}</ul>`;
 
 						// URL Rewriting summary
 						const rewriteSummary =
 							document.getElementById(
 								"rewrite-summary"
 							);
-						const apiRoot =
-							data.endpoints[
-								"api-root"
-							];
-						const apiStatus =
-							data.endpoints[
-								"api-status"
-							];
+						try {
+							if (data.endpoints) {
+								const apiRoot =
+									data
+										.endpoints[
+										"api-root"
+									];
+								const apiStatus =
+									data
+										.endpoints[
+										"api-status"
+									];
 
-						const rewriteWorking =
-							apiRoot &&
-							apiRoot.status_code !==
-								404 &&
-							apiStatus &&
-							apiStatus.status_code !==
-								404;
+								const rewriteWorking =
+									apiRoot &&
+									apiRoot.status_code !==
+										404 &&
+									apiStatus &&
+									apiStatus.status_code !==
+										404;
 
-						rewriteSummary.innerHTML = `
+								rewriteSummary.innerHTML = `
                     <div class="alert alert-${
 				rewriteWorking ? "success" : "danger"
 			}">
@@ -904,39 +1025,87 @@
 			}</p>
                     </div>
                 `;
+							} else {
+								rewriteSummary.innerHTML = `
+                    <div class="alert alert-warning">
+                        <strong>URL rewriting information not available</strong><br>
+                        The diagnostics response doesn't include URL rewriting test data.
+                    </div>
+                `;
+							}
+						} catch (error) {
+							console.error(
+								"Error rendering rewrite summary:",
+								error
+							);
+							rewriteSummary.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error rendering URL rewriting information</strong><br>
+                    ${error.message}
+                </div>
+            `;
+						}
 
 						// Generate recommendations
 						const recommendations =
 							document.getElementById(
 								"recommendations"
 							);
-						const recommendationsList = [];
+						try {
+							const recommendationsList =
+								[];
 
-						// Check if index.php exists and is readable
-						if (
-							!data.config_files.index
-								.php ||
-							!data.config_files.index
-								.php.exists
-						) {
-							recommendationsList.push(`
+							// Only add recommendations if we have the necessary data
+							if (
+								data.config_files &&
+								data.endpoints
+							) {
+								// Check if index.php exists and is readable
+								if (
+									!data
+										.config_files
+										.index ||
+									!data
+										.config_files[
+										"index.php"
+									] ||
+									!data
+										.config_files[
+										"index.php"
+									].exists
+								) {
+									recommendationsList.push(`
                         <div class="alert alert-danger">
                             <strong>Deploy updated index.php:</strong> The main router file (index.php) is missing on the server.
                             You need to upload the newly created index.php to handle API routing.
                         </div>
                     `);
-						}
+								}
 
-						// Check if API routes return 404
-						if (
-							data.endpoints[
-								"api-root"
-							].status_code === 404 &&
-							data.endpoints[
-								"api-status"
-							].status_code === 404
-						) {
-							recommendationsList.push(`
+								// Check if API routes return 404
+								if (
+									data
+										.endpoints[
+										"api-root"
+									] &&
+									data
+										.endpoints[
+										"api-status"
+									] &&
+									data
+										.endpoints[
+										"api-root"
+									]
+										.status_code ===
+										404 &&
+									data
+										.endpoints[
+										"api-status"
+									]
+										.status_code ===
+										404
+								) {
+									recommendationsList.push(`
                         <div class="alert alert-danger">
                             <strong>Configure URL Rewriting:</strong> API routes are returning 404 errors. You need to:
                             <ul>
@@ -945,64 +1114,94 @@
                             </ul>
                         </div>
                     `);
-						}
+								}
 
-						// Check if direct router access works but requires auth
-						if (
-							data.endpoints[
-								"api-router-classes"
-							].status_code === 401
-						) {
-							recommendationsList.push(`
+								// Check if direct router access works but requires auth
+								if (
+									data
+										.endpoints[
+										"api-router-classes"
+									] &&
+									data
+										.endpoints[
+										"api-router-classes"
+									]
+										.status_code ===
+										401
+								) {
+									recommendationsList.push(`
                         <div class="alert alert-warning">
                             <strong>Authentication Required:</strong> Direct access to the API router requires authentication.
                             You need to login first before accessing protected API endpoints.
                         </div>
                     `);
-						}
+								}
 
-						// Add general recommendation about using the proxy
-						recommendationsList.push(`
+								// Add general recommendation about using the proxy
+								recommendationsList.push(`
                     <div class="alert alert-info">
                         <strong>Use the Backend Proxy:</strong> Until the server routing is fully configured,
                         continue using backend-proxy.php from the frontend, which can fall back to direct script access.
                     </div>
                 `);
+							} else {
+								recommendationsList.push(`
+                <div class="alert alert-warning">
+                    <strong>Limited data available:</strong> Unable to generate complete recommendations because the diagnostic data is incomplete.
+                    Try running the diagnostics again with the proxy option checked.
+                </div>
+            `);
+							}
 
-						recommendations.innerHTML =
-							recommendationsList.join(
-								""
+							recommendations.innerHTML =
+								recommendationsList.join(
+									""
+								);
+						} catch (error) {
+							console.error(
+								"Error generating recommendations:",
+								error
 							);
+							recommendations.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error generating recommendations</strong><br>
+                    ${error.message}
+                </div>
+            `;
+						}
 
 						// Server info detail tab
 						const serverInfo =
 							document.getElementById(
 								"server-info"
 							);
-						const serverInfoItems = [];
-						for (const [
-							key,
-							value
-						] of Object.entries(
-							data.server_info
-						)) {
-							if (
-								key !==
-									"directory_structure" &&
-								key !==
-									"php_modules" &&
-								typeof value !==
-									"object"
-							) {
-								serverInfoItems.push(`
+						try {
+							if (data.server_info) {
+								const serverInfoItems =
+									[];
+								for (const [
+									key,
+									value
+								] of Object.entries(
+									data.server_info
+								)) {
+									if (
+										key !==
+											"directory_structure" &&
+										key !==
+											"php_modules" &&
+										typeof value !==
+											"object"
+									) {
+										serverInfoItems.push(`
                             <tr>
                                 <th scope="row">${key}</th>
                                 <td>${value}</td>
                             </tr>
                         `);
-							}
-						}
-						serverInfo.innerHTML = `
+									}
+								}
+								serverInfo.innerHTML = `
                     <table class="table table-striped">
                         <thead>
                             <tr>
@@ -1015,34 +1214,57 @@
                         </tbody>
                     </table>
                 `;
+							} else {
+								serverInfo.innerHTML = `
+                    <div class="alert alert-warning">
+                        <strong>Server information not available</strong><br>
+                        The diagnostics response doesn't include server information.
+                    </div>
+                `;
+							}
+						} catch (error) {
+							console.error(
+								"Error rendering server info:",
+								error
+							);
+							serverInfo.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error rendering server information</strong><br>
+                    ${error.message}
+                </div>
+            `;
+						}
 
 						// Environment info
 						const environmentInfo =
 							document.getElementById(
 								"environment-info"
 							);
-						const envItems = [];
-						for (const [
-							key,
-							value
-						] of Object.entries(
-							data.environment
-						)) {
-							if (
-								key !==
-									"environment_variables" &&
-								typeof value !==
-									"object"
-							) {
-								envItems.push(`
+						try {
+							if (data.environment) {
+								const envItems =
+									[];
+								for (const [
+									key,
+									value
+								] of Object.entries(
+									data.environment
+								)) {
+									if (
+										key !==
+											"environment_variables" &&
+										typeof value !==
+											"object"
+									) {
+										envItems.push(`
                             <tr>
                                 <th scope="row">${key}</th>
                                 <td>${value}</td>
                             </tr>
                         `);
-							}
-						}
-						environmentInfo.innerHTML = `
+									}
+								}
+								environmentInfo.innerHTML = `
                     <table class="table table-striped">
                         <thead>
                             <tr>
@@ -1055,25 +1277,49 @@
                         </tbody>
                     </table>
                 `;
+							} else {
+								environmentInfo.innerHTML = `
+                    <div class="alert alert-warning">
+                        <strong>Environment information not available</strong><br>
+                        The diagnostics response doesn't include environment data.
+                    </div>
+                `;
+							}
+						} catch (error) {
+							console.error(
+								"Error rendering environment info:",
+								error
+							);
+							environmentInfo.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error rendering environment information</strong><br>
+                    ${error.message}
+                </div>
+            `;
+						}
 
 						// Directory structure
 						const directoryStructure =
 							document.getElementById(
 								"directory-structure"
 							);
-						const dirItems = [];
-						if (
-							data.server_info
-								.directory_structure
-						) {
-							for (const [
-								dir,
-								files
-							] of Object.entries(
+						try {
+							if (
+								data.server_info &&
 								data.server_info
 									.directory_structure
-							)) {
-								dirItems.push(`
+							) {
+								const dirItems =
+									[];
+								for (const [
+									dir,
+									files
+								] of Object.entries(
+									data
+										.server_info
+										.directory_structure
+								)) {
+									dirItems.push(`
                             <div class="card mb-3">
                                 <div class="card-header">${dir}/</div>
                                 <div class="card-body">
@@ -1082,67 +1328,106 @@
 							? `<pre class="mb-0">${files.join(
 									"\n"
 							  )}</pre>`
+							: typeof files ===
+							  "object"
+							? `<pre class="mb-0">${Object.entries(
+									files
+							  )
+									.map(
+										([
+											k,
+											v
+										]) =>
+											`${k}: ${v}`
+									)
+									.join(
+										"\n"
+									)}</pre>`
 							: `<p class="text-danger mb-0">${files}</p>`
 					}
                                 </div>
                             </div>
                         `);
+								}
+								directoryStructure.innerHTML =
+									dirItems.join(
+										""
+									);
+							} else {
+								directoryStructure.innerHTML = `
+                    <div class="alert alert-warning">
+                        <strong>Directory structure information not available</strong><br>
+                        The diagnostics response doesn't include directory structure data.
+                    </div>
+                `;
 							}
+						} catch (error) {
+							console.error(
+								"Error rendering directory structure:",
+								error
+							);
+							directoryStructure.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error rendering directory structure</strong><br>
+                    ${error.message}
+                </div>
+            `;
 						}
-						directoryStructure.innerHTML =
-							dirItems.join("");
 
 						// Endpoints list
 						const endpointsList =
 							document.getElementById(
 								"endpoints-list"
 							);
-						const endpointItems = [];
-						for (const [
-							name,
-							info
-						] of Object.entries(
-							data.endpoints
-						)) {
-							const statusClass =
-								info.status_code >=
-									200 &&
-								info.status_code <
-									300
-									? "success"
-									: info.status_code ===
-									  401
-									? "warning"
-									: "danger";
+						try {
+							if (data.endpoints) {
+								const endpointItems =
+									[];
+								for (const [
+									name,
+									info
+								] of Object.entries(
+									data.endpoints
+								)) {
+									const statusClass =
+										info.status_code >=
+											200 &&
+										info.status_code <
+											300
+											? "success"
+											: info.status_code ===
+											  401
+											? "warning"
+											: "danger";
 
-							let responseContent =
-								"";
-							if (
-								info.is_json &&
-								info.json_data
-							) {
-								responseContent = `<pre class="code-block">${JSON.stringify(
-									info.json_data,
-									null,
-									2
-								)}</pre>`;
-							} else if (
-								info.raw_body_preview
-							) {
-								responseContent = `<pre class="code-block">${info.raw_body_preview}</pre>`;
-							}
+									let responseContent =
+										"";
+									if (
+										info.is_json &&
+										info.json_data
+									) {
+										responseContent = `<pre class="code-block">${JSON.stringify(
+											info.json_data,
+											null,
+											2
+										)}</pre>`;
+									} else if (
+										info.raw_body_preview
+									) {
+										responseContent = `<pre class="code-block">${info.raw_body_preview}</pre>`;
+									}
 
-							endpointItems.push(`
+									endpointItems.push(`
                         <div class="card mb-3">
                             <div class="card-header d-flex justify-content-between align-items-center">
-                                <span>${name} (${info.method})</span>
+                                <span>${name} (${info.method || "GET"})</span>
                                 <span class="badge bg-${statusClass}">${
-								info.status_code
-							}</span>
+										info.status_code
+									}</span>
                             </div>
                             <div class="card-body">
                                 <p class="mb-1"><strong>URL:</strong> ${
-					info.url
+					info.url || "N/A"
 				}</p>
                                 <p class="mb-1"><strong>Content Type:</strong> ${
 					info.content_type || "None"
@@ -1165,77 +1450,130 @@
                             </div>
                         </div>
                     `);
+								}
+								endpointsList.innerHTML =
+									endpointItems.join(
+										""
+									);
+							} else {
+								endpointsList.innerHTML = `
+                    <div class="alert alert-warning">
+                        <strong>Endpoint information not available</strong><br>
+                        The diagnostics response doesn't include endpoint test data.
+                    </div>
+                `;
+							}
+						} catch (error) {
+							console.error(
+								"Error rendering endpoints list:",
+								error
+							);
+							endpointsList.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error rendering endpoint information</strong><br>
+                    ${error.message}
+                </div>
+            `;
 						}
-						endpointsList.innerHTML =
-							endpointItems.join("");
 
 						// Files list
 						const filesList =
 							document.getElementById(
 								"files-list"
 							);
-						const fileItems = [];
-						for (const [
-							file,
-							info
-						] of Object.entries(
-							data.config_files
-						)) {
-							const statusClass =
-								info.exists
-									? info.readable
-										? "success"
-										: "warning"
-									: "danger";
-							const statusText =
-								info.exists
-									? info.readable
-										? "OK"
-										: "Not Readable"
-									: "Missing";
+						try {
+							if (data.config_files) {
+								const fileItems =
+									[];
+								for (const [
+									file,
+									info
+								] of Object.entries(
+									data.config_files
+								)) {
+									const statusClass =
+										info.exists
+											? info.readable
+												? "success"
+												: "warning"
+											: "danger";
+									const statusText =
+										info.exists
+											? info.readable
+												? "OK"
+												: "Not Readable"
+											: "Missing";
 
-							fileItems.push(`
+									fileItems.push(`
                         <div class="card mb-3">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <span>${file}</span>
                                 <span class="badge bg-${statusClass}">${statusText}</span>
                             </div>
                             <div class="card-body">
-                                <p class="mb-1"><strong>Path:</strong> ${info.path}</p>
-                                <p class="mb-1"><strong>Size:</strong> ${info.size} bytes</p>
+                                <p class="mb-1"><strong>Path:</strong> ${
+					info.path || "N/A"
+				}</p>
+                                <p class="mb-1"><strong>Size:</strong> ${
+					info.size || 0
+				} bytes</p>
                             </div>
                         </div>
                     `);
+								}
+								filesList.innerHTML =
+									fileItems.join(
+										""
+									);
+							} else {
+								filesList.innerHTML = `
+                    <div class="alert alert-warning">
+                        <strong>File information not available</strong><br>
+                        The diagnostics response doesn't include configuration file data.
+                    </div>
+                `;
+							}
+						} catch (error) {
+							console.error(
+								"Error rendering files list:",
+								error
+							);
+							filesList.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error rendering file information</strong><br>
+                    ${error.message}
+                </div>
+            `;
 						}
-						filesList.innerHTML =
-							fileItems.join("");
 
 						// Logs tab
 						const serverLogs =
 							document.getElementById(
 								"server-logs"
 							);
-						const logsContent = [];
+						try {
+							const logsContent = [];
 
-						if (
-							data.logs &&
-							Object.keys(data.logs)
-								.length > 0
-						) {
-							for (const [
-								logName,
-								logLines
-							] of Object.entries(
-								data.logs
-							)) {
-								if (
-									Array.isArray(
-										logLines
-									) &&
-									logLines.length >
-										0
-								) {
-									logsContent.push(`
+							if (
+								data.logs &&
+								Object.keys(
+									data.logs
+								).length > 0
+							) {
+								for (const [
+									logName,
+									logLines
+								] of Object.entries(
+									data.logs
+								)) {
+									if (
+										Array.isArray(
+											logLines
+										) &&
+										logLines.length >
+											0
+									) {
+										logsContent.push(`
                                 <div class="card mb-3">
                                     <div class="card-header">${logName}</div>
                                     <div class="card-body p-0">
@@ -1250,8 +1588,8 @@
                                     </div>
                                 </div>
                             `);
-								} else {
-									logsContent.push(`
+									} else {
+										logsContent.push(`
                                 <div class="card mb-3">
                                     <div class="card-header">${logName}</div>
                                     <div class="card-body">
@@ -1259,73 +1597,97 @@
                                     </div>
                                 </div>
                             `);
+									}
 								}
-							}
-						} else {
-							logsContent.push(`
+							} else {
+								logsContent.push(`
                         <div class="alert alert-info">
                             No server logs were retrieved or accessible.
                         </div>
                     `);
-						}
+							}
 
-						serverLogs.innerHTML =
-							logsContent.join("");
+							serverLogs.innerHTML =
+								logsContent.join(
+									""
+								);
+						} catch (error) {
+							console.error(
+								"Error rendering server logs:",
+								error
+							);
+							serverLogs.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error rendering server logs</strong><br>
+                    ${error.message}
+                </div>
+            `;
+						}
 
 						// Diagnostic logs
 						const diagnosticLogs =
 							document.getElementById(
 								"diagnostic-logs"
 							);
-						if (
-							data.diagnostic_log &&
-							data.diagnostic_log
-								.length > 0
-						) {
-							diagnosticLogs.innerHTML =
-								data.diagnostic_log
-									.map(
-										(
-											log
-										) => {
-											// Determine log level
-											let logClass =
-												"log-info";
-											if (
-												log.includes(
-													"[error]"
-												)
-											) {
-												logClass =
-													"log-error";
-											} else if (
-												log.includes(
-													"[warning]"
-												)
-											) {
-												logClass =
-													"log-warning";
-											} else if (
-												log.includes(
-													"Success"
-												) ||
-												log.includes(
-													"OK"
-												)
-											) {
-												logClass =
-													"log-success";
-											}
+						try {
+							if (
+								data.diagnostic_log &&
+								data
+									.diagnostic_log
+									.length >
+									0
+							) {
+								diagnosticLogs.innerHTML =
+									data.diagnostic_log
+										.map(
+											(
+												log
+											) => {
+												// Determine log level
+												let logClass =
+													"log-info";
+												if (
+													log.includes(
+														"[error]"
+													)
+												) {
+													logClass =
+														"log-error";
+												} else if (
+													log.includes(
+														"[warning]"
+													)
+												) {
+													logClass =
+														"log-warning";
+												} else if (
+													log.includes(
+														"Success"
+													) ||
+													log.includes(
+														"OK"
+													)
+												) {
+													logClass =
+														"log-success";
+												}
 
-											return `<div class="${logClass}">${log}</div>`;
-										}
-									)
-									.join(
-										""
-									);
-						} else {
-							diagnosticLogs.innerHTML =
-								'<div class="log-warning">No diagnostic logs available</div>';
+												return `<div class="${logClass}">${log}</div>`;
+											}
+										)
+										.join(
+											""
+										);
+							} else {
+								diagnosticLogs.innerHTML =
+									'<div class="log-warning">No diagnostic logs available</div>';
+							}
+						} catch (error) {
+							console.error(
+								"Error rendering diagnostic logs:",
+								error
+							);
+							diagnosticLogs.innerHTML = `<div class="log-error">Error rendering logs: ${error.message}</div>`;
 						}
 					}
 
