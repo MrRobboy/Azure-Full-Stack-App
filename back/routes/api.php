@@ -30,10 +30,10 @@ try {
 
 // Configuration des headers pour les requêtes API
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: http://localhost:727');
+header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, Accept');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
 // Log des headers de la requête
 error_log("Headers de la requête: " . print_r(getallheaders(), true));
@@ -43,11 +43,22 @@ error_log("Raw input: " . file_get_contents('php://input'));
 
 $errorService = ErrorService::getInstance();
 
-// Gestion des requêtes OPTIONS (CORS)
+// Gestion des requêtes preflight OPTIONS
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 	http_response_code(200);
-	exit();
+	exit;
 }
+
+// Configurer les cookies pour qu'ils fonctionnent entre domaines sur Azure
+$cookieParams = session_get_cookie_params();
+session_set_cookie_params([
+	'lifetime' => $cookieParams['lifetime'],
+	'path' => '/',
+	'domain' => '.azurewebsites.net', // Domaine partagé pour les cookies
+	'secure' => true,
+	'httponly' => true,
+	'samesite' => 'None'
+]);
 
 // Récupération de l'URL et de la méthode HTTP
 $request_uri = $_SERVER['REQUEST_URI'];

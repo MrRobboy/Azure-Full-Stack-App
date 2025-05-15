@@ -1,67 +1,89 @@
 <?php
-// status.php - Fichier pour vérifier l'état du backend
-
-// Définir l'en-tête pour indiquer que la réponse est au format JSON
+// Endpoint de statut pour vérifier la disponibilité du backend et de la base de données
 header('Content-Type: application/json');
-// Permettre l'accès CORS pour que le front puisse appeler cette API
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Allow-Methods: GET, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-// Informations sur l'environnement
-$phpVersion = phpversion();
-$serverInfo = $_SERVER['SERVER_SOFTWARE'] ?? 'Information serveur non disponible';
-$timestamp = date('Y-m-d H:i:s');
-
-// Vérifier si l'on peut accéder à la base de données (si applicable)
-$dbStatus = 'Non vérifié';
-$dbMessage = '';
-
-// Si vous avez un fichier de configuration pour la base de données, incluez-le et testez la connexion
-if (file_exists(__DIR__ . '/config/database.php')) {
-    try {
-        include_once __DIR__ . '/config/database.php';
-        // Supposons que votre fichier database.php définit une fonction getConnection() ou similaire
-        // Adaptez selon votre structure de code
-        if (function_exists('getConnection')) {
-            $conn = getConnection();
-            if ($conn) {
-                $dbStatus = 'Connecté';
-                $dbMessage = 'Connexion à la base de données réussie';
-            } else {
-                $dbStatus = 'Erreur';
-                $dbMessage = 'Impossible d\'établir une connexion';
-            }
-        } else {
-            $dbStatus = 'Non configuré';
-            $dbMessage = 'Fonction de connexion non disponible';
-        }
-    } catch (Exception $e) {
-        $dbStatus = 'Erreur';
-        $dbMessage = 'Exception: ' . $e->getMessage();
-    }
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
 }
 
-// Créer un tableau avec toutes les informations
-$response = [
-    'status' => 'online',
-    'message' => 'Le backend ESGI fonctionne correctement',
-    'environment' => [
-        'php_version' => $phpVersion,
-        'server' => $serverInfo,
-        'timestamp' => $timestamp,
-        'timezone' => date_default_timezone_get()
-    ],
+require_once __DIR__ . '/config/config.php';
+
+// Récupérer les informations système pour le status
+$status = [
+    'success' => true,
+    'message' => 'Le serveur backend est opérationnel',
+    'timestamp' => date('Y-m-d H:i:s'),
+    'environment' => ENVIRONMENT,
+    'api_base_url' => API_BASE_URL,
+    'php_version' => phpversion(),
+    'server_info' => $_SERVER['SERVER_SOFTWARE'] ?? 'Inconnu',
     'database' => [
-        'status' => $dbStatus,
-        'message' => $dbMessage
-    ],
-    'deployment_info' => [
-        'version' => '1.0.0',
-        'last_deploy' => $timestamp,
-        'platform' => 'Azure Web App'
+        'type' => defined('DB_TYPE') ? DB_TYPE : 'mysql',
+        'host' => DB_HOST,
+        'name' => DB_NAME,
+        'connected' => false // Sera mis à jour ci-dessous
     ]
 ];
 
-// Retourner la réponse au format JSON
-echo json_encode($response, JSON_PRETTY_PRINT);
+// Vérifier si le endpoint spécifique de base de données est demandé
+$requestPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+if (strpos($requestPath, '/db-status') !== false) {
+    try {
+        require_once __DIR__ . '/services/DatabaseService.php';
+
+        $db = DatabaseService::getInstance();
+        $connection = $db->getConnection();
+
+        // Tester une requête simple
+        $query = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'";
+        $stmt = $connection->query($query);
+        $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // Si aucune exception n'est levée, la connexion est réussie
+        echo json_encode([
+            'success' => true,
+            'message' => 'Connexion à la base de données réussie',
+            'data' => [
+                'db_type' => defined('DB_TYPE') ? DB_TYPE : 'mysql',
+                'db_host' => DB_HOST,
+                'db_name' => DB_NAME,
+                'tables_count' => count($tables),
+                'tables' => $tables
+            ]
+        ]);
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Échec de connexion à la base de données',
+            'error' => $e->getMessage(),
+            'data' => [
+                'db_type' => defined('DB_TYPE') ? DB_TYPE : 'mysql',
+                'db_host' => DB_HOST,
+                'db_name' => DB_NAME
+            ]
+        ]);
+    }
+    exit;
+}
+
+// Pour le endpoint /status standard
+try {
+    // Vérifier la connexion à la base de données
+    require_once __DIR__ . '/services/DatabaseService.php';
+
+    $db = DatabaseService::getInstance();
+    $connection = $db->getConnection();
+
+    // Si aucune exception n'est levée, la connexion est réussie
+    $status['database']['connected'] = true;
+} catch (Exception $e) {
+    $status['database']['connected'] = false;
+    $status['database']['error'] = $e->getMessage();
+}
+
+echo json_encode($status);

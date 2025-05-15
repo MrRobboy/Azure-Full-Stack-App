@@ -19,7 +19,7 @@ if (ENVIRONMENT === 'development') {
 }
 
 // Configuration de la base de données SQL Server
-define('DB_HOST', 'localhost'); // Ou l'adresse IP/nom du serveur SQL
+define('DB_HOST', 'sql-esgi-app.database.windows.net'); // Azure SQL Server host
 define('DB_NAME', 'sqldb-esgi-app');
 define('DB_USER', 'sqladmin'); // Modifiez selon votre configuration
 define('DB_PASS', 'Cisco123');
@@ -29,7 +29,7 @@ define('DB_PORT', '1433'); // Port standard pour SQL Server
 define('DB_TYPE', 'sqlsrv'); // sqlsrv pour SQL Server
 
 // URL de l'API pour communication front ↔ back
-define('API_BASE_URL', 'http://localhost:727/api');
+define('API_BASE_URL', 'https://app-backend-esgi-app.azurewebsites.net/api');
 
 // Chemins d'accès
 define('BASE_PATH', dirname(__DIR__));

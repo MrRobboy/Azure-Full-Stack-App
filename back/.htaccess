@@ -34,4 +34,62 @@ Options -Indexes
 <FilesMatch "^(config\.php|\.htaccess)$">
     Order allow,deny
     Deny from all
-</FilesMatch> 
+</FilesMatch>
+
+# Configuration Apache pour l'API backend
+
+# Règles pour gérer les requêtes OPTIONS (CORS preflight)
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]
+
+# Définir les en-têtes CORS pour toutes les requêtes
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "https://app-frontend-esgi-app.azurewebsites.net"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    Header always set Access-Control-Allow-Credentials "true"
+</IfModule>
+
+# Endpoints de statut du serveur
+RewriteRule ^api/status$ status.php [L]
+RewriteRule ^api/db-status$ status.php?type=db [L]
+
+# Rediriger les requêtes API vers le contrôleur appropié
+RewriteRule ^api/classes/?$ routes/api.php?resource=classes [QSA,L]
+RewriteRule ^api/classes/([0-9]+)/?$ routes/api.php?resource=classes&id=$1 [QSA,L]
+
+RewriteRule ^api/matieres/?$ routes/api.php?resource=matieres [QSA,L]
+RewriteRule ^api/matieres/([0-9]+)/?$ routes/api.php?resource=matieres&id=$1 [QSA,L]
+
+RewriteRule ^api/examens/?$ routes/api.php?resource=examens [QSA,L]
+RewriteRule ^api/examens/([0-9]+)/?$ routes/api.php?resource=examens&id=$1 [QSA,L]
+
+RewriteRule ^api/notes/?$ routes/api.php?resource=notes [QSA,L]
+RewriteRule ^api/notes/([0-9]+)/?$ routes/api.php?resource=notes&id=$1 [QSA,L]
+RewriteRule ^api/notes/exam/([0-9]+)/?$ routes/api.php?resource=notes&exam=$1 [QSA,L]
+
+RewriteRule ^api/users/?$ routes/api.php?resource=users [QSA,L]
+RewriteRule ^api/users/([0-9]+)/?$ routes/api.php?resource=users&id=$1 [QSA,L]
+RewriteRule ^api/users/classe/([0-9]+)/?$ routes/api.php?resource=users&classe=$1 [QSA,L]
+
+RewriteRule ^api/auth/login$ routes/api.php?resource=auth&action=login [QSA,L]
+RewriteRule ^api/auth/logout$ routes/api.php?resource=auth&action=logout [QSA,L]
+RewriteRule ^api/auth/status$ routes/api.php?resource=auth&action=status [QSA,L]
+
+RewriteRule ^api/profs/?$ routes/api.php?resource=profs [QSA,L]
+RewriteRule ^api/profs/([0-9]+)/?$ routes/api.php?resource=profs&id=$1 [QSA,L]
+
+# Empêcher l'accès aux dossiers et fichiers sensibles
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+<FilesMatch "\.(sql|log|ini|json)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Protéger contre les erreurs PHP
+php_flag display_errors off
+php_value error_reporting 0 

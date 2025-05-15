@@ -1,25 +1,14 @@
-// Configuration de l'API
-const API_CONFIG = {
-	// URL de base de l'API
-	baseUrl: window.location.origin + "/api",
-
-	// Endpoints
-	endpoints: {
-		classes: "/classes",
-		matieres: "/matieres",
-		notes: "/notes",
-		examens: "/examens",
-		auth: "/auth",
-		profs: "/profs",
-		users: "/users"
-	}
+// Configuration de l'application
+const appConfig = {
+	apiBaseUrl: "https://app-backend-esgi-app.azurewebsites.net/api",
+	version: "1.2"
 };
 
-// Fonction utilitaire pour construire les URLs de l'API
+// Fonction pour obtenir l'URL de l'API
 function getApiUrl(endpoint) {
-	if (!endpoint || !API_CONFIG.endpoints[endpoint]) {
-		console.error(`Endpoint API invalide: ${endpoint}`);
-		return API_CONFIG.baseUrl + "/unknown-endpoint";
-	}
-	return API_CONFIG.baseUrl + API_CONFIG.endpoints[endpoint];
+	return `${appConfig.apiBaseUrl}/${endpoint}`;
 }
+
+// Ajouter à l'objet window pour accessibilité globale
+window.appConfig = appConfig;
+window.getApiUrl = getApiUrl;
