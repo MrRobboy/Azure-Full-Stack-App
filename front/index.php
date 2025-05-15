@@ -13,7 +13,7 @@ ob_start();
 
 <div class="hero">
 	<div class="hero-content">
-		<h1>Bienvenue sur le système de gestion des notes</h1>
+		<h1>Bienvenue a vous sur le système de gestion des notes</h1>
 		<p class="hero-description">
 			Une plateforme complète pour gérer les notes, les matières, les classes et les examens.
 			Simplifiez votre travail d'enseignant avec notre outil intuitif.
