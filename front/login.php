@@ -49,7 +49,7 @@ ob_start();
 </div>
 
 <script src="js/cache-buster.js"></script>
-<script src="js/config.js?v=1.1"></script>
+<script src="js/config.js?v=1.8"></script>
 <script src="js/notification-system.js?v=1.1"></script>
 <script>
 	function toggleErrorDetails() {
@@ -97,12 +97,22 @@ ob_start();
 		btnLoading.style.display = 'inline-block';
 		errorMessage.style.display = 'none';
 
+		// Force proxy to true for reliability
+		appConfig.useProxy = true;
+
 		// Notification pour informer l'utilisateur
 		NotificationSystem.info('Tentative de connexion...');
 
 		try {
 			console.log('Tentative de connexion...');
-			const response = await fetch(getApiUrl('auth') + '/login', {
+
+			// Using the direct proxy URL for reliability
+			const loginEndpoint = 'api/auth/login';
+			const proxyUrl = `${appConfig.proxyUrl}?endpoint=${encodeURIComponent(loginEndpoint)}`;
+
+			console.log('URL de connexion:', proxyUrl);
+
+			const response = await fetch(proxyUrl, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -110,7 +120,8 @@ ob_start();
 				body: JSON.stringify({
 					email,
 					password
-				})
+				}),
+				credentials: 'include'
 			});
 
 			console.log('Réponse reçue:', response);
@@ -139,8 +150,12 @@ ob_start();
 		} catch (error) {
 			displayError({
 				type: 'Erreur réseau',
-				message: 'Erreur de connexion au serveur',
-				details: error.message
+				message: 'Erreur de connexion au serveur: ' + error.message,
+				details: {
+					errorMessage: error.message,
+					useProxy: appConfig.useProxy,
+					proxyUrl: appConfig.proxyUrl
+				}
 			});
 			console.error('Erreur:', error);
 		} finally {

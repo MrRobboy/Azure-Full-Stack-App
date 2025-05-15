@@ -2,9 +2,9 @@
 const appConfig = {
 	apiBaseUrl: "https://app-backend-esgi-app.azurewebsites.net/api",
 	backendBaseUrl: "https://app-backend-esgi-app.azurewebsites.net",
-	useProxy: true, // Enable proxy by default to ensure login works
-	proxyUrl: "backend-proxy.php", // URL du proxy local
-	version: "1.7"
+	useProxy: true, // Always use proxy since direct communication has CORS issues
+	proxyUrl: "simple-proxy.php", // Using the simplified proxy
+	version: "1.8"
 };
 
 // Fonction pour obtenir l'URL de l'API
@@ -13,7 +13,9 @@ function getApiUrl(endpoint) {
 		// Utiliser le proxy local - essayer les deux formats avec et sans "api/"
 		// Le proxy tentera les deux formats
 		return `${appConfig.proxyUrl}?endpoint=${encodeURIComponent(
-			endpoint
+			endpoint.startsWith("api/")
+				? endpoint
+				: "api/" + endpoint
 		)}`;
 	} else {
 		// Appel direct à l'API - vérifier si endpoint commence déjà par "api/"
@@ -68,97 +70,62 @@ function getFullUrl(fullPath) {
 // Fonction pour vérifier si l'API est disponible
 async function checkApiAvailability() {
 	try {
-		// First try using the proxy to see if it works
-		const proxyResponse = await fetch(
-			`${appConfig.proxyUrl}?endpoint=status`,
-			{
-				method: "GET",
-				credentials: "include",
-				headers: {
-					Accept: "application/json"
+		// Always force proxy usage for reliability
+		appConfig.useProxy = true;
+
+		// Test if proxy works
+		try {
+			const proxyResponse = await fetch(
+				`${appConfig.proxyUrl}?endpoint=status.php`,
+				{
+					method: "GET",
+					credentials: "include",
+					headers: {
+						Accept: "application/json"
+					}
 				}
+			);
+
+			if (proxyResponse.ok) {
+				console.log("Proxy is working correctly");
+				// Leave proxy enabled
+			} else {
+				console.log(
+					"Primary proxy not working, status:",
+					proxyResponse.status
+				);
 			}
-		);
+		} catch (proxyError) {
+			console.error("Error with proxy:", proxyError);
 
-		if (proxyResponse.ok) {
-			console.log("Proxy is working correctly");
-			appConfig.useProxy = true;
-
-			// Now try direct access to see if CORS is fixed
+			// If the proxy fails, try falling back to direct if absolutely necessary
 			try {
 				const directResponse = await fetch(
-					`${appConfig.backendBaseUrl}/azure-cors.php`,
+					`${appConfig.backendBaseUrl}/status.php`,
 					{
-						method: "GET",
-						credentials: "include",
-						headers: {
-							"Content-Type":
-								"application/json",
-							"X-Requested-With":
-								"XMLHttpRequest"
-						}
+						method: "GET"
 					}
 				);
 
 				if (directResponse.ok) {
 					console.log(
-						"Direct API access is working but keeping proxy for now"
+						"Direct communication working as fallback"
 					);
-					// Keep using proxy for stability (comment out the line below to use direct access)
+					// Only disable proxy if absolutely necessary
 					// appConfig.useProxy = false;
 				} else {
-					console.log(
-						"Direct API access failed, using proxy"
-					);
-					appConfig.useProxy = true;
-				}
-			} catch (directError) {
-				console.log(
-					"Direct API access error:",
-					directError
-				);
-				appConfig.useProxy = true;
-			}
-		} else {
-			console.log(
-				"Proxy not working correctly, trying direct access"
-			);
-			try {
-				const directResponse = await fetch(
-					`${appConfig.backendBaseUrl}/azure-cors.php`,
-					{
-						method: "GET",
-						credentials: "include",
-						headers: {
-							"Content-Type":
-								"application/json",
-							"X-Requested-With":
-								"XMLHttpRequest"
-						}
-					}
-				);
-
-				if (directResponse.ok) {
-					console.log(
-						"Direct API access working, using direct access"
-					);
-					appConfig.useProxy = false;
-				} else {
 					console.error(
-						"Both proxy and direct access failed"
+						"Both proxy and direct communication failing"
 					);
-					appConfig.useProxy = true; // Default to proxy
 				}
 			} catch (directError) {
 				console.error(
 					"Both proxy and direct access failed with errors"
 				);
-				appConfig.useProxy = true; // Default to proxy
 			}
 		}
 	} catch (error) {
 		console.error("API connection check error:", error);
-		appConfig.useProxy = true; // Default to proxy on any error
 	}
 }
 
