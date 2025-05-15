@@ -13,7 +13,7 @@ ob_start();
 
 <div class="hero">
 	<div class="hero-content">
-		<h1>CIOAOAOOA</h1>
+		<h1>Bienvenue sur le site web des meilleurs étudiants de l'ESGI</h1>
 		<p class="hero-description">
 			Une plateforme complète pour gérer les notes, les matières, les classes et les examens.
 			Simplifiez votre travail d'enseignant avec notre outil intuitif.
