@@ -45,7 +45,25 @@
 									type="text"
 									id="endpoint"
 									class="form-control"
-									value="https://app-backend-esgi-app.azurewebsites.net/pure-cors-test.php" />
+									value="pure-cors-test.php" />
+							</div>
+
+							<div class="mb-3">
+								<label
+									for="useProxy"
+									class="form-check-label">
+									<input
+										type="checkbox"
+										id="useProxy"
+										class="form-check-input"
+										checked />
+									Utiliser
+									le proxy
+									(évite
+									les
+									problèmes
+									CORS)
+								</label>
 							</div>
 
 							<div class="mb-3">
@@ -185,6 +203,10 @@
 						document.getElementById(
 							"result"
 						);
+					const useProxyCheck =
+						document.getElementById(
+							"useProxy"
+						);
 
 					// Test button handler
 					testButton.addEventListener(
@@ -229,16 +251,38 @@
 												: "omit"
 									};
 
+								// Determine URL based on proxy choice
+								let url = "";
+								if (
+									useProxyCheck.checked
+								) {
+									// Use proxy
+									url = `backend-proxy.php?endpoint=${encodeURIComponent(
+										endpointInput.value
+									)}`;
+									console.log(
+										"Using proxy:",
+										url
+									);
+								} else {
+									// Direct call to backend
+									url = `https://app-backend-esgi-app.azurewebsites.net/${endpointInput.value}`;
+									console.log(
+										"Direct backend call:",
+										url
+									);
+								}
+
 								// Log what we're doing
 								console.log(
-									`Fetching ${endpointInput.value} with options:`,
+									`Fetching ${url} with options:`,
 									options
 								);
 
 								// Make the request
 								const response =
 									await fetch(
-										endpointInput.value,
+										url,
 										options
 									);
 								console.log(

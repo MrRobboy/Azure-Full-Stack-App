@@ -18,6 +18,10 @@ require_once 'templates/base.php';
 						<option value="POST">POST</option>
 						<option value="OPTIONS">OPTIONS</option>
 					</select>
+					<div class="form-check mb-2">
+						<input type="checkbox" class="form-check-input" id="useProxyCheck" checked>
+						<label class="form-check-label" for="useProxyCheck">Utiliser le proxy (recommandé pour éviter les problèmes CORS)</label>
+					</div>
 					<button id="manualCorsTestBtn" class="btn btn-primary mb-3">Tester CORS Manuellement</button>
 					<div id="manualCorsResult" class="alert alert-info">Aucun test effectué</div>
 					<div id="manualCorsDetails" class="mt-3"></div>
@@ -105,6 +109,30 @@ require_once 'templates/base.php';
 		// Test de connexion au backend
 		async function testBackendConnection() {
 			try {
+				// Essayer d'abord via le proxy backend
+				try {
+					const proxyResponse = await fetch('backend-proxy.php?endpoint=azure-cors.php', {
+						method: 'GET',
+						credentials: 'include',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-Requested-With': 'XMLHttpRequest'
+						}
+					});
+
+					if (proxyResponse.ok) {
+						const data = await proxyResponse.json();
+						updateStatus('backendStatus', true, 'Test via proxy réussi - Backend accessible', data);
+						// Si succès, tester la connexion à la base de données
+						testDatabaseConnection();
+						// Et tester les endpoints de l'API
+						testApiEndpoints();
+						return;
+					}
+				} catch (proxyError) {
+					console.error('Erreur lors du test via proxy:', proxyError);
+				}
+
 				// Essayer d'abord notre nouvel endpoint Azure CORS spécifique
 				try {
 					const azureCorsResponse = await fetch(appConfig.apiBaseUrl.replace('/api', '') + '/azure-cors.php', {
@@ -214,7 +242,27 @@ require_once 'templates/base.php';
 		// Test de connexion à la base de données
 		async function testDatabaseConnection() {
 			try {
-				// Essayer d'abord via notre endpoint Azure CORS
+				// Essayer d'abord via le proxy
+				try {
+					const proxyResponse = await fetch('backend-proxy.php?endpoint=azure-cors.php?type=db', {
+						method: 'GET',
+						credentials: 'include',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-Requested-With': 'XMLHttpRequest'
+						}
+					});
+
+					if (proxyResponse.ok) {
+						const data = await proxyResponse.json();
+						updateStatus('dbStatus', true, 'Test de base de données via proxy réussi', data);
+						return;
+					}
+				} catch (proxyError) {
+					console.error('Erreur lors du test de DB via proxy:', proxyError);
+				}
+
+				// Essayer ensuite via notre endpoint Azure CORS
 				try {
 					const azureCorsResponse = await fetch(appConfig.apiBaseUrl.replace('/api', '') + '/azure-cors.php?type=db', {
 						method: 'GET',
@@ -266,6 +314,33 @@ require_once 'templates/base.php';
 
 			for (const endpoint of endpoints) {
 				try {
+					// Essayer d'abord via le proxy
+					try {
+						const proxyUrl = `backend-proxy.php?endpoint=azure-cors.php?resource=${endpoint}`;
+						const proxyResponse = await fetch(proxyUrl, {
+							method: 'GET',
+							credentials: 'include',
+							headers: {
+								'Content-Type': 'application/json',
+								'X-Requested-With': 'XMLHttpRequest'
+							}
+						});
+
+						if (proxyResponse.ok) {
+							const data = await proxyResponse.json();
+							const resultEl = document.createElement('div');
+							resultEl.innerHTML = `
+								<div class="alert alert-success mb-2">
+									<strong>✅ Endpoint ${endpoint} (via proxy)</strong>: OK (${proxyResponse.status})
+								</div>
+							`;
+							results.appendChild(resultEl);
+							continue; // Passer à l'endpoint suivant
+						}
+					} catch (proxyError) {
+						console.error(`Erreur lors du test proxy pour ${endpoint}:`, proxyError);
+					}
+
 					// Essayer d'abord via notre endpoint Azure CORS avec le paramètre resource
 					try {
 						const azureCorsUrl = `${appConfig.apiBaseUrl.replace('/api', '')}/azure-cors.php?resource=${endpoint}`;
@@ -343,13 +418,21 @@ require_once 'templates/base.php';
 			const resultElement = document.getElementById('manualCorsResult');
 			const detailsElement = document.getElementById('manualCorsDetails');
 			const method = document.getElementById('corsTestMethod').value;
+			const useProxy = document.getElementById('useProxyCheck').checked;
 
 			resultElement.className = 'alert alert-info';
 			resultElement.textContent = 'Test en cours...';
 			detailsElement.innerHTML = '';
 
 			try {
-				const response = await fetch('https://app-backend-esgi-app.azurewebsites.net/azure-cors.php', {
+				let url = '';
+				if (useProxy) {
+					url = 'backend-proxy.php?endpoint=azure-cors.php';
+				} else {
+					url = 'https://app-backend-esgi-app.azurewebsites.net/azure-cors.php';
+				}
+
+				const response = await fetch(url, {
 					method: method,
 					credentials: 'include',
 					headers: {
@@ -377,13 +460,21 @@ require_once 'templates/base.php';
 		document.getElementById('pureCorsTestBtn').addEventListener('click', async function() {
 			const resultElement = document.getElementById('pureCorsResult');
 			const detailsElement = document.getElementById('pureCorsDetails');
+			const useProxy = document.getElementById('useProxyCheck').checked;
 
 			resultElement.className = 'alert alert-info';
 			resultElement.textContent = 'Test en cours...';
 			detailsElement.innerHTML = '';
 
 			try {
-				const response = await fetch('https://app-backend-esgi-app.azurewebsites.net/pure-cors-test.php', {
+				let url = '';
+				if (useProxy) {
+					url = 'backend-proxy.php?endpoint=pure-cors-test.php';
+				} else {
+					url = 'https://app-backend-esgi-app.azurewebsites.net/pure-cors-test.php';
+				}
+
+				const response = await fetch(url, {
 					method: 'GET',
 					credentials: 'include',
 					headers: {

@@ -23,6 +23,10 @@ if (empty($endpoint)) {
 	exit;
 }
 
+// Remove endpoint from the query parameters to avoid duplication
+$queryParams = $_GET;
+unset($queryParams['endpoint']);
+
 // Sanitize the endpoint (basic security measure)
 $endpoint = ltrim($endpoint, '/');
 if (strpos($endpoint, '../') !== false || strpos($endpoint, '..\\') !== false) {
@@ -32,11 +36,38 @@ if (strpos($endpoint, '../') !== false || strpos($endpoint, '..\\') !== false) {
 	exit;
 }
 
+// Parse the endpoint to separate path and query string
+$endpointParts = explode('?', $endpoint, 2);
+$endpointPath = $endpointParts[0];
+$endpointQuery = isset($endpointParts[1]) ? $endpointParts[1] : '';
+
+// Combine endpoint query with additional query params
+$combinedQueryParams = [];
+
+// Parse the endpoint query string
+if (!empty($endpointQuery)) {
+	parse_str($endpointQuery, $endpointQueryParams);
+	$combinedQueryParams = array_merge($combinedQueryParams, $endpointQueryParams);
+}
+
+// Add the remaining GET parameters
+if (!empty($queryParams)) {
+	$combinedQueryParams = array_merge($combinedQueryParams, $queryParams);
+}
+
 // Build the full URL
-$url = $api_base_url . '/' . $endpoint;
+$url = $api_base_url . '/' . $endpointPath;
+
+// Add query string if we have parameters
+if (!empty($combinedQueryParams)) {
+	$url .= '?' . http_build_query($combinedQueryParams);
+}
 
 // Get the HTTP method
 $method = $_SERVER['REQUEST_METHOD'];
+
+// Debug log
+error_log("Proxy forwarding to: $url (Method: $method)");
 
 // Initialize cURL session
 $ch = curl_init();
@@ -96,6 +127,9 @@ if ($response === false) {
 	]);
 	exit;
 }
+
+// Debug log the response
+error_log("Proxy response: HTTP $http_code, Content-Type: $content_type");
 
 // Close the cURL session
 curl_close($ch);
