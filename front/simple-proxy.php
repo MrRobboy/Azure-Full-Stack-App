@@ -49,70 +49,50 @@ if (empty($endpoint)) {
 	exit;
 }
 
-// Try multiple possible API base URLs
-function tryMultipleUrls($endpoint, $method, $body = null)
-{
-	global $api_base_url;
+// If the backend is down or unreachable, we can mock the response for testing
+$mock_data = false; // Set to true to enable mocking
 
-	// Define the possible URL patterns to try
-	$patterns = [
-		// Original pattern
-		"$api_base_url/$endpoint",
+if ($mock_data && $endpoint === 'api/auth/login') {
+	$raw_post = file_get_contents("php://input");
+	$user_data = json_decode($raw_post, true);
 
-		// With api/ prefix if not present
-		(strpos($endpoint, 'api/') === 0) ? "$api_base_url/$endpoint" : "$api_base_url/api/$endpoint",
-
-		// Without api/ prefix if present
-		(strpos($endpoint, 'api/') === 0) ? "$api_base_url/" . substr($endpoint, 4) : "$api_base_url/$endpoint",
-
-		// Special case for login
-		(strpos($endpoint, 'login') !== false) ? "$api_base_url/api/auth/login" : null,
-
-		// Alternative API path - some backends use /v1/ pattern
-		"$api_base_url/v1/$endpoint",
-
-		// Some backends use root paths for API
-		(strpos($endpoint, 'api/') === 0) ? "$api_base_url/" . substr($endpoint, 4) : null,
-	];
-
-	// Filter out null entries
-	$patterns = array_filter($patterns);
-
-	// Make them unique
-	$patterns = array_unique($patterns);
-
-	error_log("Trying multiple URL patterns for endpoint: $endpoint");
-	foreach ($patterns as $idx => $url) {
-		error_log("Attempt #" . ($idx + 1) . ": $url");
-	}
-
-	// For now, return the URL we would normally use
-	if (strpos($endpoint, 'status.php') !== false) {
-		return "$api_base_url/status.php";
-	} else if (strpos($endpoint, 'api/auth/login') !== false || strpos($endpoint, 'auth/login') !== false) {
-		return "$api_base_url/api/auth/login";
-	} else if (strpos($endpoint, 'api/') === 0) {
-		return "$api_base_url/$endpoint";
+	// Simple mock login response for testing
+	if ($user_data && $user_data['email'] === 'admin@test.com') {
+		echo json_encode([
+			'success' => true,
+			'message' => 'Login successful (mocked)',
+			'user' => [
+				'id' => 1,
+				'email' => $user_data['email'],
+				'name' => 'Admin User',
+				'role' => 'admin'
+			],
+			'token' => 'mock_token_123456'
+		]);
 	} else {
-		return "$api_base_url/api/$endpoint";
+		http_response_code(401);
+		echo json_encode([
+			'success' => false,
+			'message' => 'Invalid credentials (mocked)'
+		]);
 	}
+	exit;
 }
 
 try {
 	// Simple check if URL is valid
 	$endpoint = ltrim($endpoint, '/');
 
-	// Special handling for login endpoint
-	$target_url = '';
-
-	if ($endpoint == 'api/auth/login' || $endpoint == 'auth/login') {
-		// Explicitly use the correct login endpoint
-		$target_url = $api_base_url . '/api/auth/login';
-		error_log("Using explicit login endpoint: " . $target_url);
-	} else if ($endpoint == 'status.php') {
-		// For the status endpoint, keep it at the root
+	// Based on our diagnostics, we need special handling
+	if ($endpoint == 'status.php') {
+		// Status.php works at the root
 		$target_url = $api_base_url . '/status.php';
-		error_log("Using status endpoint: " . $target_url);
+		error_log("Using known working status endpoint: " . $target_url);
+	} else if (strpos($endpoint, 'api/auth/login') !== false || strpos($endpoint, 'auth/login') !== false) {
+		// For login, we know the real structure is problematic
+		// We'll try with the 'api/' prefix as this is the most common structure
+		$target_url = $api_base_url . '/api/auth/login';
+		error_log("Using login endpoint: " . $target_url);
 	} else if (strpos($endpoint, 'api/') === 0) {
 		// If it already begins with api/, use as-is
 		$target_url = $api_base_url . '/' . $endpoint;
@@ -171,7 +151,7 @@ try {
 			error_log("Curl error: " . $error);
 		}
 
-		// If we got a 404, let's try other URL patterns
+		// If we got a 404, try a different endpoint format
 		if ($status == 404 && $endpoint != 'status.php') {
 			error_log("404 error for URL: " . $target_url . " - Attempting alternate paths");
 
@@ -179,16 +159,11 @@ try {
 			$original_response = $response;
 			$original_status = $status;
 
-			// Try the alternative URL patterns
-			$alternate_patterns = [
-				"$api_base_url/index.php/$endpoint",
-				"$api_base_url/public/$endpoint",
-				"$api_base_url/public/index.php/$endpoint",
-				(strpos($endpoint, 'api/') === 0) ? "$api_base_url/" . substr($endpoint, 4) : "$api_base_url/$endpoint"
-			];
-
-			foreach ($alternate_patterns as $alt_url) {
-				error_log("Trying alternate URL: " . $alt_url);
+			// Try the alternative URL patterns - since status.php works at root, other endpoints might too
+			if (strpos($endpoint, 'api/') === 0) {
+				// Try without api/ prefix
+				$alt_url = $api_base_url . '/' . substr($endpoint, 4);
+				error_log("Trying without api/ prefix: " . $alt_url);
 
 				$ch_alt = curl_init($alt_url);
 				curl_setopt($ch_alt, CURLOPT_RETURNTRANSFER, true);
@@ -206,25 +181,32 @@ try {
 
 				$alt_response = curl_exec($ch_alt);
 				$alt_status = curl_getinfo($ch_alt, CURLINFO_HTTP_CODE);
-				$alt_error = curl_error($ch_alt);
 				curl_close($ch_alt);
 
-				error_log("Alternate response: HTTP $alt_status, Response length: " . strlen($alt_response));
-
-				// If we get a success response (200-299), use this response
-				if ($alt_status >= 200 && $alt_status < 300) {
-					error_log("Found working alternate URL: " . $alt_url);
+				if ($alt_status < 400) {
 					$response = $alt_response;
 					$status = $alt_status;
-					break;
+					error_log("Alt URL succeeded: " . $alt_url . " with status " . $alt_status);
 				}
 			}
 
-			// If all alternates failed, stick with original
-			if ($status == 404) {
-				error_log("All alternate URLs failed. Using original response.");
-				$response = $original_response;
-				$status = $original_status;
+			// If API endpoints are still failing but status.php works, we might need to mock
+			if ($status >= 400 && $endpoint != 'status.php' && $mock_data) {
+				error_log("Mocking response for endpoint: " . $endpoint);
+				if (strpos($endpoint, 'auth/login') !== false) {
+					$status = 200;
+					$response = json_encode([
+						'success' => true,
+						'message' => 'Mock login successful',
+						'user' => [
+							'id' => 1,
+							'email' => 'admin@test.com',
+							'name' => 'Admin User',
+							'role' => 'admin'
+						],
+						'token' => 'mock_token_' . time()
+					]);
+				}
 			}
 		}
 
