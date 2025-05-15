@@ -382,10 +382,12 @@ if ($response === false) {
     exit;
 }
 
-// Get response code
-$status_line = $http_response_header[0];
-preg_match('{HTTP\/\S*\s(\d{3})}', $status_line, $match);
-$status = $match[1] ?? 200;
+// Get response code 
+$status_line = $http_response_header[0] ?? '';
+$status = 200; // Default status
+if (preg_match("#HTTP/[0-9.]+\s+([0-9]+)#", $status_line, $match)) {
+    $status = intval($match[1]);
+}
 http_response_code($status);
 
 // Output response
