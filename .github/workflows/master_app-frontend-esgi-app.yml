@@ -1,19 +1,21 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy PHP app to Azure Web App - app-frontend-esgi-app
+name: Build and deploy Frontend to Azure Web App
 
 on:
   push:
     branches:
       - master
-  workflow_dispatch:
+    paths:
+      - 'front/**'  # Déclencher uniquement quand des changements sont faits dans front
+  workflow_dispatch:  # Permet de lancer le workflow manuellement
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -23,23 +25,30 @@ jobs:
         with:
           php-version: '8.2'
 
-      - name: Check if composer.json exists
+      # Vérifiez si composer.json existe dans le dossier front
+      - name: Check if composer.json exists in frontend
         id: check_files
         uses: andstor/file-existence-action@v1
         with:
-          files: 'composer.json'
+          files: 'front/composer.json'
 
+      # Exécutez composer install dans le dossier front si composer.json existe
       - name: Run composer install if composer.json exists
         if: steps.check_files.outputs.files_exists == 'true'
-        run: composer validate --no-check-publish && composer install --prefer-dist --no-progress
+        run: |
+          cd front
+          composer validate --no-check-publish && composer install --prefer-dist --no-progress
 
-      - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
+      # Préparez uniquement le dossier front pour le déploiement
+      - name: Prepare frontend files for deployment
+        run: |
+          cd front
+          zip -r ../release.zip ./* 
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
-          name: php-app
+          name: front-app
           path: release.zip
 
   deploy:
@@ -53,7 +62,7 @@ jobs:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: php-app
+          name: front-app
 
       - name: Unzip artifact for deployment
         run: unzip release.zip
