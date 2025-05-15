@@ -211,6 +211,35 @@ class ClasseController
 
 	public function getElevesByClasse($id_classe)
 	{
-		return $this->eleveModel->getByClasse($id_classe);
+		try {
+			error_log("Tentative de récupération des élèves de la classe: " . $id_classe);
+
+			// Récupérer les élèves
+			$eleves = $this->eleveModel->getByClasse($id_classe);
+			error_log("Résultat de getByClasse: " . print_r($eleves, true));
+
+			if ($eleves === false) {
+				error_log("Erreur lors de la récupération des élèves");
+				return [
+					'success' => false,
+					'message' => 'Erreur lors de la récupération des élèves',
+					'data' => []
+				];
+			}
+
+			error_log("Élèves récupérés avec succès: " . count($eleves) . " élèves trouvés");
+			return [
+				'success' => true,
+				'message' => count($eleves) . ' élèves trouvés',
+				'data' => $eleves
+			];
+		} catch (Exception $e) {
+			error_log("Exception dans getElevesByClasse: " . $e->getMessage());
+			return [
+				'success' => false,
+				'message' => 'Erreur serveur: ' . $e->getMessage(),
+				'data' => []
+			];
+		}
 	}
 }

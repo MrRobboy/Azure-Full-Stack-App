@@ -64,12 +64,13 @@ ob_start();
 	.btn {
 		background: #007bff;
 		color: white;
-		padding: 10px 20px;
+		padding: 8px 12px;
 		border: none;
 		border-radius: 4px;
 		cursor: pointer;
-		font-size: 14px;
+		font-size: 13px;
 		transition: background 0.3s;
+		margin: 0 2px;
 	}
 
 	.btn:hover {
@@ -100,7 +101,6 @@ ob_start();
 
 	.btn-edit {
 		background: #28a745;
-		margin-right: 5px;
 	}
 
 	.btn-edit:hover {
@@ -113,6 +113,20 @@ ob_start();
 
 	.btn-danger:hover {
 		background: #c82333;
+	}
+
+	.btn-info {
+		background: #17a2b8;
+	}
+
+	.btn-info:hover {
+		background: #138496;
+	}
+
+	.action-buttons {
+		display: flex;
+		gap: 4px;
+		justify-content: flex-start;
 	}
 
 	.notification-container {
@@ -318,8 +332,9 @@ ob_start();
 	</div>
 </div>
 
-<script src="js/error-messages.js"></script>
 <script src="js/notification-system.js"></script>
+<script src="js/error-messages.js"></script>
+<script src="js/config.js"></script>
 <script>
 	// Vérifier que les scripts sont chargés
 	console.log('Vérification du chargement des scripts...');
@@ -334,12 +349,53 @@ ob_start();
 		console.error('Le script notification-system.js n\'est pas chargé correctement');
 	}
 
+	// Fonction utilitaire pour logger les requêtes et réponses
+	async function fetchWithLogging(url, options = {}) {
+		console.log('🌐 Requête API:', url);
+		console.log('Options:', options);
+
+		try {
+			const response = await fetch(url, {
+				...options,
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+					...options.headers
+				},
+				credentials: 'include'
+			});
+
+			console.log('Status:', response.status);
+			console.log('Headers:', Object.fromEntries(response.headers.entries()));
+
+			const contentType = response.headers.get('content-type');
+			if (!contentType || !contentType.includes('application/json')) {
+				throw new Error(`Réponse invalide: ${contentType}`);
+			}
+
+			const data = await response.json();
+			console.log('Réponse:', data);
+
+			if (!response.ok) {
+				throw new Error(data.message || `Erreur ${response.status}`);
+			}
+
+			return {
+				data
+			};
+		} catch (error) {
+			console.error('Erreur:', error);
+			throw error;
+		}
+	}
+
 	// Fonction pour charger les matières
 	async function loadMatieres() {
 		try {
 			console.log('Chargement des matières...');
-			const response = await fetch('api/matieres');
-			const result = await response.json();
+			const {
+				data: result
+			} = await fetchWithLogging(getApiUrl('matieres'));
 			console.log('Résultat matières:', result);
 
 			if (!result.success) {
@@ -365,8 +421,9 @@ ob_start();
 	async function loadClasses() {
 		try {
 			console.log('Chargement des classes...');
-			const response = await fetch('api/classes');
-			const result = await response.json();
+			const {
+				data: result
+			} = await fetchWithLogging(getApiUrl('classes'));
 			console.log('Résultat classes:', result);
 
 			if (!result.success) {
@@ -392,8 +449,9 @@ ob_start();
 	async function loadExams() {
 		try {
 			console.log('Chargement des examens...');
-			const response = await fetch('api/exams');
-			const result = await response.json();
+			const {
+				data: result
+			} = await fetchWithLogging(getApiUrl('examens'));
 			console.log('Résultat examens:', result);
 
 			if (!result.success) {
@@ -408,7 +466,9 @@ ob_start();
 				return;
 			}
 
+			console.log('Données des examens reçues:', result.data);
 			result.data.forEach(exam => {
+				console.log('Traitement de l\'examen:', exam);
 				const tr = document.createElement('tr');
 				tr.innerHTML = `
 					<td>${exam.titre}</td>
@@ -416,8 +476,11 @@ ob_start();
 					<td>${exam.nom_classe}</td>
 					<td>${exam.date ? new Date(exam.date).toLocaleDateString('fr-FR') : 'Non défini'}</td>
 					<td>
-						<button class="btn btn-edit" onclick="editExam(${exam.id_exam}, '${exam.titre}', ${exam.matiere}, ${exam.classe}, '${exam.date}')">Modifier</button>
-						<button class="btn btn-danger" onclick="deleteExam(${exam.id_exam})">Supprimer</button>
+						<div class="action-buttons">
+							<button class="btn btn-edit" onclick="editExam(${exam.id_examen}, '${exam.titre}', ${exam.matiere}, ${exam.classe}, '${exam.date}')">Modifier</button>
+							<button class="btn btn-danger" onclick="deleteExam(${exam.id_examen})">Supprimer</button>
+							<button class="btn btn-info" onclick="manageNotes(${exam.id_examen})">Notes</button>
+						</div>
 					</td>
 				`;
 				tbody.appendChild(tr);
@@ -472,7 +535,7 @@ ob_start();
 
 		try {
 			console.log('Envoi de la requête...');
-			const response = await fetch('api/exams', {
+			const response = await fetch(getApiUrl('examens'), {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -503,7 +566,7 @@ ob_start();
 	}
 
 	// Fonction pour modifier un examen
-	async function editExam(id, currentTitre, currentMatiere, currentClasse, currentDate) {
+	async function editExam(id_examen, currentTitre, currentMatiere, currentClasse, currentDate) {
 		const modal = document.createElement('div');
 		modal.className = 'modal';
 		modal.innerHTML = `
@@ -562,7 +625,7 @@ ob_start();
 			}
 
 			try {
-				const response = await fetch(`api/exams/${id}`, {
+				const response = await fetch(`${getApiUrl('examens')}/${id_examen}`, {
 					method: 'PUT',
 					headers: {
 						'Content-Type': 'application/json'
@@ -589,7 +652,7 @@ ob_start();
 	// Fonction pour charger les matières dans le modal d'édition
 	async function loadMatieresForEdit(selectedMatiere) {
 		try {
-			const response = await fetch('api/matieres');
+			const response = await fetch(getApiUrl('matieres'));
 			const result = await response.json();
 
 			if (!result.success) {
@@ -614,7 +677,7 @@ ob_start();
 	// Fonction pour charger les classes dans le modal d'édition
 	async function loadClassesForEdit(selectedClasse) {
 		try {
-			const response = await fetch('api/classes');
+			const response = await fetch(getApiUrl('classes'));
 			const result = await response.json();
 
 			if (!result.success) {
@@ -645,14 +708,14 @@ ob_start();
 	}
 
 	// Fonction pour supprimer un examen
-	async function deleteExam(id) {
+	async function deleteExam(id_examen) {
 		if (!confirm('Êtes-vous sûr de vouloir supprimer cet examen ?')) {
 			return;
 		}
 
 		try {
-			console.log('Tentative de suppression de l\'examen:', id);
-			const response = await fetch(`api/exams/${id}`, {
+			console.log('Tentative de suppression de l\'examen:', id_examen);
+			const response = await fetch(`${getApiUrl('examens')}/${id_examen}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json'
@@ -763,6 +826,17 @@ ob_start();
 		}
 	`;
 	document.head.appendChild(modalStyle);
+
+	// Ajouter la fonction manageNotes
+	function manageNotes(examId) {
+		console.log('Redirection vers la gestion des notes pour l\'examen:', examId);
+		if (!examId) {
+			console.error('ID de l\'examen manquant');
+			NotificationSystem.error('Erreur : ID de l\'examen manquant');
+			return;
+		}
+		window.location.href = `gestion_notes.php?exam_id=${examId}`;
+	}
 </script>
 
 <?php

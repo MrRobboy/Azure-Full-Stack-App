@@ -96,13 +96,79 @@ class Classe
 
 	public function update($id, $nom_classe, $niveau, $numero, $rythme)
 	{
-		$stmt = $this->db->prepare("UPDATE CLASSE SET nom_classe = ?, niveau = ?, numero = ?, rythme = ? WHERE id_classe = ?");
-		return $stmt->execute([$nom_classe, $niveau, $numero, $rythme, $id]);
+		try {
+			error_log("Tentative de mise à jour de la classe ID: " . $id);
+
+			// Vérifier si la classe existe
+			$classe = $this->getById($id);
+			if (!$classe) {
+				error_log("Classe non trouvée avec l'ID: " . $id);
+				return false;
+			}
+
+			$stmt = $this->db->prepare("UPDATE CLASSE SET nom_classe = ?, niveau = ?, numero = ?, rythme = ? WHERE id_classe = ?");
+			if (!$stmt) {
+				error_log("Erreur de préparation de la requête: " . print_r($this->db->errorInfo(), true));
+				return false;
+			}
+
+			$result = $stmt->execute([$nom_classe, $niveau, $numero, $rythme, $id]);
+			if (!$result) {
+				error_log("Erreur d'exécution de la requête: " . print_r($stmt->errorInfo(), true));
+				return false;
+			}
+
+			error_log("Classe mise à jour avec succès");
+			return true;
+		} catch (PDOException $e) {
+			error_log("Erreur PDO dans update: " . $e->getMessage());
+			return false;
+		} catch (Exception $e) {
+			error_log("Erreur générale dans update: " . $e->getMessage());
+			return false;
+		}
 	}
 
 	public function delete($id)
 	{
-		$stmt = $this->db->prepare("DELETE FROM CLASSE WHERE id_classe = ?");
-		return $stmt->execute([$id]);
+		try {
+			error_log("Tentative de suppression de la classe ID: " . $id);
+
+			// Vérifier si la classe existe
+			$classe = $this->getById($id);
+			if (!$classe) {
+				error_log("Classe non trouvée avec l'ID: " . $id);
+				return false;
+			}
+
+			// Vérifier si la classe a des élèves
+			$stmt = $this->db->prepare("SELECT COUNT(*) FROM USER WHERE classe = ?");
+			$stmt->execute([$id]);
+			if ($stmt->fetchColumn() > 0) {
+				error_log("Impossible de supprimer la classe car elle contient des élèves");
+				return false;
+			}
+
+			$stmt = $this->db->prepare("DELETE FROM CLASSE WHERE id_classe = ?");
+			if (!$stmt) {
+				error_log("Erreur de préparation de la requête: " . print_r($this->db->errorInfo(), true));
+				return false;
+			}
+
+			$result = $stmt->execute([$id]);
+			if (!$result) {
+				error_log("Erreur d'exécution de la requête: " . print_r($stmt->errorInfo(), true));
+				return false;
+			}
+
+			error_log("Classe supprimée avec succès");
+			return true;
+		} catch (PDOException $e) {
+			error_log("Erreur PDO dans delete: " . $e->getMessage());
+			return false;
+		} catch (Exception $e) {
+			error_log("Erreur générale dans delete: " . $e->getMessage());
+			return false;
+		}
 	}
 }

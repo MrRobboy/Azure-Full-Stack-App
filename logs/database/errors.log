@@ -1,0 +1,33 @@
+[2025-05-09 13:03:56] [database] Erreur de connexion à la base de données: could not find driver
+Trace: Array
+(
+    [0] => Array
+        (
+            [file] => D:\bureau\Codes-programmes\GIT\Azure-Full-Stack-App\back\services\DatabaseService.php
+            [line] => 23
+            [function] => logError
+            [class] => ErrorService
+            [type] => ->
+        )
+
+    [1] => Array
+        (
+            [file] => D:\bureau\Codes-programmes\GIT\Azure-Full-Stack-App\back\services\DatabaseService.php
+            [line] => 31
+            [function] => __construct
+            [class] => DatabaseService
+            [type] => ->
+        )
+
+    [2] => Array
+        (
+            [file] => D:\bureau\Codes-programmes\GIT\Azure-Full-Stack-App\back\test-db.php
+            [line] => 6
+            [function] => getInstance
+            [class] => DatabaseService
+            [type] => ::
+        )
+
+)
+
+----------------------------------------

@@ -17,11 +17,12 @@ class MatiereController
 	{
 		try {
 			$result = $this->matiere->getAll();
-
-			if (!is_array($result)) {
-				throw new Exception("Format de données invalide");
+			if ($result === false) {
+				return [
+					'success' => false,
+					'error' => "Erreur lors de la récupération des matières"
+				];
 			}
-
 			return [
 				'success' => true,
 				'data' => $result
@@ -39,21 +40,24 @@ class MatiereController
 	{
 		try {
 			if (!is_numeric($id)) {
-				throw new Exception("ID invalide");
+				return [
+					'success' => false,
+					'error' => "ID invalide"
+				];
 			}
 			$result = $this->matiere->getById($id);
 			if ($result === false) {
-				throw new Exception("Matière non trouvée");
-			}
-			if (!is_array($result)) {
-				$result = [];
+				return [
+					'success' => false,
+					'error' => "Matière non trouvée"
+				];
 			}
 			return [
 				'success' => true,
 				'data' => $result
 			];
 		} catch (Exception $e) {
-			$this->errorService->logError($e->getMessage(), 'matiere');
+			$this->errorService->logError('MatiereController::getMatiereById', $e->getMessage());
 			return [
 				'success' => false,
 				'error' => $e->getMessage()
@@ -64,12 +68,18 @@ class MatiereController
 	public function createMatiere($data)
 	{
 		try {
-			if (empty($data['nom'])) {
-				throw new Exception("Le nom de la matière est requis");
+			if (!isset($data['nom']) || empty($data['nom'])) {
+				return [
+					'success' => false,
+					'error' => "Le nom de la matière est requis"
+				];
 			}
-			$result = $this->matiere->create($data);
+			$result = $this->matiere->createMatiere($data);
 			if ($result === false) {
-				throw new Exception("Erreur lors de la création de la matière");
+				return [
+					'success' => false,
+					'error' => "Erreur lors de la création de la matière"
+				];
 			}
 			return [
 				'success' => true,
@@ -77,7 +87,7 @@ class MatiereController
 				'message' => "Matière créée avec succès"
 			];
 		} catch (Exception $e) {
-			$this->errorService->logError($e->getMessage(), 'matiere');
+			$this->errorService->logError('MatiereController::createMatiere', $e->getMessage());
 			return [
 				'success' => false,
 				'error' => $e->getMessage()
@@ -89,14 +99,23 @@ class MatiereController
 	{
 		try {
 			if (!is_numeric($id)) {
-				throw new Exception("ID invalide");
+				return [
+					'success' => false,
+					'error' => "ID invalide"
+				];
 			}
-			if (empty($data['nom'])) {
-				throw new Exception("Le nom de la matière est requis");
+			if (!isset($data['nom']) || empty($data['nom'])) {
+				return [
+					'success' => false,
+					'error' => "Le nom de la matière est requis"
+				];
 			}
-			$result = $this->matiere->update($id, $data);
+			$result = $this->matiere->updateMatiere($id, $data);
 			if ($result === false) {
-				throw new Exception("Erreur lors de la mise à jour de la matière");
+				return [
+					'success' => false,
+					'error' => "Erreur lors de la mise à jour de la matière"
+				];
 			}
 			return [
 				'success' => true,
@@ -104,7 +123,7 @@ class MatiereController
 				'message' => "Matière mise à jour avec succès"
 			];
 		} catch (Exception $e) {
-			$this->errorService->logError($e->getMessage(), 'matiere');
+			$this->errorService->logError('MatiereController::updateMatiere', $e->getMessage());
 			return [
 				'success' => false,
 				'error' => $e->getMessage()
@@ -116,18 +135,25 @@ class MatiereController
 	{
 		try {
 			if (!is_numeric($id)) {
-				throw new Exception("ID invalide");
+				return [
+					'success' => false,
+					'error' => "ID invalide"
+				];
 			}
-			$result = $this->matiere->delete($id);
+			$result = $this->matiere->deleteMatiere($id);
 			if ($result === false) {
-				throw new Exception("Erreur lors de la suppression de la matière");
+				return [
+					'success' => false,
+					'error' => "Erreur lors de la suppression de la matière"
+				];
 			}
 			return [
 				'success' => true,
-				'message' => "Matière supprimée avec succès"
+				'message' => "Matière supprimée avec succès",
+				'data' => $result
 			];
 		} catch (Exception $e) {
-			$this->errorService->logError($e->getMessage(), 'matiere');
+			$this->errorService->logError('MatiereController::deleteMatiere', $e->getMessage());
 			return [
 				'success' => false,
 				'error' => $e->getMessage()

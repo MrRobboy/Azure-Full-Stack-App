@@ -3,6 +3,7 @@ require_once __DIR__ . '/../models/Note.php';
 require_once __DIR__ . '/../models/Eleve.php';
 require_once __DIR__ . '/../models/Matiere.php';
 require_once __DIR__ . '/../models/Examen.php';
+require_once __DIR__ . '/../models/UserPrivilege.php';
 require_once __DIR__ . '/../services/ErrorService.php';
 
 class NoteController
@@ -11,6 +12,7 @@ class NoteController
 	private $eleveModel;
 	private $matiereModel;
 	private $examenModel;
+	private $userPrivilegeModel;
 	private $errorService;
 
 	public function __construct()
@@ -19,7 +21,17 @@ class NoteController
 		$this->eleveModel = new Eleve();
 		$this->matiereModel = new Matiere();
 		$this->examenModel = new Examen();
+		$this->userPrivilegeModel = new UserPrivilege();
 		$this->errorService = ErrorService::getInstance();
+	}
+
+	private function checkNotePrivilege($id_eleve, $valeur)
+	{
+		$min_note = $this->userPrivilegeModel->getMinNoteForUser($id_eleve);
+		if ($min_note !== null && $valeur < $min_note) {
+			throw new Exception("Cet étudiant ne peut pas avoir une note inférieure à " . $min_note);
+		}
+		return true;
 	}
 
 	public function getAllNotes()
@@ -94,6 +106,45 @@ class NoteController
 		}
 	}
 
+	public function getNotesByExamen($id_examen)
+	{
+		try {
+			error_log("NoteController::getNotesByExamen - Début avec id_examen: " . $id_examen);
+
+			if (!is_numeric($id_examen)) {
+				error_log("NoteController::getNotesByExamen - ID examen invalide: " . $id_examen);
+				throw new Exception("ID examen invalide");
+			}
+
+			error_log("NoteController::getNotesByExamen - Appel du modèle");
+			$result = $this->noteModel->getByExamen($id_examen);
+			error_log("NoteController::getNotesByExamen - Résultat du modèle: " . print_r($result, true));
+
+			if ($result === false) {
+				error_log("NoteController::getNotesByExamen - Erreur lors de la récupération des notes");
+				throw new Exception("Erreur lors de la récupération des notes de l'examen");
+			}
+
+			if (!is_array($result)) {
+				error_log("NoteController::getNotesByExamen - Le résultat n'est pas un tableau, conversion en tableau vide");
+				$result = [];
+			}
+
+			error_log("NoteController::getNotesByExamen - Retour du résultat final: " . print_r($result, true));
+			return [
+				'success' => true,
+				'data' => $result
+			];
+		} catch (Exception $e) {
+			error_log("NoteController::getNotesByExamen - Exception: " . $e->getMessage());
+			$this->errorService->logError('NoteController::getNotesByExamen', $e->getMessage());
+			return [
+				'success' => false,
+				'error' => $e->getMessage()
+			];
+		}
+	}
+
 	public function createNote($id_eleve, $id_matiere, $id_examen, $valeur)
 	{
 		try {
@@ -112,6 +163,9 @@ class NoteController
 			if (!is_numeric($valeur) || $valeur < 0 || $valeur > 20) {
 				throw new Exception("La note doit être un nombre compris entre 0 et 20");
 			}
+
+			// Vérification des privilèges
+			$this->checkNotePrivilege($id_eleve, $valeur);
 
 			$result = $this->noteModel->create($id_eleve, $id_matiere, $id_examen, $valeur);
 			if ($result === false) {
@@ -146,14 +200,10 @@ class NoteController
 				throw new Exception("La note doit être un nombre compris entre 0 et 20");
 			}
 
-			// On garde les mêmes valeurs pour l'élève, la matière et l'examen
-			$result = $this->noteModel->update(
-				$id,
-				$note['id_eleve'],
-				$note['id_matiere'],
-				$note['id_examen'],
-				$valeur
-			);
+			// Vérification des privilèges
+			$this->checkNotePrivilege($note['id_eleve'], $valeur);
+
+			$result = $this->noteModel->update($id, $valeur);
 
 			if ($result === false) {
 				throw new Exception("Erreur lors de la mise à jour de la note");
@@ -161,7 +211,7 @@ class NoteController
 
 			return [
 				'success' => true,
-				'data' => $this->noteModel->getById($id),
+				'data' => $result,
 				'message' => 'Note mise à jour avec succès'
 			];
 		} catch (Exception $e) {

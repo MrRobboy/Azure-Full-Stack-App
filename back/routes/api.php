@@ -2,25 +2,44 @@
 // Désactivation de l'affichage des erreurs pour l'API
 ini_set('display_errors', 0);
 ini_set('display_startup_errors', 0);
-error_reporting(0);
+error_reporting(E_ALL);
 
 // Configuration des logs
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/../../logs/php_errors.log');
 
+// Log de l'URL et de la méthode
+error_log("URL: " . $_SERVER['REQUEST_URI']);
+error_log("Méthode: " . $_SERVER['REQUEST_METHOD']);
+
 // Inclusion des fichiers nécessaires
-require_once __DIR__ . '/../controllers/AuthController.php';
-require_once __DIR__ . '/../controllers/NoteController.php';
-require_once __DIR__ . '/../controllers/MatiereController.php';
-require_once __DIR__ . '/../controllers/ClasseController.php';
-require_once __DIR__ . '/../controllers/ExamenController.php';
-require_once __DIR__ . '/../services/ErrorService.php';
+try {
+	require_once __DIR__ . '/../controllers/AuthController.php';
+	require_once __DIR__ . '/../controllers/NoteController.php';
+	require_once __DIR__ . '/../controllers/MatiereController.php';
+	require_once __DIR__ . '/../controllers/ClasseController.php';
+	require_once __DIR__ . '/../controllers/ExamenController.php';
+	require_once __DIR__ . '/../controllers/ProfController.php';
+	require_once __DIR__ . '/../controllers/UserController.php';
+	require_once __DIR__ . '/../services/ErrorService.php';
+} catch (Exception $e) {
+	error_log("Erreur lors du chargement des fichiers: " . $e->getMessage());
+	sendResponse(['success' => false, 'message' => 'Erreur lors du chargement des fichiers'], 500);
+	exit();
+}
 
 // Configuration des headers pour les requêtes API
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Origin: http://localhost:727');
+header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, Accept');
+
+// Log des headers de la requête
+error_log("Headers de la requête: " . print_r(getallheaders(), true));
+error_log("Méthode HTTP: " . $_SERVER['REQUEST_METHOD']);
+error_log("URI: " . $_SERVER['REQUEST_URI']);
+error_log("Raw input: " . file_get_contents('php://input'));
 
 $errorService = ErrorService::getInstance();
 
@@ -46,25 +65,14 @@ $noteController = new NoteController();
 $matiereController = new MatiereController();
 $classeController = new ClasseController();
 $examenController = new ExamenController();
+$profController = new ProfController();
+$userController = new UserController();
 
 // Fonction pour envoyer une réponse JSON
 function sendResponse($data, $status = 200)
 {
 	http_response_code($status);
 	header('Content-Type: application/json; charset=utf-8');
-
-	// Vérification que les données sont valides
-	if ($data === null) {
-		$data = ['success' => false, 'message' => 'Données invalides'];
-	}
-
-	// Assure que la réponse a toujours un format cohérent
-	if (!isset($data['success'])) {
-		$data = [
-			'success' => $status >= 200 && $status < 300,
-			'data' => $data
-		];
-	}
 
 	// Log de la réponse avant l'encodage
 	error_log("Données à encoder: " . print_r($data, true));
@@ -125,6 +133,57 @@ function handleError($e)
 	}
 }
 
+// Gestion des erreurs PHP
+set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+	error_log("Erreur PHP [$errno]: $errstr dans $errfile à la ligne $errline");
+	header('Content-Type: application/json; charset=utf-8');
+	http_response_code(500);
+	echo json_encode([
+		'success' => false,
+		'message' => "Erreur serveur: $errstr",
+		'debug' => [
+			'file' => $errfile,
+			'line' => $errline,
+			'type' => $errno
+		]
+	], JSON_UNESCAPED_UNICODE);
+	exit();
+});
+
+// Gestion des exceptions non capturées
+set_exception_handler(function ($e) {
+	error_log("Exception non gérée: " . $e->getMessage());
+	error_log("Trace: " . $e->getTraceAsString());
+	header('Content-Type: application/json; charset=utf-8');
+	http_response_code(500);
+	echo json_encode([
+		'success' => false,
+		'message' => $e->getMessage(),
+		'debug' => [
+			'file' => $e->getFile(),
+			'line' => $e->getLine(),
+			'trace' => $e->getTraceAsString()
+		]
+	], JSON_UNESCAPED_UNICODE);
+	exit();
+});
+
+// Gestion des erreurs fatales
+register_shutdown_function(function () {
+	$error = error_get_last();
+	if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+		error_log("Erreur fatale: " . print_r($error, true));
+		header('Content-Type: application/json; charset=utf-8');
+		http_response_code(500);
+		echo json_encode([
+			'success' => false,
+			'message' => "Erreur fatale: " . $error['message'],
+			'debug' => $error
+		], JSON_UNESCAPED_UNICODE);
+		exit();
+	}
+});
+
 try {
 	error_log("Début de la requête API");
 	error_log("Méthode HTTP: " . $method);
@@ -181,6 +240,8 @@ try {
 			if (isset($segments[1])) {
 				if ($segments[1] === 'eleve' && isset($segments[2])) {
 					sendResponse($noteController->getNotesByEleve($segments[2]));
+				} else if ($segments[1] === 'exam' && isset($segments[2])) {
+					sendResponse($noteController->getNotesByExamen($segments[2]));
 				} else {
 					sendResponse($noteController->getNoteById($segments[1]));
 				}
@@ -189,26 +250,30 @@ try {
 			}
 		} elseif ($method === 'POST') {
 			$data = json_decode(file_get_contents('php://input'), true);
+			if (!$data || !isset($data['id_eleve']) || !isset($data['id_matiere']) || !isset($data['id_examen']) || !isset($data['valeur'])) {
+				throw new Exception("Tous les champs sont obligatoires");
+			}
 			$result = $noteController->createNote(
 				$data['id_eleve'],
 				$data['id_matiere'],
 				$data['id_examen'],
 				$data['valeur']
 			);
-			sendResponse(['id' => $result], 201);
+			sendResponse($result);
 		} elseif ($method === 'PUT' && isset($segments[1])) {
 			$data = json_decode(file_get_contents('php://input'), true);
-			$noteController->updateNote(
-				$segments[1],
-				$data['id_eleve'],
-				$data['id_matiere'],
-				$data['id_examen'],
-				$data['valeur']
-			);
-			sendResponse(['message' => 'Note mise à jour']);
+			if (!$data || !isset($data['valeur'])) {
+				throw new Exception("La valeur de la note est obligatoire");
+			}
+			$result = $noteController->updateNote($segments[1], $data['valeur']);
+			sendResponse($result);
 		} elseif ($method === 'DELETE' && isset($segments[1])) {
-			$noteController->deleteNote($segments[1]);
-			sendResponse(['message' => 'Note supprimée']);
+			$result = $noteController->deleteNote($segments[1]);
+			sendResponse($result);
+		} else {
+			throw new Exception(json_encode(
+				$errorService->logError('api', 'Route de notes non trouvée', ['uri' => $segments])
+			), 404);
 		}
 	}
 
@@ -230,8 +295,9 @@ try {
 					sendResponse($result);
 				}
 			} catch (Exception $e) {
-				error_log("Erreur: " . $e->getMessage());
-				sendResponse(['message' => $e->getMessage()], 500);
+				error_log("Erreur dans la route matieres: " . $e->getMessage());
+				error_log("Trace: " . $e->getTraceAsString());
+				sendResponse(['success' => false, 'message' => $e->getMessage()], 500);
 			}
 		} elseif ($method === 'POST') {
 			try {
@@ -272,10 +338,10 @@ try {
 				error_log("Suppression de la matière avec l'ID: " . $segments[1]);
 				$result = $matiereController->deleteMatiere($segments[1]);
 				error_log("Matière supprimée avec succès");
-				sendResponse(['message' => 'Matière supprimée avec succès']);
+				sendResponse($result);
 			} catch (Exception $e) {
 				error_log("Erreur: " . $e->getMessage());
-				sendResponse(['message' => $e->getMessage()], 400);
+				sendResponse(['success' => false, 'error' => $e->getMessage()], 400);
 			}
 		} else {
 			error_log("Méthode non autorisée: " . $method);
@@ -286,32 +352,33 @@ try {
 	// Routes des classes
 	if ($segments[0] === 'classes') {
 		try {
-			error_log("Traitement de la route classes - " . date('Y-m-d H:i:s'));
-			error_log("Méthode: " . $method);
-			error_log("Segments: " . print_r($segments, true));
-
 			if ($method === 'GET') {
 				if (isset($segments[1])) {
 					if ($segments[1] === 'eleves' && isset($segments[2])) {
 						error_log("Récupération des élèves de la classe: " . $segments[2]);
 						$result = $classeController->getElevesByClasse($segments[2]);
+						error_log("Résultat de getElevesByClasse: " . print_r($result, true));
+						sendResponse($result);
+					} else if ($segments[1] === 'etudiants' && isset($segments[2])) {
+						error_log("Récupération des étudiants de la classe: " . $segments[2]);
+						$result = $classeController->getElevesByClasse($segments[2]);
+						error_log("Résultat de getElevesByClasse: " . print_r($result, true));
+						sendResponse($result);
 					} else {
-						error_log("Récupération de la classe avec l'ID: " . $segments[1]);
+						error_log("Récupération de la classe: " . $segments[1]);
 						$result = $classeController->getClasseById($segments[1]);
-						error_log("Résultat de getClasseById: " . print_r($result, true));
+						error_log("Résultat: " . print_r($result, true));
+						sendResponse($result);
 					}
 				} else {
 					error_log("Récupération de toutes les classes");
 					$result = $classeController->getAllClasses();
+					error_log("Résultat: " . print_r($result, true));
+					sendResponse($result);
 				}
-				error_log("Envoi de la réponse: " . print_r($result, true));
-				sendResponse($result);
 			} elseif ($method === 'POST') {
 				$data = json_decode(file_get_contents('php://input'), true);
-				if (!$data) {
-					throw new Exception("Données JSON invalides");
-				}
-				if (!isset($data['nom_classe']) || !isset($data['niveau']) || !isset($data['numero']) || !isset($data['rythme'])) {
+				if (!$data || !isset($data['nom_classe']) || !isset($data['niveau']) || !isset($data['numero']) || !isset($data['rythme'])) {
 					throw new Exception("Tous les champs sont obligatoires");
 				}
 				$result = $classeController->createClasse(
@@ -323,10 +390,7 @@ try {
 				sendResponse($result);
 			} elseif ($method === 'PUT' && isset($segments[1])) {
 				$data = json_decode(file_get_contents('php://input'), true);
-				if (!$data) {
-					throw new Exception("Données JSON invalides");
-				}
-				if (!isset($data['nom_classe']) || !isset($data['niveau']) || !isset($data['numero']) || !isset($data['rythme'])) {
+				if (!$data || !isset($data['nom_classe']) || !isset($data['niveau']) || !isset($data['numero']) || !isset($data['rythme'])) {
 					throw new Exception("Tous les champs sont obligatoires");
 				}
 				$result = $classeController->updateClasse(
@@ -343,9 +407,15 @@ try {
 			} else {
 				throw new Exception("Méthode non autorisée", 405);
 			}
+		} catch (PDOException $e) {
+			error_log("Erreur de base de données dans la route classes: " . $e->getMessage());
+			sendResponse([
+				'success' => false,
+				'message' => 'Erreur de connexion à la base de données',
+				'error' => $e->getMessage()
+			], 500);
 		} catch (Exception $e) {
 			error_log("Erreur dans la route classes: " . $e->getMessage());
-			error_log("Trace: " . $e->getTraceAsString());
 			sendResponse([
 				'success' => false,
 				'message' => $e->getMessage()
@@ -355,6 +425,7 @@ try {
 
 	// Routes des examens
 	if ($segments[0] === 'examens') {
+		error_log("Traitement de la requête d'examens");
 		if ($method === 'GET') {
 			if (isset($segments[1])) {
 				sendResponse($examenController->getExamenById($segments[1]));
@@ -362,57 +433,118 @@ try {
 				sendResponse($examenController->getAllExamens());
 			}
 		} elseif ($method === 'POST') {
-			try {
-				$data = json_decode(file_get_contents('php://input'), true);
-				if (!$data) {
-					throw new Exception("Données JSON invalides");
+			$data = json_decode(file_get_contents('php://input'), true);
+			if (!$data || !isset($data['titre']) || !isset($data['matiere']) || !isset($data['classe']) || !isset($data['date'])) {
+				throw new Exception("Tous les champs sont obligatoires (titre, matiere, classe, date)");
+			}
+			$result = $examenController->createExamen(
+				$data['titre'],
+				$data['matiere'],
+				$data['classe'],
+				$data['date']
+			);
+			sendResponse($result);
+		} elseif ($method === 'PUT' && isset($segments[1])) {
+			$data = json_decode(file_get_contents('php://input'), true);
+			if (!$data || !isset($data['titre']) || !isset($data['matiere']) || !isset($data['classe']) || !isset($data['date'])) {
+				throw new Exception("Tous les champs sont obligatoires (titre, matiere, classe, date)");
+			}
+			$result = $examenController->updateExamen(
+				$segments[1],
+				$data['titre'],
+				$data['matiere'],
+				$data['classe'],
+				$data['date']
+			);
+			sendResponse($result);
+		} elseif ($method === 'DELETE' && isset($segments[1])) {
+			sendResponse($examenController->deleteExamen($segments[1]));
+		} else {
+			throw new Exception(json_encode(
+				$errorService->logError('api', 'Route d\'examens non trouvée', ['uri' => $segments])
+			), 404);
+		}
+	}
+
+	// Routes des professeurs
+	if ($segments[0] === 'profs') {
+		try {
+			if ($method === 'GET') {
+				if (isset($segments[1])) {
+					error_log("Récupération du professeur: " . $segments[1]);
+					$result = $profController->getProfById($segments[1]);
+					error_log("Résultat: " . print_r($result, true));
+					sendResponse($result);
+				} else {
+					error_log("Récupération de tous les professeurs");
+					$result = $profController->getAllProfs();
+					error_log("Résultat: " . print_r($result, true));
+					sendResponse($result);
 				}
-				if (!isset($data['titre']) || !isset($data['matiere']) || !isset($data['classe'])) {
+			} elseif ($method === 'POST') {
+				$data = json_decode(file_get_contents('php://input'), true);
+				if (!$data || !isset($data['nom']) || !isset($data['prenom']) || !isset($data['email']) || !isset($data['password'])) {
 					throw new Exception("Tous les champs sont obligatoires");
 				}
-				$result = $examenController->createExamen(
-					$data['titre'],
-					$data['matiere'],
-					$data['classe']
-				);
+				$result = $profController->createProf($data);
 				sendResponse($result);
+			} elseif ($method === 'PUT' && isset($segments[1])) {
+				$data = json_decode(file_get_contents('php://input'), true);
+				if (!$data || !isset($data['nom']) || !isset($data['prenom']) || !isset($data['email'])) {
+					throw new Exception("Tous les champs sont obligatoires");
+				}
+				$result = $profController->updateProf($segments[1], $data);
+				sendResponse($result);
+			} elseif ($method === 'DELETE' && isset($segments[1])) {
+				$result = $profController->deleteProf($segments[1]);
+				sendResponse($result);
+			} else {
+				throw new Exception("Méthode non autorisée");
+			}
+		} catch (Exception $e) {
+			error_log("Erreur dans la route profs: " . $e->getMessage());
+			sendResponse(['success' => false, 'message' => $e->getMessage()], 500);
+		}
+	}
+
+	// Routes pour les utilisateurs
+	if ($segments[0] === 'users') {
+		checkAuth();
+
+		if ($method === 'GET') {
+			if (isset($segments[1]) && $segments[1] === 'classe' && isset($segments[2])) {
+				$classeId = $segments[2];
+				$users = $userController->getUsersByClasse($classeId);
+				sendResponse($users);
+			} else if (isset($segments[1])) {
+				$user = $userController->getUserById($segments[1]);
+				sendResponse($user);
+			} else {
+				$users = $userController->getAllUsers();
+				sendResponse($users);
+			}
+		} elseif ($method === 'POST') {
+			try {
+				$data = json_decode(file_get_contents('php://input'), true);
+				$result = $userController->createUser($data);
+				sendResponse($result, 201);
 			} catch (Exception $e) {
-				sendResponse([
-					'success' => false,
-					'error' => $e->getMessage()
-				], 400);
+				sendResponse(['success' => false, 'message' => $e->getMessage()], 400);
 			}
 		} elseif ($method === 'PUT' && isset($segments[1])) {
 			try {
 				$data = json_decode(file_get_contents('php://input'), true);
-				if (!$data) {
-					throw new Exception("Données JSON invalides");
-				}
-				if (!isset($data['titre']) || !isset($data['matiere']) || !isset($data['classe'])) {
-					throw new Exception("Tous les champs sont obligatoires");
-				}
-				$result = $examenController->updateExamen(
-					$segments[1],
-					$data['titre'],
-					$data['matiere'],
-					$data['classe']
-				);
+				$result = $userController->updateUser($segments[1], $data);
 				sendResponse($result);
 			} catch (Exception $e) {
-				sendResponse([
-					'success' => false,
-					'error' => $e->getMessage()
-				], 400);
+				sendResponse(['success' => false, 'message' => $e->getMessage()], 400);
 			}
 		} elseif ($method === 'DELETE' && isset($segments[1])) {
 			try {
-				$result = $examenController->deleteExamen($segments[1]);
+				$result = $userController->deleteUser($segments[1]);
 				sendResponse($result);
 			} catch (Exception $e) {
-				sendResponse([
-					'success' => false,
-					'error' => $e->getMessage()
-				], 400);
+				sendResponse(['success' => false, 'message' => $e->getMessage()], 400);
 			}
 		}
 	}

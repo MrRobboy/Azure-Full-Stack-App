@@ -193,6 +193,7 @@ ob_start();
 
 <script src="js/notification-system.js"></script>
 <script src="js/error-messages.js"></script>
+<script src="js/config.js"></script>
 <script>
 	// Vérifier que les scripts sont chargés
 	console.log('Vérification du chargement des scripts...');
@@ -211,7 +212,7 @@ ob_start();
 	async function loadMatieres() {
 		try {
 			console.log('Chargement des matières...');
-			const response = await fetch('api/matieres');
+			const response = await fetch(getApiUrl('matieres'));
 			const result = await response.json();
 			console.log('Résultat matières:', result);
 
@@ -255,7 +256,7 @@ ob_start();
 		}
 
 		try {
-			const response = await fetch('api/matieres', {
+			const response = await fetch(getApiUrl('matieres'), {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -314,7 +315,7 @@ ob_start();
 			}
 
 			try {
-				const response = await fetch(`api/matieres/${id}`, {
+				const response = await fetch(`${getApiUrl('matieres')}/${id}`, {
 					method: 'PUT',
 					headers: {
 						'Content-Type': 'application/json'
@@ -356,7 +357,7 @@ ob_start();
 
 		try {
 			console.log('Tentative de suppression de la matière:', id);
-			const response = await fetch(`api/matieres/${id}`, {
+			const response = await fetch(`${getApiUrl('matieres')}/${id}`, {
 				method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json'
@@ -366,12 +367,14 @@ ob_start();
 			const result = await response.json();
 			console.log('Résultat de la suppression:', result);
 
-			if (!result.success) {
+			if (result.success) {
+				NotificationSystem.success(result.message || 'La matière a été supprimée avec succès');
+				// Attendre un court instant avant de recharger les matières
+				await new Promise(resolve => setTimeout(resolve, 500));
+				await loadMatieres();
+			} else {
 				throw new Error(result.error || 'Erreur lors de la suppression de la matière');
 			}
-
-			NotificationSystem.success('La matière a été supprimée avec succès');
-			loadMatieres();
 		} catch (error) {
 			console.error('Erreur lors de la suppression:', error);
 			NotificationSystem.error(error.message);

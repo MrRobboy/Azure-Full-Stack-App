@@ -2,14 +2,6 @@
 class ErrorService
 {
 	private static $instance = null;
-	private $logDir;
-	private $logFiles = [
-		'api' => 'api/errors.log',
-		'database' => 'database/errors.log',
-		'auth' => 'auth/errors.log',
-		'general' => 'general/errors.log'
-	];
-
 	private $errorMessages = [
 		'CONNECTION_FAILED' => [
 			'message' => 'Impossible de se connecter au serveur',
@@ -39,26 +31,7 @@ class ErrorService
 
 	private function __construct()
 	{
-		$this->logDir = __DIR__ . '/../../logs/';
-		$this->ensureLogDirectories();
-	}
-
-	private function ensureLogDirectories()
-	{
-		try {
-			if (!file_exists($this->logDir)) {
-				@mkdir($this->logDir, 0755, true);
-			}
-
-			foreach ($this->logFiles as $type => $file) {
-				$dir = dirname($this->logDir . $file);
-				if (!file_exists($dir)) {
-					@mkdir($dir, 0755, true);
-				}
-			}
-		} catch (Exception $e) {
-			error_log("Impossible de créer les répertoires de logs: " . $e->getMessage());
-		}
+		// Initialisation vide car nous utilisons le journal d'erreurs système
 	}
 
 	public static function getInstance()
@@ -69,20 +42,20 @@ class ErrorService
 		return self::$instance;
 	}
 
-	public function logError($type, $message, $details = [])
+	public function logError($context, $message, $details = [])
 	{
 		$timestamp = date('Y-m-d H:i:s');
-		$logMessage = "[$timestamp] [$type] $message\n";
+		$logMessage = "[$timestamp] [$context] $message\n";
 
 		if (!empty($details)) {
 			$logMessage .= "Détails: " . print_r($details, true) . "\n";
 		}
 
-		$logMessage .= "Trace: " . debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5) . "\n";
+		$logMessage .= "Trace: " . print_r(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5), true) . "\n";
 		$logMessage .= "----------------------------------------\n";
 
-		$logFile = $this->logDir . $this->logFiles[$type] ?? 'general/errors.log';
-		error_log($logMessage, 3, $logFile);
+		// Utiliser le journal d'erreurs système
+		error_log($logMessage);
 	}
 
 	public function getErrorResponse($errorCode, $additionalDetails = [])
