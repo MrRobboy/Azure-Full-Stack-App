@@ -50,7 +50,7 @@ if (empty($endpoint)) {
 }
 
 // If the backend is down or unreachable, we can mock the response for testing
-$mock_data = false; // Set to true to enable mocking
+$mock_data = true; // Set to true to enable mocking
 
 if ($mock_data && $endpoint === 'api/auth/login') {
 	$raw_post = file_get_contents("php://input");

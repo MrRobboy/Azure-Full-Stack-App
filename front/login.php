@@ -52,8 +52,8 @@ ob_start();
 <script src="js/config.js?v=1.9"></script>
 <script src="js/notification-system.js?v=1.1"></script>
 <script>
-	// Use appConfig's proxy path directly
-	const proxyPath = isAzure ? '/simple-proxy.php' : appConfig.proxyUrl;
+	// Use appConfig's proxy path directly - no need to redefine isAzure
+	const proxyPath = appConfig.proxyUrl;
 	console.log('Environment:', isAzure ? 'Azure' : 'Local');
 	console.log('Using proxy path:', proxyPath);
 
