@@ -1,19 +1,31 @@
 <?php
 // Simple proxy for Azure - minimal version to test deployment
 error_reporting(E_ALL);
-ini_set('display_errors', 0); // Don't show errors to users
+ini_set('display_errors', 1); // Enable error display for debugging
 ini_set('log_errors', 1);
 ini_set('error_log', 'php_errors.log');
 
+// Log the file path and existence
+$self_path = __FILE__;
+$parent_dir = dirname($self_path);
+error_log("Simple proxy file path: $self_path");
+error_log("Parent directory: $parent_dir");
+error_log("File exists: " . (file_exists($self_path) ? 'yes' : 'no'));
+
 // Add CORS headers to avoid issues
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-header('Content-Type: application/json');
+
+// Only set content type if not OPTIONS request
+if ($_SERVER['REQUEST_METHOD'] !== 'OPTIONS') {
+	header('Content-Type: application/json');
+}
 
 // Log request information
 error_log("Simple proxy accessed: " . $_SERVER['REQUEST_URI']);
 error_log("Query string: " . $_SERVER['QUERY_STRING']);
+error_log("Request method: " . $_SERVER['REQUEST_METHOD']);
 
 // Handle OPTIONS requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -30,7 +42,9 @@ if (empty($endpoint)) {
 	echo json_encode([
 		'success' => false,
 		'message' => 'No endpoint specified',
-		'debug' => $_GET
+		'debug' => $_GET,
+		'request_uri' => $_SERVER['REQUEST_URI'],
+		'query_string' => $_SERVER['QUERY_STRING']
 	]);
 	exit;
 }
@@ -38,10 +52,24 @@ if (empty($endpoint)) {
 try {
 	// Simple check if URL is valid
 	$endpoint = ltrim($endpoint, '/');
-	$target_url = $api_base_url . '/' . $endpoint;
 
-	// Log the target URL
+	// Try both with and without "api/" prefix for compatibility
+	if (!str_starts_with($endpoint, 'api/') && !in_array($endpoint, ['status.php'])) {
+		// If endpoint doesn't start with "api/" and is not a known root endpoint like status.php
+		// try to add the api/ prefix
+		$target_url = $api_base_url . '/api/' . $endpoint;
+		error_log("First attempt with api/ prefix: " . $target_url);
+	} else {
+		$target_url = $api_base_url . '/' . $endpoint;
+		error_log("Using endpoint as-is: " . $target_url);
+	}
+
+	// Log the target URL and raw post data
 	error_log("Proxying to: " . $target_url);
+	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+		$raw_post = file_get_contents('php://input');
+		error_log("Raw POST data: " . $raw_post);
+	}
 
 	// Attempt to use curl if available
 	if (function_exists('curl_init')) {

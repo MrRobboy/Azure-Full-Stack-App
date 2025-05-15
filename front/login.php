@@ -57,6 +57,11 @@ ob_start();
 	console.log('Environment:', isAzure ? 'Azure' : 'Local');
 	console.log('Using proxy path:', proxyPath);
 
+	// Log additional debug info about the environment
+	console.log('Full hostname:', window.location.hostname);
+	console.log('Full window.location:', window.location.href);
+	console.log('API base URL from config:', appConfig.backendBaseUrl);
+
 	function toggleErrorDetails() {
 		const details = document.querySelector('.error-details');
 		const button = document.querySelector('.toggle-details');
@@ -116,6 +121,15 @@ ob_start();
 			const proxyUrl = `${proxyPath}?endpoint=${encodeURIComponent(loginEndpoint)}`;
 
 			console.log('URL de connexion:', proxyUrl);
+			console.log('Testing if proxy file exists...');
+
+			// Test if the proxy file actually exists before trying login
+			try {
+				const testResponse = await fetch(proxyPath + '?endpoint=status.php');
+				console.log('Proxy status test:', testResponse.status, testResponse.ok ? 'OK' : 'Failed');
+			} catch (testErr) {
+				console.error('Proxy test failed:', testErr);
+			}
 
 			const response = await fetch(proxyUrl, {
 				method: 'POST',
