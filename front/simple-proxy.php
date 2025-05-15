@@ -49,6 +49,15 @@ if (empty($endpoint)) {
 	exit;
 }
 
+// Extract any ID from the endpoint for PUT and DELETE operations
+$endpoint_id = null;
+$base_endpoint = $endpoint;
+if (preg_match('~^([^/]+)/(\d+)$~', $endpoint, $matches)) {
+	$base_endpoint = $matches[1];
+	$endpoint_id = $matches[2];
+	error_log("Endpoint with ID detected: base={$base_endpoint}, id={$endpoint_id}");
+}
+
 // If the backend is down or unreachable, we can mock the response for testing
 $mock_data = true; // Set to true to enable mocking
 
@@ -301,6 +310,8 @@ if ($mock_data) {
 		},
 
 		'matieres' => function () {
+			global $endpoint_id; // Access the extracted ID
+
 			// Check if this is a GET, POST, PUT or DELETE request
 			$method = $_SERVER['REQUEST_METHOD'];
 
@@ -328,12 +339,16 @@ if ($mock_data) {
 			switch ($method) {
 				case 'GET':
 					// Return all subjects or a specific one by ID
-					$path_parts = explode('/', $_SERVER['REQUEST_URI']);
-					$id = null;
-					foreach ($path_parts as $index => $part) {
-						if ($part === 'matieres' && isset($path_parts[$index + 1]) && is_numeric($path_parts[$index + 1])) {
-							$id = $path_parts[$index + 1];
-							break;
+					$id = $endpoint_id; // Use extracted ID if available
+
+					// If no ID from endpoint path, check the request URI
+					if (!$id) {
+						$path_parts = explode('/', $_SERVER['REQUEST_URI']);
+						foreach ($path_parts as $index => $part) {
+							if ($part === 'matieres' && isset($path_parts[$index + 1]) && is_numeric($path_parts[$index + 1])) {
+								$id = $path_parts[$index + 1];
+								break;
+							}
 						}
 					}
 
@@ -398,12 +413,16 @@ if ($mock_data) {
 
 				case 'PUT':
 					// Update a subject
-					$path_parts = explode('/', $_SERVER['REQUEST_URI']);
-					$id = null;
-					foreach ($path_parts as $index => $part) {
-						if ($part === 'matieres' && isset($path_parts[$index + 1]) && is_numeric($path_parts[$index + 1])) {
-							$id = $path_parts[$index + 1];
-							break;
+					$id = $endpoint_id; // Use the extracted ID
+
+					// If no ID from endpoint path, check the request URI
+					if (!$id) {
+						$path_parts = explode('/', $_SERVER['REQUEST_URI']);
+						foreach ($path_parts as $index => $part) {
+							if ($part === 'matieres' && isset($path_parts[$index + 1]) && is_numeric($path_parts[$index + 1])) {
+								$id = $path_parts[$index + 1];
+								break;
+							}
 						}
 					}
 
@@ -419,6 +438,18 @@ if ($mock_data) {
 					$raw_post = file_get_contents("php://input");
 					$matiere_data = json_decode($raw_post, true);
 
+					if (!$matiere_data) {
+						http_response_code(400);
+						echo json_encode([
+							'success' => false,
+							'message' => 'Invalid subject data (mocked)'
+						]);
+						break;
+					}
+
+					// Log the update operation
+					error_log("Updating subject with ID: {$id} and data: " . json_encode($matiere_data));
+
 					echo json_encode([
 						'success' => true,
 						'message' => 'Subject updated successfully (mocked)',
@@ -428,12 +459,16 @@ if ($mock_data) {
 
 				case 'DELETE':
 					// Delete a subject
-					$path_parts = explode('/', $_SERVER['REQUEST_URI']);
-					$id = null;
-					foreach ($path_parts as $index => $part) {
-						if ($part === 'matieres' && isset($path_parts[$index + 1]) && is_numeric($path_parts[$index + 1])) {
-							$id = $path_parts[$index + 1];
-							break;
+					$id = $endpoint_id; // Use the extracted ID
+
+					// If no ID from endpoint path, check the request URI
+					if (!$id) {
+						$path_parts = explode('/', $_SERVER['REQUEST_URI']);
+						foreach ($path_parts as $index => $part) {
+							if ($part === 'matieres' && isset($path_parts[$index + 1]) && is_numeric($path_parts[$index + 1])) {
+								$id = $path_parts[$index + 1];
+								break;
+							}
 						}
 					}
 
@@ -445,6 +480,9 @@ if ($mock_data) {
 						]);
 						break;
 					}
+
+					// Log the delete operation
+					error_log("Deleting subject with ID: {$id}");
 
 					echo json_encode([
 						'success' => true,
@@ -755,12 +793,27 @@ if ($mock_data) {
 		exit;
 	}
 
+	// Try with the base endpoint (without ID)
+	if ($base_endpoint && isset($mock_endpoints[$base_endpoint])) {
+		error_log("Using mock data for base endpoint: " . $base_endpoint);
+		$mock_endpoints[$base_endpoint]();
+		exit;
+	}
+
 	// Check if it's an API endpoint that we should mock
 	if (strpos($clean_endpoint, 'api/') === 0) {
 		$api_endpoint = substr($clean_endpoint, 4); // Remove 'api/' prefix
 		if (isset($mock_endpoints[$api_endpoint])) {
 			error_log("Using mock data for API endpoint: " . $api_endpoint);
 			$mock_endpoints[$api_endpoint]();
+			exit;
+		}
+
+		// Try with the base API endpoint (without ID)
+		$base_api_endpoint = $base_endpoint ? 'api/' . $base_endpoint : null;
+		if ($base_api_endpoint && isset($mock_endpoints[substr($base_api_endpoint, 4)])) {
+			error_log("Using mock data for base API endpoint: " . $base_api_endpoint);
+			$mock_endpoints[substr($base_api_endpoint, 4)]();
 			exit;
 		}
 	}
@@ -794,8 +847,14 @@ try {
 		error_log("Using API endpoint as-is: " . $target_url);
 	} else {
 		// Otherwise, add api/ prefix for API endpoints
-		$target_url = $api_base_url . '/api/' . $endpoint;
-		error_log("Adding API prefix to endpoint: " . $target_url);
+		// Check if we have an endpoint with ID
+		if ($endpoint_id) {
+			$target_url = $api_base_url . '/api/' . $base_endpoint . '/' . $endpoint_id;
+			error_log("Adding API prefix to endpoint with ID: " . $target_url);
+		} else {
+			$target_url = $api_base_url . '/api/' . $endpoint;
+			error_log("Adding API prefix to endpoint: " . $target_url);
+		}
 	}
 
 	// Log the target URL and raw post data

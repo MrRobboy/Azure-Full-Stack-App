@@ -272,6 +272,8 @@ ob_start();
 		}
 
 		try {
+			console.log('Ajout d\'une nouvelle matière:', nom);
+
 			const response = await fetch(getApiEndpoint('matieres'), {
 				method: 'POST',
 				headers: {
@@ -282,11 +284,25 @@ ob_start();
 				})
 			});
 
-			const result = await response.json();
+			// Check if response is OK
+			if (!response.ok) {
+				throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+			}
+
+			const responseText = await response.text();
+			let result;
+
+			try {
+				result = JSON.parse(responseText);
+			} catch (e) {
+				console.error('Réponse invalide (non-JSON):', responseText);
+				throw new Error('Réponse invalide du serveur: ' + responseText.substring(0, 100));
+			}
+
 			console.log('Résultat de la création:', result);
 
 			if (!result.success) {
-				throw new Error(result.error || 'Erreur lors de l\'ajout de la matière');
+				throw new Error(result.message || result.error || 'Erreur lors de l\'ajout de la matière');
 			}
 
 			document.getElementById('nom').value = '';
@@ -331,6 +347,8 @@ ob_start();
 			}
 
 			try {
+				console.log(`Modification de la matière ID ${id}: ${newNom}`);
+
 				const response = await fetch(getApiEndpoint(`matieres/${id}`), {
 					method: 'PUT',
 					headers: {
@@ -341,10 +359,23 @@ ob_start();
 					})
 				});
 
-				const result = await response.json();
+				// Check if response is OK
+				if (!response.ok) {
+					throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+				}
+
+				const responseText = await response.text();
+				let result;
+
+				try {
+					result = JSON.parse(responseText);
+				} catch (e) {
+					console.error('Réponse invalide (non-JSON):', responseText);
+					throw new Error('Réponse invalide du serveur: ' + responseText.substring(0, 100));
+				}
 
 				if (!result.success) {
-					throw new Error(result.error || 'Erreur lors de la modification de la matière');
+					throw new Error(result.error || result.message || 'Erreur lors de la modification de la matière');
 				}
 
 				closeModal();
@@ -373,6 +404,7 @@ ob_start();
 
 		try {
 			console.log('Tentative de suppression de la matière:', id);
+
 			const response = await fetch(getApiEndpoint(`matieres/${id}`), {
 				method: 'DELETE',
 				headers: {
@@ -380,8 +412,20 @@ ob_start();
 				}
 			});
 
-			const result = await response.json();
-			console.log('Résultat de la suppression:', result);
+			// Check if response is OK
+			if (!response.ok) {
+				throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+			}
+
+			const responseText = await response.text();
+			let result;
+
+			try {
+				result = JSON.parse(responseText);
+			} catch (e) {
+				console.error('Réponse invalide (non-JSON):', responseText);
+				throw new Error('Réponse invalide du serveur: ' + responseText.substring(0, 100));
+			}
 
 			if (result.success) {
 				NotificationSystem.success(result.message || 'La matière a été supprimée avec succès');
@@ -389,7 +433,7 @@ ob_start();
 				await new Promise(resolve => setTimeout(resolve, 500));
 				await loadMatieres();
 			} else {
-				throw new Error(result.error || 'Erreur lors de la suppression de la matière');
+				throw new Error(result.message || result.error || 'Erreur lors de la suppression de la matière');
 			}
 		} catch (error) {
 			console.error('Erreur lors de la suppression:', error);
