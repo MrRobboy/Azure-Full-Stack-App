@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0" />
+		<title>Test cross-domain - Master</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				line-height: 1.6;
+				padding: 20px;
+				max-width: 800px;
+				margin: 0 auto;
+			}
+			h1,
+			h2 {
+				color: #0078d7;
+			}
+			iframe {
+				width: 100%;
+				height: 300px;
+				border: 1px solid #ddd;
+				margin: 20px 0;
+			}
+			button {
+				background-color: #0078d7;
+				color: white;
+				border: none;
+				padding: 10px 15px;
+				margin: 5px;
+				cursor: pointer;
+				border-radius: 4px;
+			}
+			button:hover {
+				background-color: #005a9e;
+			}
+			pre {
+				background-color: #f5f5f5;
+				padding: 10px;
+				border-radius: 4px;
+				overflow-x: auto;
+			}
+			#result {
+				margin-top: 20px;
+				border: 1px solid #ddd;
+				padding: 15px;
+				border-radius: 4px;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Test de communication cross-domain</h1>
+		<p>
+			Cette page teste la communication entre le backend et le
+			frontend en utilisant postMessage.
+		</p>
+
+		<div>
+			<h2>Configuration</h2>
+			<label for="targetOrigin">Origine cible:</label>
+			<input
+				type="text"
+				id="targetOrigin"
+				value="https://app-frontend-esgi-app.azurewebsites.net"
+				style="width: 350px" />
+		</div>
+
+		<div>
+			<h2>Frame du frontend</h2>
+			<iframe id="frontendFrame" src="about:blank"></iframe>
+		</div>
+
+		<div>
+			<h2>Tests</h2>
+			<button id="loadFrameBtn">Charger la frame</button>
+			<button id="sendMsgBtn" disabled>
+				Envoyer un message
+			</button>
+		</div>
+
+		<div id="result">
+			<p>Aucun résultat pour le moment.</p>
+		</div>
+
+		<script>
+			// Éléments DOM
+			const targetOriginInput =
+				document.getElementById("targetOrigin");
+			const frontendFrame =
+				document.getElementById("frontendFrame");
+			const loadFrameBtn =
+				document.getElementById("loadFrameBtn");
+			const sendMsgBtn =
+				document.getElementById("sendMsgBtn");
+			const resultDiv = document.getElementById("result");
+
+			// Écouteur de messages venant de l'iframe
+			window.addEventListener("message", function (event) {
+				console.log("Message reçu:", event);
+
+				// Vérifier l'origine du message
+				if (event.origin !== targetOriginInput.value) {
+					resultDiv.innerHTML = `
+                    <h3 style="color: orange;">Attention: Origine du message non reconnue</h3>
+                    <p>Origine: ${event.origin}</p>
+                    <p>Origine attendue: ${targetOriginInput.value}</p>
+                    <pre>${JSON.stringify(event.data, null, 2)}</pre>
+                `;
+					return;
+				}
+
+				// Afficher le message reçu
+				resultDiv.innerHTML = `
+                <h3 style="color: green;">Message reçu</h3>
+                <p>Origine: ${event.origin}</p>
+                <pre>${JSON.stringify(event.data, null, 2)}</pre>
+            `;
+			});
+
+			// Chargement de l'iframe
+			loadFrameBtn.addEventListener("click", function () {
+				const targetOrigin =
+					targetOriginInput.value.trim();
+				if (!targetOrigin) {
+					alert(
+						"Veuillez entrer une origine cible"
+					);
+					return;
+				}
+
+				// Construire l'URL avec le paramètre d'origine
+				const iframeUrl = new URL(
+					`${targetOrigin}/test-messaging.html`
+				);
+				iframeUrl.searchParams.append(
+					"source",
+					window.location.origin
+				);
+
+				// Charger l'iframe
+				frontendFrame.src = iframeUrl.toString();
+				resultDiv.innerHTML = `<p>Frame chargée depuis: ${iframeUrl}</p>`;
+
+				// Activer le bouton d'envoi après chargement
+				frontendFrame.onload = function () {
+					sendMsgBtn.disabled = false;
+				};
+			});
+
+			// Envoi de message à l'iframe
+			sendMsgBtn.addEventListener("click", function () {
+				const targetOrigin =
+					targetOriginInput.value.trim();
+				if (!targetOrigin) {
+					alert(
+						"Veuillez entrer une origine cible"
+					);
+					return;
+				}
+
+				// Données à envoyer
+				const message = {
+					type: "test",
+					timestamp: new Date().toISOString(),
+					source: "backend",
+					data: {
+						hello: "world",
+						number: Math.floor(
+							Math.random() * 1000
+						)
+					}
+				};
+
+				// Envoyer le message
+				frontendFrame.contentWindow.postMessage(
+					message,
+					targetOrigin
+				);
+				resultDiv.innerHTML = `
+                <h3 style="color: blue;">Message envoyé</h3>
+                <p>Destination: ${targetOrigin}</p>
+                <pre>${JSON.stringify(message, null, 2)}</pre>
+            `;
+			});
+		</script>
+	</body>
+</html>

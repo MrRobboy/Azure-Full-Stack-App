@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0" />
+		<title>Testeur Direct d'API</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				line-height: 1.6;
+				padding: 20px;
+				max-width: 1200px;
+				margin: 0 auto;
+				background-color: #f8f9fa;
+			}
+
+			h1,
+			h2,
+			h3 {
+				color: #333;
+			}
+
+			.container {
+				background: white;
+				border-radius: 5px;
+				padding: 20px;
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+				margin-bottom: 20px;
+			}
+
+			.form-group {
+				margin-bottom: 15px;
+			}
+
+			label {
+				display: block;
+				margin-bottom: 5px;
+				font-weight: bold;
+			}
+
+			input,
+			select,
+			textarea {
+				width: 100%;
+				padding: 8px;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				box-sizing: border-box;
+				font-family: inherit;
+				font-size: 14px;
+			}
+
+			textarea {
+				min-height: 120px;
+				font-family: monospace;
+			}
+
+			button {
+				background-color: #4caf50;
+				color: white;
+				border: none;
+				padding: 10px 15px;
+				border-radius: 4px;
+				cursor: pointer;
+				font-size: 16px;
+			}
+
+			button:hover {
+				background-color: #45a049;
+			}
+
+			.response {
+				background-color: #f5f5f5;
+				border-radius: 5px;
+				padding: 15px;
+				margin-top: 20px;
+			}
+
+			pre {
+				background-color: #f9f9f9;
+				padding: 10px;
+				border-radius: 5px;
+				overflow-x: auto;
+				white-space: pre-wrap;
+				margin: 10px 0;
+			}
+
+			.error {
+				color: #d9534f;
+			}
+
+			.success {
+				color: #5cb85c;
+			}
+
+			.loading {
+				display: none;
+				margin-top: 10px;
+				color: #31708f;
+			}
+
+			.loading::after {
+				content: ".";
+				animation: dots 1s steps(5, end) infinite;
+			}
+
+			@keyframes dots {
+				0%,
+				20% {
+					content: ".";
+				}
+				40% {
+					content: "..";
+				}
+				60% {
+					content: "...";
+				}
+				80%,
+				100% {
+					content: "";
+				}
+			}
+
+			.request-history {
+				margin-top: 20px;
+			}
+
+			.history-item {
+				background-color: #f5f5f5;
+				padding: 10px;
+				margin-bottom: 10px;
+				border-radius: 5px;
+				cursor: pointer;
+				transition: background-color 0.2s;
+			}
+
+			.history-item:hover {
+				background-color: #e9e9e9;
+			}
+
+			.tab {
+				overflow: hidden;
+				border: 1px solid #ccc;
+				background-color: #f1f1f1;
+				border-radius: 5px 5px 0 0;
+			}
+
+			.tab button {
+				background-color: inherit;
+				float: left;
+				border: none;
+				outline: none;
+				cursor: pointer;
+				padding: 10px 16px;
+				transition: background-color 0.2s;
+				color: #333;
+			}
+
+			.tab button:hover {
+				background-color: #ddd;
+			}
+
+			.tab button.active {
+				background-color: #4caf50;
+				color: white;
+			}
+
+			.tabcontent {
+				display: none;
+				padding: 20px;
+				border: 1px solid #ccc;
+				border-top: none;
+				border-radius: 0 0 5px 5px;
+				background-color: white;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Testeur Direct d'API</h1>
+		<p>
+			Cet outil permet de tester directement les endpoints
+			d'API sans passer par des proxys ou des mécanismes CORS.
+		</p>
+
+		<div class="tab">
+			<button
+				class="tablinks active"
+				onclick="openTab(event, 'requestTab')">
+				Requête
+			</button>
+			<button
+				class="tablinks"
+				onclick="openTab(event, 'historyTab')">
+				Historique
+			</button>
+			<button
+				class="tablinks"
+				onclick="openTab(event, 'settingsTab')">
+				Paramètres
+			</button>
+		</div>
+
+		<div id="requestTab" class="tabcontent" style="display: block">
+			<div class="container">
+				<h2>Paramètres de la requête</h2>
+
+				<div class="form-group">
+					<label for="endpoint"
+						>URL complète de
+						l'endpoint:</label
+					>
+					<input
+						type="text"
+						id="endpoint"
+						value="https://app-backend-esgi-app.azurewebsites.net/api/status"
+						placeholder="https://example.com/api/resource" />
+				</div>
+
+				<div class="form-group">
+					<label for="method"
+						>Méthode HTTP:</label
+					>
+					<select id="method">
+						<option value="GET">GET</option>
+						<option value="POST">
+							POST
+						</option>
+						<option value="PUT">PUT</option>
+						<option value="DELETE">
+							DELETE
+						</option>
+						<option value="OPTIONS">
+							OPTIONS
+						</option>
+					</select>
+				</div>
+
+				<div class="form-group">
+					<label for="headers"
+						>En-têtes (format JSON):</label
+					>
+					<textarea id="headers">
+{
+  "Content-Type": "application/json",
+  "X-Requested-With": "XMLHttpRequest"
+}</textarea
+					>
+				</div>
+
+				<div class="form-group">
+					<label for="body"
+						>Corps de la requête (format
+						JSON - pour POST/PUT):</label
+					>
+					<textarea id="body">{}</textarea>
+				</div>
+
+				<button id="sendRequest">
+					Envoyer la requête
+				</button>
+				<div id="loading" class="loading">
+					Envoi de la requête
+				</div>
+			</div>
+
+			<div class="container response">
+				<h2>Réponse</h2>
+				<div id="responseStatus"></div>
+				<div id="responseHeaders"></div>
+				<div id="responseBody"></div>
+			</div>
+		</div>
+
+		<div id="historyTab" class="tabcontent">
+			<div class="container">
+				<h2>Historique des requêtes</h2>
+				<p>
+					Cliquez sur une requête pour la
+					recharger dans le formulaire.
+				</p>
+				<div
+					id="requestHistory"
+					class="request-history">
+					<p>Aucune requête dans l'historique.</p>
+				</div>
+				<button id="clearHistory">
+					Effacer l'historique
+				</button>
+			</div>
+		</div>
+
+		<div id="settingsTab" class="tabcontent">
+			<div class="container">
+				<h2>Paramètres</h2>
+
+				<div class="form-group">
+					<label for="useProxy">
+						<input
+							type="checkbox"
+							id="useProxy" />
+						Utiliser le proxy pour
+						contourner les limitations CORS
+					</label>
+				</div>
+
+				<div class="form-group">
+					<label for="proxyUrl"
+						>URL du proxy:</label
+					>
+					<input
+						type="text"
+						id="proxyUrl"
+						value="../backend-proxy.php"
+						placeholder="path/to/proxy.php" />
+				</div>
+
+				<div class="form-group">
+					<label for="defaultEndpoint"
+						>URL de base par défaut:</label
+					>
+					<input
+						type="text"
+						id="defaultEndpoint"
+						value="https://app-backend-esgi-app.azurewebsites.net/api/"
+						placeholder="https://example.com/api/" />
+				</div>
+
+				<button id="saveSettings">
+					Enregistrer les paramètres
+				</button>
+			</div>
+		</div>
+
+		<script>
+			// Gestion des onglets
+			function openTab(evt, tabName) {
+				var i, tabcontent, tablinks;
+
+				// Masquer tous les contenus d'onglets
+				tabcontent =
+					document.getElementsByClassName(
+						"tabcontent"
+					);
+				for (i = 0; i < tabcontent.length; i++) {
+					tabcontent[i].style.display = "none";
+				}
+
+				// Désactiver tous les boutons d'onglets
+				tablinks =
+					document.getElementsByClassName(
+						"tablinks"
+					);
+				for (i = 0; i < tablinks.length; i++) {
+					tablinks[i].className = tablinks[
+						i
+					].className.replace(" active", "");
+				}
+
+				// Afficher l'onglet actif et ajouter la classe "active" au bouton
+				document.getElementById(tabName).style.display =
+					"block";
+				evt.currentTarget.className += " active";
+			}
+
+			// Récupérer les éléments DOM
+			const endpointInput =
+				document.getElementById("endpoint");
+			const methodSelect = document.getElementById("method");
+			const headersTextarea =
+				document.getElementById("headers");
+			const bodyTextarea = document.getElementById("body");
+			const sendRequestBtn =
+				document.getElementById("sendRequest");
+			const loadingDiv = document.getElementById("loading");
+			const responseStatusDiv =
+				document.getElementById("responseStatus");
+			const responseHeadersDiv =
+				document.getElementById("responseHeaders");
+			const responseBodyDiv =
+				document.getElementById("responseBody");
+			const requestHistoryDiv =
+				document.getElementById("requestHistory");
+			const clearHistoryBtn =
+				document.getElementById("clearHistory");
+			const useProxyCheckbox =
+				document.getElementById("useProxy");
+			const proxyUrlInput =
+				document.getElementById("proxyUrl");
+			const defaultEndpointInput =
+				document.getElementById("defaultEndpoint");
+			const saveSettingsBtn =
+				document.getElementById("saveSettings");
+
+			// Stocker l'historique des requêtes
+			let requestHistory =
+				JSON.parse(
+					localStorage.getItem("apiTesterHistory")
+				) || [];
+
+			// Charger les paramètres
+			const settings = JSON.parse(
+				localStorage.getItem("apiTesterSettings")
+			) || {
+				useProxy: false,
+				proxyUrl: "../backend-proxy.php",
+				defaultEndpoint:
+					"https://app-backend-esgi-app.azurewebsites.net/api/"
+			};
+
+			// Initialiser les champs de paramètres
+			useProxyCheckbox.checked = settings.useProxy;
+			proxyUrlInput.value = settings.proxyUrl;
+			defaultEndpointInput.value = settings.defaultEndpoint;
+
+			// Envoyer la requête
+			sendRequestBtn.addEventListener("click", async () => {
+				try {
+					// Préparer les paramètres
+					const endpoint =
+						endpointInput.value.trim();
+					const method = methodSelect.value;
+					let headers = {};
+					let body = null;
+
+					try {
+						headers = JSON.parse(
+							headersTextarea.value
+						);
+					} catch (e) {
+						showError(
+							"Format JSON des en-têtes invalide: " +
+								e.message
+						);
+						return;
+					}
+
+					if (
+						method === "POST" ||
+						method === "PUT"
+					) {
+						try {
+							body = JSON.parse(
+								bodyTextarea.value
+							);
+						} catch (e) {
+							showError(
+								"Format JSON du corps invalide: " +
+									e.message
+							);
+							return;
+						}
+					}
+
+					// Afficher le chargement
+					loadingDiv.style.display = "block";
+					responseStatusDiv.innerHTML = "";
+					responseHeadersDiv.innerHTML = "";
+					responseBodyDiv.innerHTML = "";
+
+					// Enregistrer la requête dans l'historique
+					const requestData = {
+						timestamp: new Date().toISOString(),
+						endpoint,
+						method,
+						headers,
+						body
+					};
+
+					// Envoyer la requête
+					let url, options;
+
+					if (settings.useProxy) {
+						// Utiliser le proxy
+						url = settings.proxyUrl;
+						options = {
+							method: "POST",
+							headers: {
+								"Content-Type":
+									"application/json"
+							},
+							body: JSON.stringify({
+								url: endpoint,
+								method,
+								headers,
+								data: body
+							})
+						};
+					} else {
+						// Requête directe
+						url = endpoint;
+						options = {
+							method,
+							headers,
+							credentials: "include"
+						};
+
+						if (body) {
+							options.body =
+								JSON.stringify(
+									body
+								);
+						}
+					}
+
+					const startTime = Date.now();
+					const response = await fetch(
+						url,
+						options
+					);
+					const endTime = Date.now();
+
+					// Récupérer les en-têtes de réponse
+					const responseHeaders = {};
+					response.headers.forEach(
+						(value, name) => {
+							responseHeaders[name] =
+								value;
+						}
+					);
+
+					// Tenter de récupérer le corps comme JSON
+					let responseBody;
+					let responseText;
+					try {
+						responseText =
+							await response.text();
+						try {
+							responseBody =
+								JSON.parse(
+									responseText
+								);
+						} catch (e) {
+							responseBody =
+								responseText;
+						}
+					} catch (e) {
+						responseBody =
+							"Error reading response body: " +
+							e.message;
+					}
+
+					// Mettre à jour l'historique
+					requestData.response = {
+						status: response.status,
+						statusText: response.statusText,
+						headers: responseHeaders,
+						body: responseBody,
+						time: endTime - startTime
+					};
+
+					requestHistory.unshift(requestData);
+					if (requestHistory.length > 10) {
+						requestHistory =
+							requestHistory.slice(
+								0,
+								10
+							);
+					}
+					localStorage.setItem(
+						"apiTesterHistory",
+						JSON.stringify(requestHistory)
+					);
+					updateHistoryDisplay();
+
+					// Afficher la réponse
+					responseStatusDiv.innerHTML = `
+                    <h3 class="${response.ok ? "success" : "error"}">
+                        ${response.status} ${response.statusText} (${
+						endTime - startTime
+					}ms)
+                    </h3>
+                `;
+
+					responseHeadersDiv.innerHTML = `
+                    <h3>En-têtes de réponse:</h3>
+                    <pre>${JSON.stringify(responseHeaders, null, 2)}</pre>
+                `;
+
+					responseBodyDiv.innerHTML = `
+                    <h3>Corps de la réponse:</h3>
+                    <pre>${
+				typeof responseBody === "string"
+					? responseBody
+					: JSON.stringify(responseBody, null, 2)
+			}</pre>
+                `;
+				} catch (error) {
+					showError(
+						"Erreur lors de l'envoi de la requête: " +
+							error.message
+					);
+				} finally {
+					loadingDiv.style.display = "none";
+				}
+			});
+
+			// Afficher une erreur
+			function showError(message) {
+				responseStatusDiv.innerHTML = `<h3 class="error">Erreur</h3>`;
+				responseBodyDiv.innerHTML = `<pre class="error">${message}</pre>`;
+				loadingDiv.style.display = "none";
+			}
+
+			// Mettre à jour l'affichage de l'historique
+			function updateHistoryDisplay() {
+				if (requestHistory.length === 0) {
+					requestHistoryDiv.innerHTML =
+						"<p>Aucune requête dans l'historique.</p>";
+					return;
+				}
+
+				let html = "";
+				requestHistory.forEach((request, index) => {
+					const date = new Date(
+						request.timestamp
+					);
+					const formattedDate = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+					const response = request.response || {
+						status: "N/A",
+						time: "N/A"
+					};
+
+					html += `
+                    <div class="history-item" data-index="${index}">
+                        <strong>${request.method} ${request.endpoint}</strong>
+                        <div>Date: ${formattedDate}</div>
+                        <div>Statut: ${response.status} (${response.time}ms)</div>
+                    </div>
+                `;
+				});
+
+				requestHistoryDiv.innerHTML = html;
+
+				// Ajouter les gestionnaires d'événements
+				document.querySelectorAll(
+					".history-item"
+				).forEach((item) => {
+					item.addEventListener("click", () => {
+						const index = parseInt(
+							item.getAttribute(
+								"data-index"
+							)
+						);
+						loadRequestFromHistory(index);
+					});
+				});
+			}
+
+			// Charger une requête depuis l'historique
+			function loadRequestFromHistory(index) {
+				const request = requestHistory[index];
+
+				endpointInput.value = request.endpoint;
+				methodSelect.value = request.method;
+				headersTextarea.value = JSON.stringify(
+					request.headers,
+					null,
+					2
+				);
+				bodyTextarea.value = JSON.stringify(
+					request.body,
+					null,
+					2
+				);
+
+				// Afficher l'onglet de requête
+				document.querySelector(
+					'.tablinks[onclick*="requestTab"]'
+				).click();
+			}
+
+			// Effacer l'historique
+			clearHistoryBtn.addEventListener("click", () => {
+				if (
+					confirm(
+						"Êtes-vous sûr de vouloir effacer tout l'historique des requêtes ?"
+					)
+				) {
+					requestHistory = [];
+					localStorage.setItem(
+						"apiTesterHistory",
+						JSON.stringify(requestHistory)
+					);
+					updateHistoryDisplay();
+				}
+			});
+
+			// Enregistrer les paramètres
+			saveSettingsBtn.addEventListener("click", () => {
+				settings.useProxy = useProxyCheckbox.checked;
+				settings.proxyUrl = proxyUrlInput.value.trim();
+				settings.defaultEndpoint =
+					defaultEndpointInput.value.trim();
+
+				localStorage.setItem(
+					"apiTesterSettings",
+					JSON.stringify(settings)
+				);
+				alert("Paramètres enregistrés avec succès.");
+			});
+
+			// Initialiser l'affichage de l'historique
+			updateHistoryDisplay();
+		</script>
+	</body>
+</html>

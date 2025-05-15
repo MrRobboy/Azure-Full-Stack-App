@@ -1,6 +1,6 @@
 <?php
 $pageTitle = "Test de connectivité Azure";
-require_once 'templates/base.php';
+require_once '../templates/base.php';
 ?>
 
 <div class="container">
@@ -69,7 +69,7 @@ require_once 'templates/base.php';
 	</div>
 </div>
 
-<script src="js/config.js?v=1.6"></script>
+<script src="../js/config.js?v=1.6"></script>
 <script>
 	document.addEventListener('DOMContentLoaded', function() {
 		// Afficher les URLs
@@ -137,7 +137,7 @@ require_once 'templates/base.php';
 		document.getElementById('testApiBtn').addEventListener('click', async function() {
 			try {
 				const url = appConfig.useProxy ?
-					`backend-proxy.php?endpoint=api/status` :
+					`../backend-proxy.php?endpoint=api/status` :
 					`${appConfig.apiBaseUrl}/status`;
 
 				const response = await fetch(url, {
@@ -164,7 +164,7 @@ require_once 'templates/base.php';
 		document.getElementById('testDbBtn').addEventListener('click', async function() {
 			try {
 				const url = appConfig.useProxy ?
-					`backend-proxy.php?endpoint=api/db-status` :
+					`../backend-proxy.php?endpoint=api/db-status` :
 					`${appConfig.apiBaseUrl}/db-status`;
 
 				const response = await fetch(url, {

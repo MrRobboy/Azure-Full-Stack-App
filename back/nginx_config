@@ -12,47 +12,60 @@ server_name app-backend-esgi-app.azurewebsites.net;
 root /home/site/wwwroot;
 index index.php;
 
-# CORS Headers
+# Global CORS - Apply these headers to all responses
 add_header 'Access-Control-Allow-Origin' $cors_header always;
 add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
 add_header 'Access-Control-Allow-Headers' 'Origin, X-Requested-With, Content-Type, Accept, Authorization' always;
 add_header 'Access-Control-Allow-Credentials' 'true' always;
+add_header 'Access-Control-Max-Age' '86400' always;
 
-# Handle OPTIONS requests
+# Handle preflight OPTIONS requests
 if ($request_method = OPTIONS) {
 add_header 'Access-Control-Allow-Origin' $cors_header always;
 add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
 add_header 'Access-Control-Allow-Headers' 'Origin, X-Requested-With, Content-Type, Accept, Authorization' always;
 add_header 'Access-Control-Allow-Credentials' 'true' always;
+add_header 'Access-Control-Max-Age' '86400' always;
 add_header 'Content-Type' 'text/plain charset=UTF-8';
 add_header 'Content-Length' 0;
 return 204;
 }
 
-# API Rewrites
-location ~ ^/api/status$ {
-rewrite ^/api/status$ /status.php last;
-}
-
-location ~ ^/api/db-status$ {
-rewrite ^/api/db-status$ /status.php?type=db last;
-}
-
-location ~ ^/api/(.+)$ {
-rewrite ^/api/(.+)$ /routes/api.php?resource=$1 last;
-}
-
-# General PHP handling
-location ~ \.php$ {
+# Direct access to PHP files
+location ~ \.(php)$ {
+try_files $uri =404;
 fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
 fastcgi_index index.php;
 fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
 include fastcgi_params;
 }
 
-# Handle 404s
+# Status endpoints
+location ~ ^/api/status$ {
+try_files $uri $uri/ /status.php?$args;
+}
+
+location ~ ^/api/db-status$ {
+try_files $uri $uri/ /status.php?type=db&$args;
+}
+
+# API Routes - First try index.php, then fall back to api.php
+location ~ ^/api/ {
+try_files $uri $uri/ /index.php?$args /routes/api.php?resource=$1&$args;
+}
+
+# Rewrite all remaining non-file URLs to index.php
+location / {
+try_files $uri $uri/ /index.php?$args;
+}
+
+# Error handling
 error_page 404 /404.html;
 location = /404.html {
 internal;
 }
+
+# Log configuration
+access_log /var/log/nginx/api_access.log;
+error_log /var/log/nginx/api_error.log;
 }

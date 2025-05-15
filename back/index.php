@@ -8,19 +8,39 @@ ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/../logs/php_errors.log');
 
+// CORS Headers - Add at entry point to handle preflight requests
+header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept, Authorization');
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Max-Age: 86400');
+
+// Handle OPTIONS preflight requests
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+	http_response_code(200);
+	exit;
+}
+
 // Log request details
 error_log("Request URI: " . $_SERVER['REQUEST_URI']);
 error_log("Request Method: " . $_SERVER['REQUEST_METHOD']);
+error_log("Query String: " . $_SERVER['QUERY_STRING']);
 
 // Parse the request URI
-$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$uri = $_SERVER['REQUEST_URI'];
+$uri = explode('?', $uri)[0]; // Remove query string
 $uri = trim($uri, '/');
 $segments = explode('/', $uri);
+
+// Log parsed segments
+error_log("Parsed URI segments: " . json_encode($segments));
 
 // Handle API routes
 if (!empty($segments[0]) && $segments[0] === 'api') {
 	// Remove 'api' prefix
 	array_shift($segments);
+
+	error_log("API route segments after shift: " . json_encode($segments));
 
 	if (empty($segments[0])) {
 		// API root - return API info
@@ -54,8 +74,14 @@ if (!empty($segments[0]) && $segments[0] === 'api') {
 	// Add any additional path segments to the query
 	if (count($segments) > 1) {
 		$_GET['id'] = $segments[1];
+
+		// Add any additional parameters
+		if (count($segments) > 2) {
+			$_GET['action'] = $segments[2];
+		}
 	}
 
+	error_log("Routing to API router with resource: " . $_GET['resource']);
 	include __DIR__ . '/routes/api.php';
 	exit;
 }
@@ -64,6 +90,7 @@ if (!empty($segments[0]) && $segments[0] === 'api') {
 $file = __DIR__ . '/' . $uri;
 if (file_exists($file) && is_file($file) && pathinfo($file, PATHINFO_EXTENSION) === 'php') {
 	// Include the PHP file directly
+	error_log("Direct file access: " . $file);
 	include $file;
 	exit;
 }
@@ -74,6 +101,7 @@ header('HTTP/1.1 404 Not Found');
 echo json_encode([
 	'success' => false,
 	'message' => 'Resource not found',
-	'uri' => $uri
+	'uri' => $uri,
+	'segments' => $segments
 ]);
 exit;
