@@ -52,8 +52,7 @@ ob_start();
 <script src="js/config.js?v=1.9"></script>
 <script src="js/notification-system.js?v=1.1"></script>
 <script>
-	// Determine if we're on Azure or local environment and set proxy path
-	const isAzure = window.location.hostname.includes('azurewebsites.net');
+	// Use appConfig's proxy path directly
 	const proxyPath = isAzure ? '/simple-proxy.php' : appConfig.proxyUrl;
 	console.log('Environment:', isAzure ? 'Azure' : 'Local');
 	console.log('Using proxy path:', proxyPath);
