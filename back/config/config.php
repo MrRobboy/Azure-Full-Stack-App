@@ -1,4 +1,7 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 // Environnement : 'development' ou 'production'
 define('ENVIRONMENT', 'development');
 
@@ -34,9 +37,7 @@ define('FRONT_PATH', dirname(BASE_PATH) . '/front');
 define('BACK_PATH', BASE_PATH);
 
 // Initialisation de session
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+
 
 // Logs utiles pour debug
 if (ENVIRONMENT === 'development') {
