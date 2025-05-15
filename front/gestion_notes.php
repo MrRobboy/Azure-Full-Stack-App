@@ -62,6 +62,44 @@ require_once 'templates/base.php';
 	</div>
 </div>
 
+<style>
+	/* Styles pour les étudiants privilégiés */
+	.privileged-student {
+		color: #ffc107;
+		font-weight: bold;
+	}
+
+	.form-text.text-warning {
+		color: #ff9800;
+		margin-top: 5px;
+		padding: 5px 10px;
+		background-color: rgba(255, 152, 0, 0.1);
+		border-left: 3px solid #ff9800;
+		border-radius: 3px;
+	}
+
+	.form-text.text-muted {
+		margin-top: 5px;
+		font-size: 12px;
+		color: #6c757d;
+	}
+
+	/* Styles pour améliorer la lisibilité du formulaire */
+	.form-group {
+		margin-bottom: 20px;
+	}
+
+	.form-control:focus {
+		border-color: #007bff;
+		box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+	}
+
+	/* Style pour l'option sélectionnée avec privilège */
+	#etudiant option:checked.privileged-student {
+		background-color: rgba(255, 193, 7, 0.2);
+	}
+</style>
+
 <script src="js/notification-system.js?v=1.1"></script>
 <script src="js/error-messages.js"></script>
 <script src="js/config.js?v=1.1"></script>
@@ -76,6 +114,69 @@ require_once 'templates/base.php';
 	let examInfo = null; // Variable globale pour stocker les informations de l'examen
 	console.log('🚀 Initialisation de la page de gestion des notes');
 	console.log('ID de l\'examen:', examId);
+
+	// Cache pour les privilèges d'étudiants appris lors des erreurs
+	let learnedPrivileges = {};
+
+	// Fonction pour apprendre et stocker les privilèges des étudiants à partir des erreurs
+	function learnPrivilegeFromError(studentId, error) {
+		if (!error) return null;
+
+		// Essayer d'extraire la note minimale de l'erreur
+		const minNoteRegex = /ne peut pas avoir une note inférieure à (\d+\.?\d*)/i;
+		const match = error.match(minNoteRegex);
+
+		if (match && match[1]) {
+			const minNote = parseFloat(match[1]);
+
+			// Stocker cette information pour usage futur
+			learnedPrivileges[studentId] = minNote;
+			console.log(`Privilège appris pour l'étudiant ${studentId}: note minimale = ${minNote}`);
+
+			// Mettre à jour l'option dans le sélecteur si nécessaire
+			const select = document.getElementById('etudiant');
+			for (let i = 0; i < select.options.length; i++) {
+				const option = select.options[i];
+				if (option.value == studentId && !option.dataset.minNote) {
+					option.textContent = `★ ${option.textContent}`;
+					option.dataset.minNote = minNote;
+					option.title = `Note minimum requise: ${minNote}`;
+					option.className = 'privileged-student';
+
+					// Si c'est l'option actuellement sélectionnée, mettre à jour le champ de note
+					if (select.selectedIndex === i) {
+						const noteInput = document.getElementById('note');
+						noteInput.min = minNote;
+						noteInput.title = `Note minimum: ${minNote}`;
+
+						let minNoteInfo = document.getElementById('min-note-info');
+						if (!minNoteInfo) {
+							minNoteInfo = document.createElement('small');
+							minNoteInfo.id = 'min-note-info';
+							minNoteInfo.className = 'form-text text-warning';
+							noteInput.parentNode.appendChild(minNoteInfo);
+						}
+						minNoteInfo.innerHTML = `<strong>Note:</strong> Cet étudiant ne peut pas avoir une note inférieure à ${minNote}`;
+					}
+					break;
+				}
+			}
+
+			// Si aucune info-bulle d'explication n'est présente, ajouter
+			const infoText = document.querySelector('.form-text.text-muted');
+			if (!infoText) {
+				const select = document.getElementById('etudiant');
+				const newInfoText = document.createElement('small');
+				newInfoText.className = 'form-text text-muted';
+				newInfoText.innerHTML = '★ indique un étudiant avec une note minimale requise';
+				select.parentNode.appendChild(newInfoText);
+			}
+
+			return minNote;
+		}
+
+		return null;
+	}
 
 	// Fonction utilitaire pour logger les requêtes et réponses
 	async function fetchWithLogging(url, options = {}) {
@@ -162,6 +263,13 @@ require_once 'templates/base.php';
 	async function loadStudents(classeId) {
 		try {
 			console.log('Chargement des étudiants pour la classe:', classeId);
+
+			// Initialiser avec les privilèges déjà connus
+			let studentPrivileges = {
+				...learnedPrivileges
+			};
+			console.log('Privilèges déjà connus:', studentPrivileges);
+
 			const {
 				data: classeResult
 			} = await fetchWithLogging(`api/users/classe/${classeId}`);
@@ -171,6 +279,48 @@ require_once 'templates/base.php';
 				throw new Error(classeResult.message || 'Erreur lors du chargement des étudiants');
 			}
 
+			// Obtenir les informations sur les privilèges de chaque étudiant
+			try {
+				// Tentative d'appel à l'API des privilèges
+				console.log('Tentative de récupération des privilèges des étudiants...');
+				const response = await fetch(getApiUrl('privileges') + '/students', {
+					headers: {
+						'Accept': 'application/json',
+						'Content-Type': 'application/json'
+					},
+					credentials: 'include'
+				});
+
+				// Si l'API renvoie une 404, c'est probablement parce que l'endpoint n'existe pas encore
+				if (response.status === 404) {
+					console.warn('API de privilèges non disponible (404): cela pourrait être normal si cette fonctionnalité n\'est pas encore implémentée côté serveur');
+					// Continuer sans afficher d'erreur à l'utilisateur
+				} else if (response.ok) {
+					const privilegesResult = await response.json();
+					if (privilegesResult.success && privilegesResult.data) {
+						// Créer un mapping des privilèges par ID d'étudiant
+						privilegesResult.data.forEach(privilege => {
+							studentPrivileges[privilege.id_user] = privilege.min_note;
+						});
+					}
+					console.log('Privilèges des étudiants:', studentPrivileges);
+				} else {
+					console.warn(`Erreur lors de la récupération des privilèges: ${response.status} ${response.statusText}`);
+				}
+			} catch (error) {
+				console.warn('Impossible de charger les privilèges des étudiants:', error);
+				// Ne pas afficher d'erreur à l'utilisateur, simplement logger
+			}
+
+			// Incorporer les privilèges déjà appris via les messages d'erreur
+			if (Object.keys(learnedPrivileges).length > 0) {
+				console.log('Incorporation des privilèges appris précédemment:', learnedPrivileges);
+				studentPrivileges = {
+					...studentPrivileges,
+					...learnedPrivileges
+				};
+			}
+
 			const select = document.getElementById('etudiant');
 			select.innerHTML = '<option value="">Sélectionnez un étudiant</option>';
 
@@ -178,8 +328,58 @@ require_once 'templates/base.php';
 				classeResult.data.forEach(student => {
 					const option = document.createElement('option');
 					option.value = student.id_user;
-					option.textContent = `${student.nom} ${student.prenom}`;
+
+					// Vérifier si l'étudiant a un privilège de note minimum
+					const hasPrivilege = studentPrivileges[student.id_user] !== undefined;
+					const minNote = hasPrivilege ? studentPrivileges[student.id_user] : null;
+
+					if (hasPrivilege) {
+						option.textContent = `★ ${student.nom} ${student.prenom}`;
+						option.dataset.minNote = minNote;
+						option.title = `Note minimum requise: ${minNote}`;
+						option.className = 'privileged-student';
+					} else {
+						option.textContent = `${student.nom} ${student.prenom}`;
+					}
+
 					select.appendChild(option);
+				});
+
+				// Ajouter une info-bulle pour expliquer l'étoile
+				const infoText = document.createElement('small');
+				infoText.className = 'form-text text-muted';
+				infoText.innerHTML = '★ indique un étudiant avec une note minimale requise';
+				select.parentNode.appendChild(infoText);
+
+				// Ajouter un écouteur d'événements pour afficher la note minimale si disponible
+				select.addEventListener('change', function() {
+					const selectedOption = this.options[this.selectedIndex];
+					const noteInput = document.getElementById('note');
+
+					if (selectedOption.dataset.minNote) {
+						const minNote = parseFloat(selectedOption.dataset.minNote);
+						noteInput.min = minNote;
+						noteInput.title = `Note minimum: ${minNote}`;
+
+						// Ajouter ou mettre à jour l'info sur la note minimale
+						let minNoteInfo = document.getElementById('min-note-info');
+						if (!minNoteInfo) {
+							minNoteInfo = document.createElement('small');
+							minNoteInfo.id = 'min-note-info';
+							minNoteInfo.className = 'form-text text-warning';
+							noteInput.parentNode.appendChild(minNoteInfo);
+						}
+						minNoteInfo.innerHTML = `<strong>Note:</strong> Cet étudiant ne peut pas avoir une note inférieure à ${minNote}`;
+					} else {
+						noteInput.min = 0;
+						noteInput.title = '';
+
+						// Supprimer l'info sur la note minimale si elle existe
+						const minNoteInfo = document.getElementById('min-note-info');
+						if (minNoteInfo) {
+							minNoteInfo.remove();
+						}
+					}
 				});
 			} else {
 				console.warn('Aucun étudiant trouvé pour cette classe');
@@ -262,6 +462,9 @@ require_once 'templates/base.php';
 			return;
 		}
 
+		const studentId = formData.get('etudiant');
+		const grade = formData.get('note');
+
 		try {
 			const {
 				data: result
@@ -272,14 +475,37 @@ require_once 'templates/base.php';
 				},
 				body: JSON.stringify({
 					id_examen: examId,
-					id_eleve: formData.get('etudiant'),
+					id_eleve: studentId,
 					id_matiere: examInfo.id_matiere,
-					valeur: formData.get('note')
+					valeur: grade
 				})
 			});
 
 			if (!result.success) {
-				throw new Error(result.message || 'Erreur lors de l\'ajout de la note');
+				// Vérifier si l'erreur concerne un privilège de note minimum
+				const minNoteRegex = /ne peut pas avoir une note inférieure à (\d+\.?\d*)/i;
+				const match = result.error ? result.error.match(minNoteRegex) : null;
+
+				if (match) {
+					// Apprendre et enregistrer ce privilège pour le futur
+					const minNote = learnPrivilegeFromError(studentId, result.error);
+
+					const etudiant = document.getElementById('etudiant');
+					const etudiantNom = etudiant.options[etudiant.selectedIndex].text;
+
+					// Créer un message d'erreur personnalisé
+					const errorMessage = `
+						<div class="privilege-error">
+							<strong>Privilège détecté</strong><br>
+							L'étudiant ${etudiantNom} ne peut pas recevoir une note inférieure à <strong>${minNote}</strong>.<br>
+							Veuillez entrer une note plus élevée.
+						</div>`;
+
+					NotificationSystem.error(errorMessage);
+				} else {
+					throw new Error(result.error || result.message || 'Erreur lors de l\'ajout de la note');
+				}
+				return;
 			}
 
 			NotificationSystem.success('Note ajoutée avec succès');
@@ -354,7 +580,45 @@ require_once 'templates/base.php';
 					console.log('Réponse de la modification:', result);
 
 					if (!result.success) {
-						throw new Error(result.error || 'Erreur lors de la modification de la note');
+						// Récupérer l'ID de l'étudiant à partir de la note
+						let studentId = null;
+
+						// Essayer de récupérer les détails de la note pour avoir l'ID de l'étudiant
+						try {
+							const noteDetailsResponse = await fetchWithLogging(`api/notes/${noteId}`);
+							const noteDetails = noteDetailsResponse.data;
+							if (noteDetails.success && noteDetails.data && noteDetails.data.id_eleve) {
+								studentId = noteDetails.data.id_eleve;
+							}
+						} catch (error) {
+							console.warn('Impossible de récupérer les détails de la note:', error);
+						}
+
+						// Vérifier si l'erreur concerne un privilège de note minimum
+						const minNoteRegex = /ne peut pas avoir une note inférieure à (\d+\.?\d*)/i;
+						const match = result.error ? result.error.match(minNoteRegex) : null;
+
+						if (match) {
+							// Si on a l'ID de l'étudiant, apprendre ce privilège
+							if (studentId) {
+								learnPrivilegeFromError(studentId, result.error);
+							}
+
+							const minNote = match[1]; // Extraire la valeur minimale
+
+							// Créer un message d'erreur personnalisé
+							const errorMessage = `
+								<div class="privilege-error">
+									<strong>Privilège détecté</strong><br>
+									Cet étudiant ne peut pas recevoir une note inférieure à <strong>${minNote}</strong>.<br>
+									Veuillez entrer une note plus élevée.
+								</div>`;
+
+							NotificationSystem.error(errorMessage);
+						} else {
+							throw new Error(result.error || 'Erreur lors de la modification de la note');
+						}
+						return;
 					}
 
 					closeNoteModal();

@@ -282,6 +282,21 @@ style.textContent = `
         animation: spin 1s ease-in-out infinite;
     }
     
+    .privilege-error {
+        padding: 8px 10px;
+        background-color: rgba(255, 255, 255, 0.15);
+        border-radius: 4px;
+        margin-top: 5px;
+        margin-bottom: 5px;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+    
+    .privilege-error strong {
+        color: #ffcc00;
+        font-weight: bold;
+    }
+    
     @keyframes spin {
         to { transform: rotate(360deg); }
     }
