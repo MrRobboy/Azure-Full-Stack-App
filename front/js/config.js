@@ -16,15 +16,13 @@ const isAzure =
 			"app-frontend-esgi-app.azurewebsites.net");
 
 if (isAzure) {
-	// On Azure, use absolute paths from root
-	appConfig.proxyUrl = "/simple-proxy.php";
-	console.log("Running on Azure, using absolute paths");
+	// On Azure, try different paths to find the proxy
+	// First, try relative path (normal case)
+	appConfig.proxyUrl = "simple-proxy.php";
 
-	// Make sure we're communicating with the right backend
-	appConfig.backendBaseUrl =
-		"https://app-backend-esgi-app.azurewebsites.net";
-	appConfig.apiBaseUrl =
-		"https://app-backend-esgi-app.azurewebsites.net/api";
+	// If we're in a web app's virtual directory, we need the full path
+	// We need to handle both root and virtual directory scenarios
+	console.log("Running on Azure, testing various proxy paths");
 } else {
 	console.log("Running locally, using relative paths");
 
@@ -49,6 +47,58 @@ console.log("App config:", appConfig);
 console.log("Is Azure environment:", isAzure);
 console.log("Proxy URL:", appConfig.proxyUrl);
 console.log("API Base URL:", appConfig.apiBaseUrl);
+
+// Try multiple proxy paths to find the working one
+async function findWorkingProxyPath() {
+	if (isAzure) {
+		// Array of possible proxy paths on Azure
+		const possibleProxyPaths = [
+			"simple-proxy.php", // Same directory
+			"/simple-proxy.php", // Root
+			"../simple-proxy.php", // One level up
+			"../../simple-proxy.php", // Two levels up
+			window.location.pathname.substring(
+				0,
+				window.location.pathname.lastIndexOf("/")
+			) + "/simple-proxy.php" // Current directory
+		];
+
+		console.log("Testing possible proxy paths...");
+
+		for (const path of possibleProxyPaths) {
+			try {
+				console.log("Testing proxy path:", path);
+				const response = await fetch(
+					`${path}?endpoint=status.php`,
+					{
+						method: "GET",
+						headers: {
+							Accept: "application/json"
+						}
+					}
+				);
+
+				if (response.ok) {
+					console.log(
+						"Found working proxy path:",
+						path
+					);
+					appConfig.proxyUrl = path;
+					return true;
+				}
+			} catch (error) {
+				console.log(
+					`Path ${path} failed:`,
+					error.message
+				);
+			}
+		}
+
+		console.error("No working proxy path found!");
+		return false;
+	}
+	return true;
+}
 
 // List of possible backend URLs to try
 const possibleBackendUrls = [
@@ -279,11 +329,19 @@ async function tryFindWorkingBackend() {
 
 // Vérifier la connexion API au chargement
 document.addEventListener("DOMContentLoaded", async function () {
-	// First try to find a working backend
+	// Priorité 1 : Trouver le chemin du proxy qui fonctionne
+	await findWorkingProxyPath();
+
+	// Priorité 2 : Trouver un backend qui fonctionne
 	await tryFindWorkingBackend();
 
-	// Then check API availability with potentially updated URL
+	// Priorité 3 : Vérifier la disponibilité de l'API
 	await checkApiAvailability();
+
+	// Finalement, mettre à jour les logs de configuration après tous les ajustements
+	console.log("Configuration finale:");
+	console.log("Proxy URL:", appConfig.proxyUrl);
+	console.log("API Base URL:", appConfig.apiBaseUrl);
 });
 
 // Ajouter à l'objet window pour accessibilité globale

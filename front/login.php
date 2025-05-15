@@ -58,15 +58,56 @@ ob_start();
 <script src="js/config.js?v=1.9"></script>
 <script src="js/notification-system.js?v=1.1"></script>
 <script>
-	// Use appConfig's proxy path directly - no need to redefine isAzure
-	const proxyPath = appConfig.proxyUrl;
+	// Utiliser le chemin du proxy depuis la configuration
+	let proxyPath = appConfig.proxyUrl;
 	console.log('Environment:', isAzure ? 'Azure' : 'Local');
 	console.log('Using proxy path:', proxyPath);
 
-	// Log additional debug info about the environment
+	// Log de diagnostic étendu sur l'environnement
 	console.log('Full hostname:', window.location.hostname);
 	console.log('Full window.location:', window.location.href);
+	console.log('Current pathname:', window.location.pathname);
 	console.log('API base URL from config:', appConfig.backendBaseUrl);
+
+	// Fonction pour tester un chemin de proxy
+	async function testProxyPath(path) {
+		try {
+			console.log('Testing proxy path:', path);
+			const response = await fetch(`${path}?endpoint=status.php`);
+			const success = response.ok;
+			console.log(`Proxy test ${path}: ${success ? 'SUCCESS' : 'FAILED'} (${response.status})`);
+			return success;
+		} catch (err) {
+			console.error(`Proxy test ${path} error:`, err);
+			return false;
+		}
+	}
+
+	// Tester différents chemins pour le proxy
+	(async function() {
+		// Essayer plusieurs chemins possibles pour trouver le proxy
+		const pathsToTry = [
+			proxyPath,
+			"simple-proxy.php",
+			"/simple-proxy.php",
+			window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/')) + "/simple-proxy.php"
+		];
+
+		let foundWorkingPath = false;
+
+		for (const path of pathsToTry) {
+			if (await testProxyPath(path)) {
+				console.log('Found working proxy path:', path);
+				proxyPath = path;
+				foundWorkingPath = true;
+				break;
+			}
+		}
+
+		if (!foundWorkingPath) {
+			console.error('No working proxy path found! Login may fail.');
+		}
+	})();
 
 	function toggleErrorDetails() {
 		const details = document.querySelector('.error-details');
@@ -144,22 +185,21 @@ ob_start();
 		try {
 			console.log('Tentative de connexion...');
 
-			// Using the direct proxy URL for reliability
+			// Endpoint d'authentification
 			const loginEndpoint = 'api/auth/login';
+
+			// S'assurer que nous avons un chemin de proxy qui fonctionne
+			console.log('Preparing login with proxy path:', proxyPath);
+
+			// Construire l'URL complète
 			const proxyUrl = `${proxyPath}?endpoint=${encodeURIComponent(loginEndpoint)}`;
-
 			console.log('URL de connexion:', proxyUrl);
-			console.log('Testing if proxy file exists...');
 
-			// Test if the proxy file actually exists before trying login
-			try {
-				const testResponse = await fetch(proxyPath + '?endpoint=status.php');
-				console.log('Proxy status test:', testResponse.status, testResponse.ok ? 'OK' : 'Failed');
-			} catch (testErr) {
-				console.error('Proxy test failed:', testErr);
-			}
+			// Afficher un message explicatif à l'utilisateur
+			NotificationSystem.info("Connexion en cours... Veuillez patienter");
 
-			const response = await fetch(proxyUrl, {
+			// Options de requête avec retry
+			const fetchOptions = {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -169,7 +209,41 @@ ob_start();
 					password
 				}),
 				credentials: 'include'
-			});
+			};
+
+			// Fonction pour réessayer avec un autre chemin
+			async function attemptLoginWithPath(path) {
+				const url = `${path}?endpoint=${encodeURIComponent(loginEndpoint)}`;
+				console.log(`Attempting login with path: ${url}`);
+				return fetch(url, fetchOptions);
+			}
+
+			// Essayer d'abord avec le chemin principal
+			let response;
+			try {
+				response = await attemptLoginWithPath(proxyPath);
+				if (!response.ok && response.status === 404) {
+					// Si 404, essayer d'autres chemins
+					console.log("First proxy path returned 404, trying alternatives...");
+					for (const altPath of ["simple-proxy.php", "/simple-proxy.php"]) {
+						if (altPath === proxyPath) continue; // Skip if same as already tried
+						try {
+							console.log(`Trying alternative path: ${altPath}`);
+							const altResponse = await attemptLoginWithPath(altPath);
+							if (altResponse.ok || altResponse.status !== 404) {
+								response = altResponse;
+								console.log(`Alternative path ${altPath} worked!`);
+								break;
+							}
+						} catch (altErr) {
+							console.error(`Alternative path ${altPath} failed:`, altErr);
+						}
+					}
+				}
+			} catch (fetchErr) {
+				console.error("All login attempts failed:", fetchErr);
+				throw new Error("Impossible de contacter le serveur: " + fetchErr.message);
+			}
 
 			console.log('Réponse reçue:', response);
 			const responseText = await response.text();
