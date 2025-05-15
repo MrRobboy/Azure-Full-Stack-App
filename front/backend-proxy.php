@@ -9,7 +9,7 @@
 
 // Set error reporting
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0); // Disable displaying errors directly
 
 // Log access to this proxy with more details
 error_log("Backend proxy accessed: " . $_SERVER['REQUEST_URI']);
@@ -28,12 +28,17 @@ if (empty($endpoint)) {
 	exit;
 }
 
+// Check if debug mode is enabled
+$debug_mode = isset($_GET['debug']) && $_GET['debug'] == '1';
+
 // Log original endpoint and query string
 error_log("Original endpoint requested: " . $endpoint);
+error_log("Debug mode: " . ($debug_mode ? 'ON' : 'OFF'));
 
-// Remove endpoint from the query parameters to avoid duplication
+// Remove endpoint and debug from the query parameters to avoid duplication
 $queryParams = $_GET;
 unset($queryParams['endpoint']);
+unset($queryParams['debug']);
 
 // Sanitize the endpoint (basic security measure)
 $endpoint = ltrim($endpoint, '/');
@@ -223,11 +228,30 @@ if ($content_type) {
 }
 
 // If we got an error, provide additional debug info
-if ($http_code >= 400) {
+if ($http_code >= 400 || $debug_mode) {
 	error_log("Proxy error details: HTTP $http_code");
+
+	// Check if the response is HTML (containing HTML tags)
+	$is_html_response = false;
+	if ($content_type && (strpos($content_type, 'text/html') !== false ||
+		strpos($response, '<html') !== false ||
+		strpos($response, '<!DOCTYPE') !== false ||
+		strpos($response, '<body') !== false)) {
+		$is_html_response = true;
+		// Extract error message from HTML if possible
+		$error_msg = "HTML Error Response";
+		if (preg_match('/<title[^>]*>(.*?)<\/title>/is', $response, $matches)) {
+			$error_msg = trim($matches[1]);
+		} elseif (preg_match('/<h1[^>]*>(.*?)<\/h1>/is', $response, $matches)) {
+			$error_msg = trim($matches[1]);
+		}
+	}
 
 	// Append debug info to the response
 	$debug_info = [
+		'error' => $http_code >= 400,
+		'http_status' => $http_code,
+		'message' => $is_html_response ? "HTML Error Response: " . substr($error_msg, 0, 100) : "API Error",
 		'proxy_debug' => [
 			'original_status' => $http_code,
 			'original_endpoint' => $endpoint,
@@ -235,20 +259,61 @@ if ($http_code >= 400) {
 			'successful_url' => $successful_url,
 			'method' => $method,
 			'timestamp' => date('Y-m-d H:i:s'),
-			'verbose_logs' => $verbose_logs
+			'verbose_logs' => $verbose_logs,
+			'is_html_response' => $is_html_response,
+			'debug_mode' => $debug_mode
 		]
 	];
 
-	// Try to decode the original JSON response
-	$json_response = json_decode($response, true);
-	if (json_last_error() === JSON_ERROR_NONE && is_array($json_response)) {
-		// Valid JSON, add our debug info
-		$json_response['proxy_debug'] = $debug_info['proxy_debug'];
-		$response = json_encode($json_response);
+	// Add the raw HTML response or first 2000 chars in debug mode
+	if ($debug_mode && $is_html_response) {
+		$debug_info['html_content'] = substr($response, 0, 2000);
+	}
+
+	// Try to decode the original JSON response if it's not HTML
+	if (!$is_html_response) {
+		$json_response = json_decode($response, true);
+		if (json_last_error() === JSON_ERROR_NONE && is_array($json_response)) {
+			// Valid JSON, add our debug info
+			if ($debug_mode || $http_code >= 400) {
+				$json_response['proxy_debug'] = $debug_info['proxy_debug'];
+			}
+			$response = json_encode($json_response);
+		} else {
+			// Not valid JSON, return our debug info as JSON
+			$response = json_encode($debug_info);
+		}
 	} else {
-		// Not valid JSON, return our debug info as JSON
+		// It's HTML, just return our debug info as JSON
 		$response = json_encode($debug_info);
 	}
+
+	// Always set content type to JSON for error responses or debug mode
+	header('Content-Type: application/json');
+} else if (
+	$content_type && strpos($content_type, 'application/json') === false &&
+	(strpos($content_type, 'text/html') !== false ||
+		strpos($response, '<html') !== false ||
+		strpos($response, '<!DOCTYPE') !== false)
+) {
+	// Handle successful HTML responses that should be JSON
+	$debug_info = [
+		'success' => true,
+		'http_status' => $http_code,
+		'message' => "Response was HTML, converted to JSON",
+		'html_content' => substr($response, 0, 1000), // First 1000 chars of HTML
+		'proxy_debug' => [
+			'original_status' => $http_code,
+			'original_endpoint' => $endpoint,
+			'tried_urls' => $urlVariants,
+			'successful_url' => $successful_url,
+			'content_type' => $content_type,
+			'timestamp' => date('Y-m-d H:i:s')
+		]
+	];
+
+	$response = json_encode($debug_info);
+	header('Content-Type: application/json');
 }
 
 // Output the response

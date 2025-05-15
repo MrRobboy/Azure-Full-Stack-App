@@ -46,6 +46,11 @@ require_once 'templates/base.php';
 							<label class="form-check-label" for="useProxy">Utiliser le proxy</label>
 						</div>
 
+						<div class="mb-3 form-check">
+							<input type="checkbox" class="form-check-input" id="debugMode" checked>
+							<label class="form-check-label" for="debugMode">Mode debug</label>
+						</div>
+
 						<button type="submit" class="btn btn-primary">Tester l'endpoint</button>
 					</form>
 				</div>
@@ -138,6 +143,9 @@ require_once 'templates/base.php';
 			urlTestedContainer.classList.add('d-none');
 			responseContainer.classList.add('d-none');
 
+			// Get the debug mode setting
+			const debugMode = document.getElementById('debugMode').checked;
+
 			try {
 				// Déterminer l'URL en fonction du format et du proxy
 				let url;
@@ -162,6 +170,10 @@ require_once 'templates/base.php';
 					try {
 						if (useProxy) {
 							url = `backend-proxy.php?endpoint=${encodeURIComponent(testUrl)}`;
+							// Add debug mode parameter if checked
+							if (debugMode) {
+								url += "&debug=1";
+							}
 						} else {
 							url = `https://app-backend-esgi-app.azurewebsites.net/${testUrl}`;
 						}
