@@ -2,6 +2,29 @@
 
 Ce document fournit des instructions pour résoudre les problèmes d'API sur l'application hébergée sur Azure.
 
+## Mise à jour importante: Azure avec Nginx
+
+Suite à des investigations récentes, nous avons découvert que l'infrastructure backend fonctionne avec Nginx (`nginx/1.26.2`) et non IIS comme initialement prévu. Cela explique pourquoi certaines configurations dans `web.config` n'étaient pas appliquées.
+
+## Nouvelle structure de routage
+
+Pour résoudre les problèmes de routage sur Nginx, nous avons implémenté les solutions suivantes:
+
+1. **Routeur PHP central**: Modification du fichier `index.php` pour agir comme un routeur central qui gère toutes les requêtes API
+2. **Correction du format d'URL**: Standardisation sur le format `/api/[resource]` pour toutes les requêtes API
+3. **Correction des problèmes de session**: Résolution des avertissements liés à la session PHP qui interrompaient les réponses JSON
+4. **Amélioration du proxy backend**: Mise à jour pour prioriser le nouveau format d'URL API
+
+### Format d'URL recommandé
+
+Le format d'URL recommandé pour toutes les requêtes API est désormais:
+
+```
+https://app-backend-esgi-app.azurewebsites.net/api/[resource]
+```
+
+Exemple: `https://app-backend-esgi-app.azurewebsites.net/api/classes`
+
 ## Structure des URLs
 
 L'application utilise plusieurs formats d'URL en fonction de l'endpoint :
@@ -35,8 +58,8 @@ L'application utilise plusieurs formats d'URL en fonction de l'endpoint :
 
 La configuration CORS est gérée à deux niveaux :
 
-1. **Au niveau IIS (web.config)** - Définit les en-têtes CORS globaux
-2. **Au niveau PHP** - Définit les en-têtes CORS dans chaque script PHP
+1. **Au niveau Nginx** - Peut être configuré dans le serveur web
+2. **Au niveau PHP** - Défini dans chaque script PHP
 
 ## Solutions pour les problèmes CORS
 
@@ -66,16 +89,25 @@ Nous avons implémenté plusieurs approches pour résoudre les problèmes CORS :
 Solutions :
 
 - Utiliser le proxy backend
-- Vérifier les en-têtes CORS dans le web.config
-- Vérifier les en-têtes CORS dans le script PHP
+- Vérifier les en-têtes CORS dans les scripts PHP
+- Tester avec Direct API Tester pour isoler le problème
 
 ### Problème : 404 Not Found pour les endpoints API
 
 Solutions :
 
-- Vérifier l'URL exacte avec l'outil API Tester
-- Tester les trois formats d'URL (direct, avec api/, route)
-- Vérifier les règles de réécriture dans web.config
+- Utiliser le format d'URL avec préfixe API: `/api/[resource]`
+- Vérifier avec l'outil test-routing.php pour comprendre la configuration du serveur
+- Utiliser l'outil API Tester pour tester différents formats d'URL
+
+### Problème : Erreur "SyntaxError: Unexpected token '<'"
+
+Solutions :
+
+- Vérifier les paramètres de session PHP pour éviter les warnings
+- Désactiver l'affichage des erreurs PHP (`display_errors = Off`)
+- Utiliser le mode debug dans le proxy pour voir l'HTML exact renvoyé
+- Corriger les erreurs PHP dans le script backend identifiées
 
 ### Problème : 401 Unauthorized pour les API
 
@@ -88,20 +120,20 @@ Solutions :
 
 Le proxy backend a été amélioré pour essayer automatiquement plusieurs formats d'URL API, ce qui augmente les chances de réussite.
 
-Exemple d'utilisation :
+Exemple d'utilisation avec le mode debug :
 
 ```javascript
-fetch("backend-proxy.php?endpoint=status")
+fetch("backend-proxy.php?endpoint=api/status&debug=1")
 	.then((response) => response.json())
 	.then((data) => console.log(data));
 ```
 
-Pour les endpoints API, il tentera automatiquement les formats suivants :
+### Nouveaux outils de diagnostic
 
-- `/classes`
-- `/api/classes`
-- `/routes/api.php?resource=classes`
+1. **direct-api-tester.html** : Interface pour tester les API directement sans le proxy
+2. **test-direct-api.php** : Script PHP pour tester les endpoints API avec plus de détails
+3. **test-routing.php** : Script pour vérifier la configuration du serveur et des routes
 
 ## Configuration recommandée
 
-Après les tests avec l'API Tester, il est recommandé d'utiliser le format qui fonctionne de manière consistante dans votre fichier config.js.
+Après les tests avec les nouveaux outils, il est recommandé d'utiliser le format d'URL avec préfixe API (`/api/[resource]`) dans toutes vos requêtes API.

@@ -84,23 +84,23 @@ if (strpos($endpoint, '?') !== false) {
 
 		$urlVariants[] = $baseUrl;
 	} else {
-		// For API endpoints, try multiple routing patterns
+		// For API endpoints, try routing patterns
 
-		// 1. Direct endpoint without api/ prefix
-		$directUrl = $api_base_url . '/' . $endpoint;
-		if (!empty($queryParams)) {
-			$directUrl .= '?' . http_build_query($queryParams);
-		}
-		$urlVariants[] = $directUrl;
-
-		// 2. With api/ prefix
+		// 1. With api/ prefix (preferred format for the new router)
 		$apiUrl = $api_base_url . '/api/' . $endpoint;
 		if (!empty($queryParams)) {
 			$apiUrl .= '?' . http_build_query($queryParams);
 		}
 		$urlVariants[] = $apiUrl;
 
-		// 3. Using the API router directly with resource parameter
+		// 2. Direct endpoint without api/ prefix (fallback)
+		$directUrl = $api_base_url . '/' . $endpoint;
+		if (!empty($queryParams)) {
+			$directUrl .= '?' . http_build_query($queryParams);
+		}
+		$urlVariants[] = $directUrl;
+
+		// 3. Using the API router directly with resource parameter (legacy format)
 		$routerUrl = $api_base_url . '/routes/api.php?resource=' . $endpoint;
 		if (!empty($queryParams)) {
 			$routerUrl .= '&' . http_build_query($queryParams);

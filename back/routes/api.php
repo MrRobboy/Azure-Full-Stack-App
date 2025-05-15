@@ -51,14 +51,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Configurer les cookies pour qu'ils fonctionnent entre domaines sur Azure
 $cookieParams = session_get_cookie_params();
-session_set_cookie_params([
-	'lifetime' => $cookieParams['lifetime'],
-	'path' => '/',
-	'domain' => '.azurewebsites.net', // Domaine partagé pour les cookies
-	'secure' => true,
-	'httponly' => true,
-	'samesite' => 'None'
-]);
+
+// On vérifie si la session est déjà active avant de modifier les paramètres
+if (session_status() == PHP_SESSION_NONE) {
+	session_set_cookie_params([
+		'lifetime' => $cookieParams['lifetime'],
+		'path' => '/',
+		'domain' => '.azurewebsites.net', // Domaine partagé pour les cookies
+		'secure' => true,
+		'httponly' => true,
+		'samesite' => 'None'
+	]);
+
+	// Démarrer la session après avoir configuré les paramètres
+	session_start();
+}
 
 // Récupération de l'URL et de la méthode HTTP
 $request_uri = $_SERVER['REQUEST_URI'];
