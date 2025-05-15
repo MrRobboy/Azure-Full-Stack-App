@@ -20,6 +20,48 @@ if (isAzure) {
 	console.log("Running locally, using relative paths");
 }
 
+// List of possible backend URLs to try
+const possibleBackendUrls = [
+	// Current URL
+	"https://app-backend-esgi-app.azurewebsites.net",
+
+	// Try with the same hostname as the frontend
+	window.location.protocol + "//" + window.location.hostname,
+
+	// Common variations
+	"https://api-backend-esgi-app.azurewebsites.net",
+	"https://backend-esgi-app.azurewebsites.net",
+	"https://esgi-app-backend.azurewebsites.net"
+];
+
+// Function to check if a backend URL is accessible
+async function checkBackendUrl(url) {
+	try {
+		const statusUrl = url + "/status.php";
+		const response = await fetch(statusUrl, {
+			method: "GET",
+			headers: {
+				Accept: "application/json"
+			},
+			mode: "no-cors" // Try with no-cors to see if the URL exists
+		});
+
+		// No-cors always returns opaque response, so we just check if we got a response at all
+		return {
+			url: url,
+			status: response.status,
+			ok: response.status === 0 || response.ok
+		};
+	} catch (error) {
+		return {
+			url: url,
+			status: 0,
+			ok: false,
+			error: error.message
+		};
+	}
+}
+
 // Fonction pour obtenir l'URL de l'API
 function getApiUrl(endpoint) {
 	if (appConfig.useProxy) {
@@ -142,8 +184,67 @@ async function checkApiAvailability() {
 	}
 }
 
+// Try checking all possible backend URLs
+async function tryFindWorkingBackend() {
+	try {
+		console.log("Trying to find a working backend URL...");
+
+		let workingUrl = null;
+
+		// First try using the proxy to test status.php
+		const proxyResponse = await fetch(
+			`${appConfig.proxyUrl}?endpoint=status.php`,
+			{
+				method: "GET",
+				credentials: "include",
+				headers: {
+					Accept: "application/json"
+				}
+			}
+		);
+
+		if (proxyResponse.ok) {
+			console.log(
+				"Proxy is working with current backend URL configuration."
+			);
+			return;
+		}
+
+		// If proxy didn't work, try all possible backend URLs
+		for (const url of possibleBackendUrls) {
+			console.log("Trying backend URL:", url);
+			const result = await checkBackendUrl(url);
+
+			if (result.ok) {
+				console.log("Found working backend URL:", url);
+				workingUrl = url;
+				break;
+			}
+		}
+
+		if (workingUrl) {
+			// Update configuration with working URL
+			appConfig.backendBaseUrl = workingUrl;
+			appConfig.apiBaseUrl = workingUrl + "/api";
+			console.log("Updated backend URL to:", workingUrl);
+		} else {
+			console.error(
+				"No working backend URL found among the tested options."
+			);
+		}
+	} catch (error) {
+		console.error("Error while finding backend URL:", error);
+	}
+}
+
 // Vérifier la connexion API au chargement
-document.addEventListener("DOMContentLoaded", checkApiAvailability);
+document.addEventListener("DOMContentLoaded", async function () {
+	// First try to find a working backend
+	await tryFindWorkingBackend();
+
+	// Then check API availability with potentially updated URL
+	await checkApiAvailability();
+});
 
 // Ajouter à l'objet window pour accessibilité globale
 window.appConfig = appConfig;
