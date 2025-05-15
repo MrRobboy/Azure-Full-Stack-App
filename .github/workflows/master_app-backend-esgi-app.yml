@@ -7,6 +7,8 @@ on:
   push:
     branches:
       - master
+    paths:
+      - 'back/**'  # Limite le déclenchement aux modifications dans le dossier back
   workflow_dispatch:
 
 jobs:
@@ -23,18 +25,25 @@ jobs:
         with:
           php-version: '8.2'
 
+      # Vérifiez si composer.json existe dans le dossier back
       - name: Check if composer.json exists
         id: check_files
         uses: andstor/file-existence-action@v1
         with:
-          files: 'composer.json'
+          files: 'back/composer.json'
 
+      # Exécutez composer install dans le dossier back si composer.json existe
       - name: Run composer install if composer.json exists
         if: steps.check_files.outputs.files_exists == 'true'
-        run: composer validate --no-check-publish && composer install --prefer-dist --no-progress
+        run: |
+          cd back
+          composer validate --no-check-publish && composer install --prefer-dist --no-progress
 
+      # Zip uniquement le contenu du dossier back
       - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
+        run: |
+          cd back
+          zip -r ../release.zip ./*
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
