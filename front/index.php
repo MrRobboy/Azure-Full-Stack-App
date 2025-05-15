@@ -4,7 +4,6 @@ session_start();
 // Si l'utilisateur est déjà connecté, rediriger vers le tableau de bord
 if (isset($_SESSION['prof_id'])) {
 	header('Location: dashboard.php');
-	exit();
 }
 
 $pageTitle = "Accueil";
@@ -139,5 +138,5 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
-require_once 'templates/base.php';
+include 'templates/base.php';
 ?>
