@@ -144,7 +144,7 @@ class Prof
 				$data['password']
 			]);
 
-			return $this->db->lastInsertId();
+			return DatabaseService::getInstance()->lastInsertId();
 		} catch (PDOException $e) {
 			throw new Exception('Erreur lors de la création du professeur', 500);
 		}

@@ -123,7 +123,7 @@ class User
 				$data['classe']
 			]);
 
-			return $this->db->lastInsertId();
+			return DatabaseService::getInstance()->lastInsertId();
 		} catch (PDOException $e) {
 			throw new Exception('Erreur lors de la création de l\'utilisateur', 500);
 		}

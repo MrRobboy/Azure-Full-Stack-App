@@ -81,7 +81,7 @@ class Classe
 			$result = $stmt->execute([$nom_classe, $niveau, $numero, $rythme]);
 
 			if ($result) {
-				$id = $this->db->lastInsertId();
+				$id = DatabaseService::getInstance()->lastInsertId();
 				error_log("Classe créée avec succès, ID: " . $id);
 				return $id;
 			} else {

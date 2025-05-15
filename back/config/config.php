@@ -15,11 +15,15 @@ if (ENVIRONMENT === 'development') {
     error_reporting(0);
 }
 
-// Configuration de la base de données MariaDB
-define('DB_HOST', 'localhost');
+// Configuration de la base de données SQL Server
+define('DB_HOST', 'localhost'); // Ou l'adresse IP/nom du serveur SQL
 define('DB_NAME', 'gestion_notes');
-define('DB_USER', 'root');
-define('DB_PASS', 'Respons11');
+define('DB_USER', 'sqladmin'); // Modifiez selon votre configuration
+define('DB_PASS', 'Cisco123');
+define('DB_PORT', '1433'); // Port standard pour SQL Server
+
+// Indiquer le type de base de données
+define('DB_TYPE', 'sqlsrv'); // sqlsrv pour SQL Server
 
 // URL de l'API pour communication front ↔ back
 define('API_BASE_URL', 'http://localhost:727/api');

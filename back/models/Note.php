@@ -169,7 +169,7 @@ class Note
 				throw new Exception("Erreur lors de l'insertion de la note");
 			}
 
-			$id = $this->db->lastInsertId();
+			$id = DatabaseService::getInstance()->lastInsertId();
 			return $this->getById($id);
 		} catch (Exception $e) {
 			$this->errorService->logError('Note::create', $e->getMessage());

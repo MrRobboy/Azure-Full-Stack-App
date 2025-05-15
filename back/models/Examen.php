@@ -124,7 +124,8 @@ class Examen
 				throw new Exception("Erreur lors de l'exécution de la requête: " . $error[2]);
 			}
 
-			$id = $this->db->lastInsertId();
+			// Utiliser la méthode lastInsertId de DatabaseService pour la compatibilité SQL Server
+			$id = DatabaseService::getInstance()->lastInsertId();
 			error_log("ID de l'examen créé: " . $id);
 
 			// Vérifier que l'insertion a réussi

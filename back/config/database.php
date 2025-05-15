@@ -14,12 +14,23 @@ class Database
 		$this->conn = null;
 
 		try {
-			$dsn = "mysql:host=$this->host;dbname=$this->db_name;charset=utf8mb4";
-			$this->conn = new PDO($dsn, $this->username, $this->password);
-			$this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-			$this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+			// Vérifier si on utilise SQL Server
+			if (defined('DB_TYPE') && DB_TYPE === 'sqlsrv') {
+				$port = defined('DB_PORT') ? DB_PORT : '1433';
+				$dsn = "sqlsrv:Server=$this->host,$port;Database=$this->db_name";
+				$this->conn = new PDO($dsn, $this->username, $this->password);
+				$this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+				$this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+			} else {
+				// Par défaut, utiliser MySQL/MariaDB pour la rétrocompatibilité
+				$dsn = "mysql:host=$this->host;dbname=$this->db_name;charset=utf8mb4";
+				$this->conn = new PDO($dsn, $this->username, $this->password);
+				$this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+				$this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+			}
 		} catch (PDOException $e) {
-			throw new Exception("Erreur de connexion à MariaDB: " . $e->getMessage());
+			$dbType = defined('DB_TYPE') ? DB_TYPE : 'mysql';
+			throw new Exception("Erreur de connexion à $dbType: " . $e->getMessage());
 		}
 
 		return $this->conn;

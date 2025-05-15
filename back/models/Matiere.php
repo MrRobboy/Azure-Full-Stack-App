@@ -76,7 +76,7 @@ class Matiere
 				throw new Exception("Erreur lors de la création de la matière");
 			}
 
-			$id = $this->db->lastInsertId();
+			$id = DatabaseService::getInstance()->lastInsertId();
 			error_log("Matière créée avec succès, ID: " . $id);
 			return $id;
 		} catch (Exception $e) {

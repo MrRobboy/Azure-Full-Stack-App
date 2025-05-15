@@ -105,7 +105,7 @@ class Eleve
 				VALUES (?, ?, ?, ?, ?)
 			");
 			$stmt->execute([$nom, $prenom, $email, password_hash($password, PASSWORD_DEFAULT), $id_classe]);
-			return $this->db->lastInsertId();
+			return DatabaseService::getInstance()->lastInsertId();
 		} catch (Exception $e) {
 			$this->errorService->logError('Eleve::create', $e->getMessage());
 			return false;
