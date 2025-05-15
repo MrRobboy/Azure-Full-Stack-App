@@ -53,15 +53,25 @@ try {
 	// Simple check if URL is valid
 	$endpoint = ltrim($endpoint, '/');
 
-	// Try both with and without "api/" prefix for compatibility
-	if (!str_starts_with($endpoint, 'api/') && !in_array($endpoint, ['status.php'])) {
-		// If endpoint doesn't start with "api/" and is not a known root endpoint like status.php
-		// try to add the api/ prefix
-		$target_url = $api_base_url . '/api/' . $endpoint;
-		error_log("First attempt with api/ prefix: " . $target_url);
-	} else {
+	// Special handling for login endpoint
+	$target_url = '';
+
+	if ($endpoint == 'api/auth/login' || $endpoint == 'auth/login') {
+		// Explicitly use the correct login endpoint
+		$target_url = $api_base_url . '/api/auth/login';
+		error_log("Using explicit login endpoint: " . $target_url);
+	} else if ($endpoint == 'status.php') {
+		// For the status endpoint, keep it at the root
+		$target_url = $api_base_url . '/status.php';
+		error_log("Using status endpoint: " . $target_url);
+	} else if (strpos($endpoint, 'api/') === 0) {
+		// If it already begins with api/, use as-is
 		$target_url = $api_base_url . '/' . $endpoint;
-		error_log("Using endpoint as-is: " . $target_url);
+		error_log("Using API endpoint as-is: " . $target_url);
+	} else {
+		// Otherwise, add api/ prefix for API endpoints
+		$target_url = $api_base_url . '/api/' . $endpoint;
+		error_log("Adding API prefix to endpoint: " . $target_url);
 	}
 
 	// Log the target URL and raw post data
@@ -82,12 +92,21 @@ try {
 		// Set proper method
 		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $_SERVER['REQUEST_METHOD']);
 
+		// Set headers - important for backend authentication
+		$headers = ['Content-Type: application/json'];
+
+		// Forward any Authorization header
+		if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+			$headers[] = 'Authorization: ' . $_SERVER['HTTP_AUTHORIZATION'];
+		}
+
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
 		// If it's a POST or PUT, forward the body
 		if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT') {
 			$body = file_get_contents("php://input");
 			if (!empty($body)) {
 				curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-				curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
 			}
 		}
 
@@ -106,19 +125,43 @@ try {
 			error_log("Curl error: " . $error);
 		}
 
+		// If we got a 404, let's provide more details
+		if ($status == 404) {
+			error_log("404 error for URL: " . $target_url);
+			error_log("Response content for 404: " . substr($response, 0, 500));
+
+			// Try to make a HEAD request to the base URL to check connectivity
+			$ch_check = curl_init($api_base_url);
+			curl_setopt($ch_check, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($ch_check, CURLOPT_NOBODY, true);
+			curl_exec($ch_check);
+			$check_status = curl_getinfo($ch_check, CURLINFO_HTTP_CODE);
+			curl_close($ch_check);
+
+			error_log("Base URL HEAD check: HTTP $check_status");
+		}
+
 		echo $response;
 	} else {
 		// Fallback to file_get_contents if curl is not available
 		$context = stream_context_create([
 			'http' => [
 				'method' => $_SERVER['REQUEST_METHOD'],
-				'ignore_errors' => true
+				'ignore_errors' => true,
+				'header' => 'Content-Type: application/json'
 			],
 			'ssl' => [
 				'verify_peer' => false,
 				'verify_peer_name' => false
 			]
 		]);
+
+		if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT') {
+			$body = file_get_contents("php://input");
+			if (!empty($body)) {
+				$context['http']['content'] = $body;
+			}
+		}
 
 		$response = @file_get_contents($target_url, false, $context);
 		$status = $http_response_header[0] ?? 'HTTP/1.1 500 Internal Server Error';
