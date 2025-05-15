@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0" />
+		<title>Test Simple d'API Azure</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				max-width: 800px;
+				margin: 0 auto;
+				padding: 20px;
+			}
+			h1 {
+				color: #0078d4;
+			}
+			button {
+				background-color: #0078d4;
+				color: white;
+				border: none;
+				padding: 10px 15px;
+				margin: 5px;
+				cursor: pointer;
+				border-radius: 4px;
+			}
+			button:hover {
+				background-color: #005a9e;
+			}
+			pre {
+				background-color: #f5f5f5;
+				padding: 10px;
+				border-radius: 4px;
+				overflow-x: auto;
+			}
+			.result {
+				margin-top: 20px;
+			}
+			.success {
+				background-color: #dff0d8;
+				color: #3c763d;
+				padding: 10px;
+				border-radius: 4px;
+			}
+			.error {
+				background-color: #f2dede;
+				color: #a94442;
+				padding: 10px;
+				border-radius: 4px;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Test Simple d'API Azure</h1>
+		<p>
+			Cette page HTML simple permet de tester la connexion à
+			l'API sans dépendances PHP.
+		</p>
+
+		<div>
+			<button id="corsTestBtn">Test CORS</button>
+			<button id="apiTestBtn">Test API</button>
+			<button id="dbTestBtn">Test BDD</button>
+		</div>
+
+		<div class="result" id="result">
+			<p>Cliquez sur un bouton pour tester la connexion.</p>
+		</div>
+
+		<script>
+			// Configuration
+			const config = {
+				backendUrl: "https://app-backend-esgi-app.azurewebsites.net",
+				apiUrl: "https://app-backend-esgi-app.azurewebsites.net/api"
+			};
+
+			// Fonction pour afficher les résultats
+			function displayResult(success, message, data) {
+				const resultDiv =
+					document.getElementById("result");
+				resultDiv.innerHTML = `
+                <div class="${success ? "success" : "error"}">
+                    <p><strong>${
+				success ? "Succès" : "Erreur"
+			}</strong>: ${message}</p>
+                </div>
+                ${data ? `<pre>${JSON.stringify(data, null, 2)}</pre>` : ""}
+            `;
+			}
+
+			// Test CORS
+			document.getElementById("corsTestBtn").addEventListener(
+				"click",
+				async () => {
+					try {
+						displayResult(
+							true,
+							"Test en cours...",
+							null
+						);
+
+						const response = await fetch(
+							`${config.backendUrl}/azure-cors.php`,
+							{
+								method: "GET",
+								credentials:
+									"include",
+								headers: {
+									"Content-Type":
+										"application/json",
+									"X-Requested-With":
+										"XMLHttpRequest"
+								}
+							}
+						);
+
+						if (response.ok) {
+							const data =
+								await response.json();
+							displayResult(
+								true,
+								"Test CORS réussi",
+								data
+							);
+						} else {
+							displayResult(
+								false,
+								`Échec du test CORS (${response.status}: ${response.statusText})`,
+								null
+							);
+						}
+					} catch (error) {
+						displayResult(
+							false,
+							`Erreur: ${error.message}`,
+							null
+						);
+					}
+				}
+			);
+
+			// Test API
+			document.getElementById("apiTestBtn").addEventListener(
+				"click",
+				async () => {
+					try {
+						displayResult(
+							true,
+							"Test en cours...",
+							null
+						);
+
+						const response = await fetch(
+							`${config.apiUrl}/status`,
+							{
+								method: "GET",
+								credentials:
+									"include",
+								headers: {
+									"Content-Type":
+										"application/json",
+									"X-Requested-With":
+										"XMLHttpRequest"
+								}
+							}
+						);
+
+						if (response.ok) {
+							const data =
+								await response.json();
+							displayResult(
+								true,
+								"Test API réussi",
+								data
+							);
+						} else {
+							displayResult(
+								false,
+								`Échec du test API (${response.status}: ${response.statusText})`,
+								null
+							);
+						}
+					} catch (error) {
+						displayResult(
+							false,
+							`Erreur: ${error.message}`,
+							null
+						);
+					}
+				}
+			);
+
+			// Test BDD
+			document.getElementById("dbTestBtn").addEventListener(
+				"click",
+				async () => {
+					try {
+						displayResult(
+							true,
+							"Test en cours...",
+							null
+						);
+
+						const response = await fetch(
+							`${config.apiUrl}/db-status`,
+							{
+								method: "GET",
+								credentials:
+									"include",
+								headers: {
+									"Content-Type":
+										"application/json",
+									"X-Requested-With":
+										"XMLHttpRequest"
+								}
+							}
+						);
+
+						if (response.ok) {
+							const data =
+								await response.json();
+							displayResult(
+								true,
+								"Test BDD réussi",
+								data
+							);
+						} else {
+							displayResult(
+								false,
+								`Échec du test BDD (${response.status}: ${response.statusText})`,
+								null
+							);
+						}
+					} catch (error) {
+						displayResult(
+							false,
+							`Erreur: ${error.message}`,
+							null
+						);
+					}
+				}
+			);
+		</script>
+	</body>
+</html>

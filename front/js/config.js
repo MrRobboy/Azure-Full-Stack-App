@@ -2,9 +2,9 @@
 const appConfig = {
 	apiBaseUrl: "https://app-backend-esgi-app.azurewebsites.net/api",
 	backendBaseUrl: "https://app-backend-esgi-app.azurewebsites.net",
-	useProxy: true, // Activer le proxy par défaut pour éviter les problèmes CORS
+	useProxy: false, // Désactiver le proxy pour les appels directs à l'API Azure
 	proxyUrl: "backend-proxy.php", // URL du proxy local
-	version: "1.5"
+	version: "1.6"
 };
 
 // Fonction pour obtenir l'URL de l'API
@@ -16,9 +16,12 @@ function getApiUrl(endpoint) {
 			endpoint
 		)}`;
 	} else {
-		// Appel direct à l'API - utiliser l'URL complète sans api/ préfixe
-		// puisque l'API semble ne pas utiliser ce préfixe
-		return `${appConfig.backendBaseUrl}/${endpoint}`;
+		// Appel direct à l'API - vérifier si endpoint commence déjà par "api/"
+		if (endpoint.startsWith("api/")) {
+			return `${appConfig.backendBaseUrl}/${endpoint}`;
+		} else {
+			return `${appConfig.apiBaseUrl}/${endpoint}`;
+		}
 	}
 }
 
@@ -61,6 +64,44 @@ function getFullUrl(fullPath) {
 		return fullPath;
 	}
 }
+
+// Fonction pour vérifier si l'API est disponible
+async function checkApiAvailability() {
+	try {
+		const response = await fetch(
+			`${appConfig.backendBaseUrl}/azure-cors.php`,
+			{
+				method: "GET",
+				credentials: "include",
+				headers: {
+					"Content-Type": "application/json",
+					"X-Requested-With": "XMLHttpRequest"
+				}
+			}
+		);
+
+		if (response.ok) {
+			// API directe fonctionne, désactiver le proxy
+			appConfig.useProxy = false;
+			console.log(
+				"API direct access working, proxy disabled"
+			);
+		} else {
+			// Problème avec l'API directe, activer le proxy
+			appConfig.useProxy = true;
+			console.log(
+				"API direct access failed, switching to proxy"
+			);
+		}
+	} catch (error) {
+		// Erreur de connexion, activer le proxy
+		appConfig.useProxy = true;
+		console.log("API connection error, switching to proxy", error);
+	}
+}
+
+// Vérifier la connexion API au chargement
+document.addEventListener("DOMContentLoaded", checkApiAvailability);
 
 // Ajouter à l'objet window pour accessibilité globale
 window.appConfig = appConfig;
