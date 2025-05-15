@@ -17,6 +17,11 @@
 				max-height: 500px;
 				overflow: auto;
 			}
+			.test-options {
+				border-left: 3px solid #0d6efd;
+				padding-left: 15px;
+				margin-bottom: 15px;
+			}
 		</style>
 	</head>
 	<body>
@@ -139,6 +144,66 @@
 							</button>
 						</div>
 					</div>
+
+					<div class="card mt-4">
+						<div class="card-header">
+							<h3>Tests rapides</h3>
+						</div>
+						<div class="card-body">
+							<div
+								class="test-options">
+								<h5>
+									Test
+									CORS pur
+								</h5>
+								<button
+									id="pure-cors-btn"
+									class="btn btn-outline-primary">
+									Test
+									CORS
+								</button>
+							</div>
+
+							<div
+								class="test-options">
+								<h5>
+									Test API
+									et
+									Endpoints
+								</h5>
+								<button
+									id="classes-btn"
+									class="btn btn-outline-success">
+									Classes
+								</button>
+								<button
+									id="matieres-btn"
+									class="btn btn-outline-success">
+									Matières
+								</button>
+								<button
+									id="examens-btn"
+									class="btn btn-outline-success">
+									Examens
+								</button>
+							</div>
+
+							<div
+								class="test-options">
+								<h5>
+									Test
+									base de
+									données
+								</h5>
+								<button
+									id="db-status-btn"
+									class="btn btn-outline-info">
+									Statut
+									BDD
+								</button>
+							</div>
+						</div>
+					</div>
 				</div>
 
 				<div class="col-md-4">
@@ -208,150 +273,233 @@
 							"useProxy"
 						);
 
+					// Fonction pour effectuer un test
+					async function runTest(
+						endpoint,
+						useProxy
+					) {
+						statusDiv.className =
+							"alert alert-info";
+						statusDiv.textContent =
+							"Test en cours...";
+						resultPre.textContent =
+							"Chargement...";
+
+						try {
+							// Parse custom headers
+							let headers = {};
+							try {
+								headers =
+									JSON.parse(
+										customHeadersInput.value
+									);
+							} catch (e) {
+								console.error(
+									"Invalid JSON for headers:",
+									e
+								);
+								statusDiv.className =
+									"alert alert-warning";
+								statusDiv.textContent =
+									"Format JSON des headers invalide";
+								return;
+							}
+
+							// Build fetch options
+							const options = {
+								method: methodSelect.value,
+								headers: headers,
+								credentials:
+									credentialsCheck.checked
+										? "include"
+										: "omit"
+							};
+
+							// Determine URL based on proxy choice
+							let url = "";
+							if (useProxy) {
+								// Use proxy - properly encode the endpoint
+								url = `backend-proxy.php?endpoint=${encodeURIComponent(
+									endpoint
+								)}`;
+								console.log(
+									"Using proxy:",
+									url
+								);
+							} else {
+								// Direct call to backend
+								url = `https://app-backend-esgi-app.azurewebsites.net/${endpoint}`;
+								console.log(
+									"Direct backend call:",
+									url
+								);
+							}
+
+							// Log what we're doing
+							console.log(
+								`Fetching ${url} with options:`,
+								options
+							);
+
+							// Make the request
+							const response =
+								await fetch(
+									url,
+									options
+								);
+							console.log(
+								"Response status:",
+								response.status
+							);
+
+							// Get response headers
+							const responseHeaders =
+								{};
+							response.headers.forEach(
+								(
+									value,
+									key
+								) => {
+									responseHeaders[
+										key
+									] =
+										value;
+								}
+							);
+
+							// Try to parse JSON
+							let data;
+							const contentType =
+								response.headers.get(
+									"content-type"
+								);
+							if (
+								contentType &&
+								contentType.includes(
+									"application/json"
+								)
+							) {
+								data =
+									await response.json();
+							} else {
+								data =
+									await response.text();
+							}
+
+							// Format the result
+							const result = {
+								status: response.status,
+								statusText: response.statusText,
+								headers: responseHeaders,
+								data: data
+							};
+
+							// Display the result
+							resultPre.textContent =
+								JSON.stringify(
+									result,
+									null,
+									2
+								);
+							statusDiv.className =
+								"alert alert-success";
+							statusDiv.textContent = `Succès: ${response.status} ${response.statusText}`;
+						} catch (error) {
+							console.error(
+								"Error during fetch:",
+								error
+							);
+							resultPre.textContent = `Error: ${error.message}\n\nStack: ${error.stack}`;
+							statusDiv.className =
+								"alert alert-danger";
+							statusDiv.textContent = `Erreur: ${error.message}`;
+						}
+					}
+
 					// Test button handler
 					testButton.addEventListener(
 						"click",
-						async function () {
-							statusDiv.className =
-								"alert alert-info";
-							statusDiv.textContent =
-								"Test en cours...";
-							resultPre.textContent =
-								"Chargement...";
+						function () {
+							runTest(
+								endpointInput.value,
+								useProxyCheck.checked
+							);
+						}
+					);
 
-							try {
-								// Parse custom headers
-								let headers =
-									{};
-								try {
-									headers =
-										JSON.parse(
-											customHeadersInput.value
-										);
-								} catch (e) {
-									console.error(
-										"Invalid JSON for headers:",
-										e
-									);
-									statusDiv.className =
-										"alert alert-warning";
-									statusDiv.textContent =
-										"Format JSON des headers invalide";
-									return;
-								}
+					// Pre-defined test buttons
+					document.getElementById(
+						"pure-cors-btn"
+					).addEventListener(
+						"click",
+						function () {
+							endpointInput.value =
+								"pure-cors-test.php";
+							useProxyCheck.checked = true;
+							runTest(
+								"pure-cors-test.php",
+								true
+							);
+						}
+					);
 
-								// Build fetch options
-								const options =
-									{
-										method: methodSelect.value,
-										headers: headers,
-										credentials:
-											credentialsCheck.checked
-												? "include"
-												: "omit"
-									};
+					document.getElementById(
+						"classes-btn"
+					).addEventListener(
+						"click",
+						function () {
+							endpointInput.value =
+								"api/classes";
+							useProxyCheck.checked = true;
+							runTest(
+								"api/classes",
+								true
+							);
+						}
+					);
 
-								// Determine URL based on proxy choice
-								let url = "";
-								if (
-									useProxyCheck.checked
-								) {
-									// Use proxy
-									url = `backend-proxy.php?endpoint=${encodeURIComponent(
-										endpointInput.value
-									)}`;
-									console.log(
-										"Using proxy:",
-										url
-									);
-								} else {
-									// Direct call to backend
-									url = `https://app-backend-esgi-app.azurewebsites.net/${endpointInput.value}`;
-									console.log(
-										"Direct backend call:",
-										url
-									);
-								}
+					document.getElementById(
+						"matieres-btn"
+					).addEventListener(
+						"click",
+						function () {
+							endpointInput.value =
+								"api/matieres";
+							useProxyCheck.checked = true;
+							runTest(
+								"api/matieres",
+								true
+							);
+						}
+					);
 
-								// Log what we're doing
-								console.log(
-									`Fetching ${url} with options:`,
-									options
-								);
+					document.getElementById(
+						"examens-btn"
+					).addEventListener(
+						"click",
+						function () {
+							endpointInput.value =
+								"api/examens";
+							useProxyCheck.checked = true;
+							runTest(
+								"api/examens",
+								true
+							);
+						}
+					);
 
-								// Make the request
-								const response =
-									await fetch(
-										url,
-										options
-									);
-								console.log(
-									"Response status:",
-									response.status
-								);
-
-								// Get response headers
-								const responseHeaders =
-									{};
-								response.headers.forEach(
-									(
-										value,
-										key
-									) => {
-										responseHeaders[
-											key
-										] =
-											value;
-									}
-								);
-
-								// Try to parse JSON
-								let data;
-								const contentType =
-									response.headers.get(
-										"content-type"
-									);
-								if (
-									contentType &&
-									contentType.includes(
-										"application/json"
-									)
-								) {
-									data =
-										await response.json();
-								} else {
-									data =
-										await response.text();
-								}
-
-								// Format the result
-								const result = {
-									status: response.status,
-									statusText: response.statusText,
-									headers: responseHeaders,
-									data: data
-								};
-
-								// Display the result
-								resultPre.textContent =
-									JSON.stringify(
-										result,
-										null,
-										2
-									);
-								statusDiv.className =
-									"alert alert-success";
-								statusDiv.textContent = `Succès: ${response.status} ${response.statusText}`;
-							} catch (error) {
-								console.error(
-									"Error during fetch:",
-									error
-								);
-								resultPre.textContent = `Error: ${error.message}\n\nStack: ${error.stack}`;
-								statusDiv.className =
-									"alert alert-danger";
-								statusDiv.textContent = `Erreur: ${error.message}`;
-							}
+					document.getElementById(
+						"db-status-btn"
+					).addEventListener(
+						"click",
+						function () {
+							endpointInput.value =
+								"azure-cors.php?type=db";
+							useProxyCheck.checked = true;
+							runTest(
+								"azure-cors.php?type=db",
+								true
+							);
 						}
 					);
 

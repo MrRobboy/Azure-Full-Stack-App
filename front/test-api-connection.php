@@ -77,6 +77,18 @@ require_once 'templates/base.php';
 					<div id="apiTestResults" class="mt-3"></div>
 				</div>
 			</div>
+
+			<div class="card mb-4">
+				<div class="card-header">
+					<h3>Test de découverte des endpoints</h3>
+				</div>
+				<div class="card-body">
+					<p>Ce test vérifie quels endpoints API sont disponibles.</p>
+					<button id="discoverEndpointsBtn" class="btn btn-primary">Découvrir les endpoints</button>
+					<div id="endpointDiscoveryResult" class="alert alert-info mt-3">Aucun test effectué</div>
+					<div id="endpointsList" class="mt-3"></div>
+				</div>
+			</div>
 		</div>
 	</div>
 </div>
@@ -316,7 +328,10 @@ require_once 'templates/base.php';
 				try {
 					// Essayer d'abord via le proxy
 					try {
-						const proxyUrl = `backend-proxy.php?endpoint=azure-cors.php?resource=${endpoint}`;
+						// Utiliser correctement le format d'URL pour le proxy
+						const proxyUrl = `backend-proxy.php?endpoint=${encodeURIComponent('api/' + endpoint)}`;
+						console.log(`Testing endpoint via proxy: ${proxyUrl}`);
+
 						const proxyResponse = await fetch(proxyUrl, {
 							method: 'GET',
 							credentials: 'include',
@@ -336,14 +351,19 @@ require_once 'templates/base.php';
 							`;
 							results.appendChild(resultEl);
 							continue; // Passer à l'endpoint suivant
+						} else {
+							console.error(`Proxy error for ${endpoint}: ${proxyResponse.status} ${proxyResponse.statusText}`);
+							// Continue to try other methods
 						}
 					} catch (proxyError) {
 						console.error(`Erreur lors du test proxy pour ${endpoint}:`, proxyError);
 					}
 
-					// Essayer d'abord via notre endpoint Azure CORS avec le paramètre resource
+					// Essayer ensuite via notre endpoint Azure CORS avec le paramètre resource
 					try {
 						const azureCorsUrl = `${appConfig.apiBaseUrl.replace('/api', '')}/azure-cors.php?resource=${endpoint}`;
+						console.log(`Testing endpoint via Azure CORS: ${azureCorsUrl}`);
+
 						const azureResponse = await fetch(azureCorsUrl, {
 							method: 'GET',
 							credentials: 'include',
@@ -363,12 +383,16 @@ require_once 'templates/base.php';
 							`;
 							results.appendChild(resultEl);
 							continue; // Passer à l'endpoint suivant
+						} else {
+							console.error(`Azure CORS error for ${endpoint}: ${azureResponse.status} ${azureResponse.statusText}`);
 						}
 					} catch (azureError) {
 						console.error(`Erreur lors du test Azure CORS pour ${endpoint}:`, azureError);
 					}
 
 					// Si Azure CORS échoue, essayer l'API standard
+					console.log(`Testing direct API endpoint: ${getApiUrl(endpoint)}`);
+
 					const response = await fetch(getApiUrl(endpoint), {
 						method: 'GET',
 						credentials: 'include',
@@ -410,6 +434,117 @@ require_once 'templates/base.php';
 			updateStatus('apiTestStatus', allSuccess,
 				allSuccess ? 'Tous les endpoints API testés avec succès.' : 'Certains endpoints API ont échoué.');
 		}
+
+		// Test de découverte des endpoints API
+		document.getElementById('discoverEndpointsBtn').addEventListener('click', async function() {
+			const resultElement = document.getElementById('endpointDiscoveryResult');
+			const listElement = document.getElementById('endpointsList');
+
+			resultElement.className = 'alert alert-info';
+			resultElement.textContent = 'Test en cours...';
+			listElement.innerHTML = '';
+
+			// Liste des endpoints possibles à tester
+			const endpointsToTest = [
+				'classes', 'matieres', 'examens', 'notes', 'profs', 'users',
+				'classes/all', 'matieres/all', 'examens/all', 'notes/all', 'profs/all',
+				'auth/status'
+			];
+
+			const workingEndpoints = [];
+			const failedEndpoints = [];
+
+			for (const endpoint of endpointsToTest) {
+				try {
+					// Tester via le proxy
+					const proxyUrl = `backend-proxy.php?endpoint=${encodeURIComponent('api/' + endpoint)}`;
+					console.log(`Testing discovery endpoint: ${proxyUrl}`);
+
+					const response = await fetch(proxyUrl, {
+						method: 'GET',
+						credentials: 'include',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-Requested-With': 'XMLHttpRequest'
+						}
+					});
+
+					if (response.ok) {
+						workingEndpoints.push({
+							endpoint,
+							status: response.status
+						});
+					} else {
+						failedEndpoints.push({
+							endpoint,
+							status: response.status
+						});
+					}
+				} catch (error) {
+					console.error(`Erreur de découverte pour ${endpoint}:`, error);
+					failedEndpoints.push({
+						endpoint,
+						error: error.message
+					});
+				}
+			}
+
+			// Afficher les résultats
+			if (workingEndpoints.length > 0) {
+				resultElement.className = 'alert alert-success';
+				resultElement.textContent = `${workingEndpoints.length} endpoints fonctionnels trouvés!`;
+
+				listElement.innerHTML = '<h4>Endpoints fonctionnels:</h4>';
+				const workingList = document.createElement('ul');
+				workingList.className = 'list-group';
+
+				workingEndpoints.forEach(item => {
+					const listItem = document.createElement('li');
+					listItem.className = 'list-group-item';
+					listItem.innerHTML = `<strong>${item.endpoint}</strong> - Status: ${item.status}`;
+					workingList.appendChild(listItem);
+				});
+
+				listElement.appendChild(workingList);
+
+				if (failedEndpoints.length > 0) {
+					const failedTitle = document.createElement('h4');
+					failedTitle.className = 'mt-3';
+					failedTitle.textContent = 'Endpoints non disponibles:';
+					listElement.appendChild(failedTitle);
+
+					const failedList = document.createElement('ul');
+					failedList.className = 'list-group';
+
+					failedEndpoints.forEach(item => {
+						const listItem = document.createElement('li');
+						listItem.className = 'list-group-item list-group-item-warning';
+						listItem.innerHTML = `<strong>${item.endpoint}</strong> - Status: ${item.status || 'Error: ' + item.error}`;
+						failedList.appendChild(listItem);
+					});
+
+					listElement.appendChild(failedList);
+				}
+			} else {
+				resultElement.className = 'alert alert-danger';
+				resultElement.textContent = 'Aucun endpoint fonctionnel trouvé';
+
+				if (failedEndpoints.length > 0) {
+					listElement.innerHTML = '<h4>Endpoints testés:</h4>';
+					const failedList = document.createElement('ul');
+					failedList.className = 'list-group';
+
+					failedEndpoints.forEach(item => {
+						const listItem = document.createElement('li');
+						listItem.className = 'list-group-item list-group-item-danger';
+						listItem.innerHTML = `<strong>${item.endpoint}</strong> - Status: ${item.status || 'Error: ' + item.error}`;
+						failedList.appendChild(listItem);
+					});
+
+					listElement.appendChild(failedList);
+				}
+			}
+		});
 
 		// Lancer les tests de connexion
 		testBackendConnection();

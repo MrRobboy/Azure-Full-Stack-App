@@ -36,31 +36,23 @@ if (strpos($endpoint, '../') !== false || strpos($endpoint, '..\\') !== false) {
 	exit;
 }
 
-// Parse the endpoint to separate path and query string
-$endpointParts = explode('?', $endpoint, 2);
-$endpointPath = $endpointParts[0];
-$endpointQuery = isset($endpointParts[1]) ? $endpointParts[1] : '';
+// Handle special case for URLs with query parameters
+if (strpos($endpoint, '?') !== false) {
+	// For endpoints like "azure-cors.php?resource=classes"
+	$url = $api_base_url . '/' . $endpoint;
 
-// Combine endpoint query with additional query params
-$combinedQueryParams = [];
+	// Add any additional query params from the proxy request
+	if (!empty($queryParams)) {
+		$url .= (strpos($url, '?') !== false ? '&' : '?') . http_build_query($queryParams);
+	}
+} else {
+	// Normal case - separate path and query
+	$url = $api_base_url . '/' . $endpoint;
 
-// Parse the endpoint query string
-if (!empty($endpointQuery)) {
-	parse_str($endpointQuery, $endpointQueryParams);
-	$combinedQueryParams = array_merge($combinedQueryParams, $endpointQueryParams);
-}
-
-// Add the remaining GET parameters
-if (!empty($queryParams)) {
-	$combinedQueryParams = array_merge($combinedQueryParams, $queryParams);
-}
-
-// Build the full URL
-$url = $api_base_url . '/' . $endpointPath;
-
-// Add query string if we have parameters
-if (!empty($combinedQueryParams)) {
-	$url .= '?' . http_build_query($combinedQueryParams);
+	// Add query string if we have parameters
+	if (!empty($queryParams)) {
+		$url .= '?' . http_build_query($queryParams);
+	}
 }
 
 // Get the HTTP method
@@ -142,6 +134,31 @@ if ($content_type) {
 	header("Content-Type: $content_type");
 } else {
 	header('Content-Type: application/json');
+}
+
+// If we got a 401 or 404, provide additional debug info
+if ($http_code == 401 || $http_code == 404) {
+	error_log("Proxy error details: HTTP $http_code for URL: $url");
+	// Append debug info to the response
+	$debug_info = [
+		'proxy_debug' => [
+			'original_status' => $http_code,
+			'requested_url' => $url,
+			'method' => $method,
+			'timestamp' => date('Y-m-d H:i:s')
+		]
+	];
+
+	// Try to decode the original JSON response
+	$json_response = json_decode($response, true);
+	if (json_last_error() === JSON_ERROR_NONE && is_array($json_response)) {
+		// Valid JSON, add our debug info
+		$json_response['proxy_debug'] = $debug_info['proxy_debug'];
+		$response = json_encode($json_response);
+	} else {
+		// Not valid JSON, return our debug info as JSON
+		$response = json_encode($debug_info);
+	}
 }
 
 // Output the response
