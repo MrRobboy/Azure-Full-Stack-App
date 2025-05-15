@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0" />
+		<title>Test CORS Direct</title>
+		<link
+			href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+			rel="stylesheet" />
+		<style>
+			pre {
+				background-color: #f5f5f5;
+				padding: 10px;
+				border-radius: 5px;
+				max-height: 500px;
+				overflow: auto;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container mt-5">
+			<h1>Test CORS Direct</h1>
+			<p>
+				Cette page teste directement le script PHP de
+				CORS sans passer par un framework ou des
+				middlewares.
+			</p>
+
+			<div class="row mt-4">
+				<div class="col-md-8">
+					<div class="card">
+						<div class="card-header">
+							<h3>Options de test</h3>
+						</div>
+						<div class="card-body">
+							<div class="mb-3">
+								<label
+									for="endpoint"
+									class="form-label"
+									>Endpoint</label
+								>
+								<input
+									type="text"
+									id="endpoint"
+									class="form-control"
+									value="https://app-backend-esgi-app.azurewebsites.net/pure-cors-test.php" />
+							</div>
+
+							<div class="mb-3">
+								<label
+									for="method"
+									class="form-label"
+									>Méthode
+									HTTP</label
+								>
+								<select
+									id="method"
+									class="form-select">
+									<option
+										value="GET"
+										selected>
+										GET
+									</option>
+									<option
+										value="POST">
+										POST
+									</option>
+									<option
+										value="OPTIONS">
+										OPTIONS
+									</option>
+								</select>
+							</div>
+
+							<div
+								class="mb-3 form-check">
+								<input
+									type="checkbox"
+									class="form-check-input"
+									id="credentials"
+									checked />
+								<label
+									class="form-check-label"
+									for="credentials"
+									>Include
+									Credentials</label
+								>
+							</div>
+
+							<div class="mb-3">
+								<label
+									for="custom-headers"
+									class="form-label"
+									>Headers
+									personnalisés
+									(JSON)</label
+								>
+								<textarea
+									id="custom-headers"
+									class="form-control"
+									rows="3">
+{
+  "Content-Type": "application/json",
+  "X-Requested-With": "XMLHttpRequest"
+}</textarea
+								>
+							</div>
+
+							<button
+								id="test-button"
+								class="btn btn-primary">
+								Tester
+							</button>
+							<button
+								id="copy-button"
+								class="btn btn-secondary ms-2">
+								Copier les
+								résultats
+							</button>
+						</div>
+					</div>
+				</div>
+
+				<div class="col-md-4">
+					<div class="card">
+						<div class="card-header">
+							<h3>Statut</h3>
+						</div>
+						<div class="card-body">
+							<div
+								id="status"
+								class="alert alert-info">
+								Prêt à tester
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="card mt-4">
+				<div class="card-header">
+					<h3>Résultats</h3>
+				</div>
+				<div class="card-body">
+					<pre id="result">Aucun résultat</pre>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			document.addEventListener(
+				"DOMContentLoaded",
+				function () {
+					const testButton =
+						document.getElementById(
+							"test-button"
+						);
+					const copyButton =
+						document.getElementById(
+							"copy-button"
+						);
+					const endpointInput =
+						document.getElementById(
+							"endpoint"
+						);
+					const methodSelect =
+						document.getElementById(
+							"method"
+						);
+					const credentialsCheck =
+						document.getElementById(
+							"credentials"
+						);
+					const customHeadersInput =
+						document.getElementById(
+							"custom-headers"
+						);
+					const statusDiv =
+						document.getElementById(
+							"status"
+						);
+					const resultPre =
+						document.getElementById(
+							"result"
+						);
+
+					// Test button handler
+					testButton.addEventListener(
+						"click",
+						async function () {
+							statusDiv.className =
+								"alert alert-info";
+							statusDiv.textContent =
+								"Test en cours...";
+							resultPre.textContent =
+								"Chargement...";
+
+							try {
+								// Parse custom headers
+								let headers =
+									{};
+								try {
+									headers =
+										JSON.parse(
+											customHeadersInput.value
+										);
+								} catch (e) {
+									console.error(
+										"Invalid JSON for headers:",
+										e
+									);
+									statusDiv.className =
+										"alert alert-warning";
+									statusDiv.textContent =
+										"Format JSON des headers invalide";
+									return;
+								}
+
+								// Build fetch options
+								const options =
+									{
+										method: methodSelect.value,
+										headers: headers,
+										credentials:
+											credentialsCheck.checked
+												? "include"
+												: "omit"
+									};
+
+								// Log what we're doing
+								console.log(
+									`Fetching ${endpointInput.value} with options:`,
+									options
+								);
+
+								// Make the request
+								const response =
+									await fetch(
+										endpointInput.value,
+										options
+									);
+								console.log(
+									"Response status:",
+									response.status
+								);
+
+								// Get response headers
+								const responseHeaders =
+									{};
+								response.headers.forEach(
+									(
+										value,
+										key
+									) => {
+										responseHeaders[
+											key
+										] =
+											value;
+									}
+								);
+
+								// Try to parse JSON
+								let data;
+								const contentType =
+									response.headers.get(
+										"content-type"
+									);
+								if (
+									contentType &&
+									contentType.includes(
+										"application/json"
+									)
+								) {
+									data =
+										await response.json();
+								} else {
+									data =
+										await response.text();
+								}
+
+								// Format the result
+								const result = {
+									status: response.status,
+									statusText: response.statusText,
+									headers: responseHeaders,
+									data: data
+								};
+
+								// Display the result
+								resultPre.textContent =
+									JSON.stringify(
+										result,
+										null,
+										2
+									);
+								statusDiv.className =
+									"alert alert-success";
+								statusDiv.textContent = `Succès: ${response.status} ${response.statusText}`;
+							} catch (error) {
+								console.error(
+									"Error during fetch:",
+									error
+								);
+								resultPre.textContent = `Error: ${error.message}\n\nStack: ${error.stack}`;
+								statusDiv.className =
+									"alert alert-danger";
+								statusDiv.textContent = `Erreur: ${error.message}`;
+							}
+						}
+					);
+
+					// Copy button handler
+					copyButton.addEventListener(
+						"click",
+						function () {
+							navigator.clipboard
+								.writeText(
+									resultPre.textContent
+								)
+								.then(() => {
+									const originalText =
+										statusDiv.textContent;
+									statusDiv.textContent =
+										"Résultats copiés dans le presse-papiers!";
+									setTimeout(
+										() => {
+											statusDiv.textContent =
+												originalText;
+										},
+										2000
+									);
+								})
+								.catch(
+									(
+										err
+									) => {
+										console.error(
+											"Could not copy text:",
+											err
+										);
+									}
+								);
+						}
+					);
+				}
+			);
+		</script>
+	</body>
+</html>

@@ -21,6 +21,16 @@ require_once 'templates/base.php';
 					<button id="manualCorsTestBtn" class="btn btn-primary mb-3">Tester CORS Manuellement</button>
 					<div id="manualCorsResult" class="alert alert-info">Aucun test effectué</div>
 					<div id="manualCorsDetails" class="mt-3"></div>
+
+					<hr class="mt-4">
+					<h4>Test CORS pur (sans web.config)</h4>
+					<p>Ce test utilise un script PHP direct qui définit les en-têtes CORS sans utiliser web.config :</p>
+					<button id="pureCorsTestBtn" class="btn btn-success mb-3">Tester Pure CORS</button>
+					<a href="pure-cors-test.html" target="_blank" class="btn btn-outline-secondary mb-3 ms-2">
+						Ouvrir la page de test CORS avancé
+					</a>
+					<div id="pureCorsResult" class="alert alert-info">Aucun test effectué</div>
+					<div id="pureCorsDetails" class="mt-3"></div>
 				</div>
 			</div>
 
@@ -361,6 +371,40 @@ require_once 'templates/base.php';
 				resultElement.className = 'alert alert-danger';
 				resultElement.textContent = `Erreur lors du test CORS: ${error.message}`;
 				console.error('Erreur du test CORS manuel:', error);
+			}
+		});
+
+		document.getElementById('pureCorsTestBtn').addEventListener('click', async function() {
+			const resultElement = document.getElementById('pureCorsResult');
+			const detailsElement = document.getElementById('pureCorsDetails');
+
+			resultElement.className = 'alert alert-info';
+			resultElement.textContent = 'Test en cours...';
+			detailsElement.innerHTML = '';
+
+			try {
+				const response = await fetch('https://app-backend-esgi-app.azurewebsites.net/pure-cors-test.php', {
+					method: 'GET',
+					credentials: 'include',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-Requested-With': 'XMLHttpRequest'
+					}
+				});
+
+				if (response.ok) {
+					const data = await response.json();
+					resultElement.className = 'alert alert-success';
+					resultElement.textContent = 'Test Pure CORS réussi!';
+					detailsElement.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+				} else {
+					resultElement.className = 'alert alert-danger';
+					resultElement.textContent = `Échec du test Pure CORS: ${response.status} ${response.statusText}`;
+				}
+			} catch (error) {
+				resultElement.className = 'alert alert-danger';
+				resultElement.textContent = `Erreur lors du test Pure CORS: ${error.message}`;
+				console.error('Erreur du test Pure CORS:', error);
 			}
 		});
 	});

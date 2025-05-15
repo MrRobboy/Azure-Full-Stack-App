@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>CORS Test Page</title>
+		<meta charset="UTF-8" />
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				max-width: 800px;
+				margin: 0 auto;
+				padding: 20px;
+			}
+			h1 {
+				color: #333;
+			}
+			pre {
+				background-color: #f5f5f5;
+				padding: 10px;
+				border-radius: 5px;
+				overflow: auto;
+			}
+			.success {
+				color: green;
+			}
+			.error {
+				color: red;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>CORS Test Page</h1>
+		<p>This page serves as a simple check for CORS headers.</p>
+
+		<div id="status">Loading...</div>
+		<pre id="headers"></pre>
+
+		<script>
+			// Simple function to update the status
+			function updateStatus(success, message) {
+				const statusElement =
+					document.getElementById("status");
+				statusElement.className = success
+					? "success"
+					: "error";
+				statusElement.innerHTML = message;
+			}
+
+			// Display headers that were sent
+			const headersElement =
+				document.getElementById("headers");
+			headersElement.textContent =
+				"Headers sent by this page:\n\n" +
+				JSON.stringify(
+					{
+						"Access-Control-Allow-Origin":
+							"*",
+						"Access-Control-Allow-Methods":
+							"GET, POST, OPTIONS",
+						"Access-Control-Allow-Headers":
+							"Content-Type, Authorization",
+						"Content-Type":
+							"text/html; charset=UTF-8"
+					},
+					null,
+					2
+				);
+
+			// Update the status
+			updateStatus(
+				true,
+				"CORS Test Page loaded successfully. This page includes the necessary CORS headers for testing."
+			);
+		</script>
+	</body>
+</html>
