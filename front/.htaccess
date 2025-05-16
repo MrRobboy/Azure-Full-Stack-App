@@ -1,40 +1,22 @@
-# Activation du module de réécriture
-RewriteEngine On
-
-# Base pour les routes front-end
-RewriteBase /
-
-# Redirection des requêtes API vers le backend Azure
-RewriteRule ^api/(.*)$ https://app-backend-esgi-app.azurewebsites.net/api/$1 [P,L]
-
-# Proxy fallback pour les requêtes API directes
-RewriteRule ^direct-api/(.*)$ backend-proxy.php?endpoint=$1 [QSA,L]
-
-# Redirection des requêtes vers les fichiers PHP
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^([^/]+)/?$ $1.php [QSA,L]
-
-# Protection des fichiers sensibles
-<FilesMatch "^(config\.php|\.htaccess)$">
-    Order allow,deny
-    Deny from all
+# Ensure PHP files are properly executed
+<FilesMatch "\.php$">
+    SetHandler application/x-httpd-php
 </FilesMatch>
 
-# Configuration CORS pour Azure
-<IfModule mod_headers.c>
-    # Autoriser les requêtes depuis le backend
-    Header set Access-Control-Allow-Origin "https://app-backend-esgi-app.azurewebsites.net"
-    Header set Access-Control-Allow-Credentials "true"
-    Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-    Header set Access-Control-Allow-Headers "Content-Type, Authorization, Accept, X-Requested-With"
-    
-    # Gérer les requêtes OPTIONS préalables
-    RewriteCond %{REQUEST_METHOD} OPTIONS
-    RewriteRule ^(.*)$ $1 [R=200,L]
-</IfModule>
+# Allow access to proxy files from any location
+<Files "simple-proxy.php">
+    Order Allow,Deny
+    Allow from all
+</Files>
 
-# Ajouter les types MIME qui peuvent manquer dans Azure
-AddType application/x-javascript .js
-AddType text/css .css
-AddType application/json .json 
+<Files "proxy-health.php">
+    Order Allow,Deny
+    Allow from all
+</Files>
+
+# Enable CORS for all proxy requests
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS, PUT, DELETE"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+</IfModule>
