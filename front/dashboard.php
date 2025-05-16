@@ -51,6 +51,33 @@ $loginTime = $_SESSION['loginTime'] ?? time();
 
 error_log('User logged in: ' . json_encode($user));
 
+// Database connection
+require_once 'includes/db-config.php';
+
+// Function to get count from database
+function getCount($table)
+{
+    global $conn;
+    try {
+        $stmt = $conn->prepare("SELECT COUNT(*) as count FROM $table");
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['count'];
+    } catch (PDOException $e) {
+        error_log("Error getting count for $table: " . $e->getMessage());
+        return 0;
+    }
+}
+
+// Get counts for dashboard
+$counts = [
+    'matieres' => getCount('matieres'),
+    'classes' => getCount('classes'),
+    'examens' => getCount('examens'),
+    'professeurs' => getCount('professeurs'),
+    'users' => getCount('users')
+];
+
 $pageTitle = "Tableau de bord";
 ob_start();
 ?>
@@ -92,35 +119,35 @@ ob_start();
         <div class="dashboard-card">
             <i class="fas fa-book fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
             <h3>Matières</h3>
-            <p id="matieresCount">-</p>
+            <p id="matieresCount"><?php echo $counts['matieres']; ?></p>
             <button onclick="navigateToGestion('matieres')" class="btn btn-primary">Gérer les matières</button>
         </div>
 
         <div class="dashboard-card">
             <i class="fas fa-users fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
             <h3>Classes</h3>
-            <p id="classesCount">-</p>
+            <p id="classesCount"><?php echo $counts['classes']; ?></p>
             <button onclick="navigateToGestion('classes')" class="btn btn-primary">Gérer les classes</button>
         </div>
 
         <div class="dashboard-card">
             <i class="fas fa-calendar-alt fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
             <h3>Examens</h3>
-            <p id="examensCount">-</p>
+            <p id="examensCount"><?php echo $counts['examens']; ?></p>
             <button onclick="navigateToGestion('exams')" class="btn btn-primary">Gérer les examens</button>
         </div>
 
         <div class="dashboard-card">
             <i class="fas fa-chalkboard-teacher fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
             <h3>Professeurs</h3>
-            <p id="profsCount">-</p>
+            <p id="profsCount"><?php echo $counts['professeurs']; ?></p>
             <button onclick="navigateToGestion('profs')" class="btn btn-primary">Gérer les professeurs</button>
         </div>
 
         <div class="dashboard-card">
             <i class="fas fa-users-cog fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
             <h3>Utilisateurs</h3>
-            <p id="usersCount">-</p>
+            <p id="usersCount"><?php echo $counts['users']; ?></p>
             <button onclick="navigateToGestion('users')" class="btn btn-primary">Gérer les utilisateurs</button>
         </div>
 
