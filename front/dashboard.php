@@ -59,6 +59,7 @@ ob_start();
     <!-- ... existing head content ... -->
     <!-- Load our API service -->
     <script src="js/api-service.js"></script>
+    <script src="js/notification-system.js"></script>
     <!-- ... other scripts ... -->
 </head>
 
@@ -133,8 +134,37 @@ ob_start();
 </div>
 
 <script>
+    // Fallback for NotificationSystem if not loaded
+    if (typeof NotificationSystem === 'undefined') {
+        console.warn('Creating fallback NotificationSystem');
+        window.NotificationSystem = {
+            init: function() {
+                console.log('Fallback NotificationSystem initialized');
+            },
+            info: function(msg) {
+                console.log('INFO: ' + msg);
+            },
+            error: function(msg) {
+                console.error('ERROR: ' + msg);
+            },
+            warning: function(msg) {
+                console.warn('WARNING: ' + msg);
+            },
+            success: function(msg) {
+                console.log('SUCCESS: ' + msg);
+            }
+        };
+    }
+
     // Dashboard initialization
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize NotificationSystem
+        if (typeof NotificationSystem !== 'undefined') {
+            NotificationSystem.init();
+        } else {
+            console.error('NotificationSystem module not loaded!');
+        }
+
         // Show loading indicator
         const loadingIndicator = document.getElementById('loading-indicator');
         if (loadingIndicator) loadingIndicator.style.display = 'block';
