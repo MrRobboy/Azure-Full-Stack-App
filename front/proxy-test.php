@@ -18,6 +18,7 @@ header('Content-Security-Policy: default-src \'self\'; script-src \'self\' \'uns
 
 // Configuration des tests
 $testConfig = [
+	'base_url' => 'https://app-frontend-esgi-app.azurewebsites.net',
 	'endpoints' => [
 		'status' => 'status.php',
 		'auth' => 'auth/login',
@@ -47,39 +48,49 @@ function runTests($config)
 
 	// Test de connexion
 	foreach ($config['endpoints'] as $name => $endpoint) {
-		$results["connection_test_$name"] = testConnection($endpoint);
+		$results["connection_test_$name"] = testConnection($endpoint, $config['base_url']);
 	}
 
 	// Test CORS
 	foreach ($config['endpoints'] as $name => $endpoint) {
-		$results["cors_test_$name"] = testCORS($endpoint, $config['cors_headers']);
+		$results["cors_test_$name"] = testCORS($endpoint, $config['cors_headers'], $config['base_url']);
 	}
 
 	// Test de sécurité
 	$results['security_test'] = testSecurity($config['security_headers']);
 
 	// Test de performance
-	$results['performance_test'] = testPerformance();
+	$results['performance_test'] = testPerformance($config['base_url']);
 
 	// Test de rate limit
-	$results['rate_limit_test'] = testRateLimit();
+	$results['rate_limit_test'] = testRateLimit($config['base_url']);
 
 	// Test de validation des entrées
-	$results['input_validation_test'] = testInputValidation();
+	$results['input_validation_test'] = testInputValidation($config['base_url']);
 
 	return $results;
 }
 
 // Test de connexion
-function testConnection($endpoint)
+function testConnection($endpoint, $baseUrl)
 {
 	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, "api-bridge.php?endpoint=$endpoint");
+	curl_setopt($ch, CURLOPT_URL, "$baseUrl/api-bridge.php?endpoint=$endpoint");
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+	curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+	curl_setopt($ch, CURLOPT_VERBOSE, true);
+	$verbose = fopen('php://temp', 'w+');
+	curl_setopt($ch, CURLOPT_STDERR, $verbose);
+
 	$response = curl_exec($ch);
 	$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 	$error = curl_error($ch);
+
+	rewind($verbose);
+	$verboseLog = stream_get_contents($verbose);
+
 	curl_close($ch);
 
 	return [
@@ -89,22 +100,33 @@ function testConnection($endpoint)
 		'details' => [
 			'http_code' => $httpCode,
 			'response' => $response,
-			'error' => $error
+			'error' => $error,
+			'verbose_log' => $verboseLog
 		]
 	];
 }
 
 // Test CORS
-function testCORS($endpoint, $requiredHeaders)
+function testCORS($endpoint, $requiredHeaders, $baseUrl)
 {
 	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, "api-bridge.php?endpoint=$endpoint");
+	curl_setopt($ch, CURLOPT_URL, "$baseUrl/api-bridge.php?endpoint=$endpoint");
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_HEADER, true);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+	curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+	curl_setopt($ch, CURLOPT_VERBOSE, true);
+	$verbose = fopen('php://temp', 'w+');
+	curl_setopt($ch, CURLOPT_STDERR, $verbose);
+
 	$response = curl_exec($ch);
 	$headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
 	$headers = substr($response, 0, $headerSize);
+
+	rewind($verbose);
+	$verboseLog = stream_get_contents($verbose);
+
 	curl_close($ch);
 
 	$missingHeaders = [];
@@ -120,7 +142,8 @@ function testCORS($endpoint, $requiredHeaders)
 		'message' => empty($missingHeaders) ? 'CORS Headers Check' : 'Missing CORS Headers',
 		'details' => [
 			'missing_headers' => $missingHeaders,
-			'headers' => $headers
+			'headers' => $headers,
+			'verbose_log' => $verboseLog
 		]
 	];
 }
@@ -149,13 +172,15 @@ function testSecurity($requiredHeaders)
 }
 
 // Test de performance
-function testPerformance()
+function testPerformance($baseUrl)
 {
 	$start = microtime(true);
 	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, "api-bridge.php?endpoint=status.php");
+	curl_setopt($ch, CURLOPT_URL, "$baseUrl/api-bridge.php?endpoint=status.php");
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+	curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 	curl_exec($ch);
 	$end = microtime(true);
 	curl_close($ch);
@@ -174,14 +199,16 @@ function testPerformance()
 }
 
 // Test de rate limit
-function testRateLimit()
+function testRateLimit($baseUrl)
 {
 	$responses = [];
 	for ($i = 0; $i < 10; $i++) {
 		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, "api-bridge.php?endpoint=status.php");
+		curl_setopt($ch, CURLOPT_URL, "$baseUrl/api-bridge.php?endpoint=status.php");
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 		$response = curl_exec($ch);
 		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		curl_close($ch);
@@ -214,7 +241,7 @@ function testRateLimit()
 }
 
 // Test de validation des entrées
-function testInputValidation()
+function testInputValidation($baseUrl)
 {
 	$testInputs = [
 		'valid' => 'test123',
@@ -224,11 +251,13 @@ function testInputValidation()
 	$results = [];
 	foreach ($testInputs as $type => $input) {
 		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, "api-bridge.php?endpoint=status.php");
+		curl_setopt($ch, CURLOPT_URL, "$baseUrl/api-bridge.php?endpoint=status.php");
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_POST, true);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['input' => $input]));
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 		$response = curl_exec($ch);
 		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		curl_close($ch);

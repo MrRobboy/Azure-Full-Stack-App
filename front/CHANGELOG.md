@@ -234,6 +234,61 @@
 - Correction de la gestion des paramètres de requête dans les fichiers proxy
 - Amélioration de la configuration FastCGI
 
+## [4.5.0] - 2024-05-16
+
+### Added
+
+- Fichier de test unifié (`proxy-test.php`)
+     - Tests de connexion pour tous les endpoints
+     - Tests CORS avec vérification des headers
+     - Tests de sécurité avec vérification des headers
+     - Tests de performance avec mesure du temps de réponse
+     - Tests de rate limit avec simulation de requêtes multiples
+     - Tests de validation des entrées avec cas valides et invalides
+     - Logs verbeux pour le débogage des requêtes cURL
+
+### Changed
+
+- Amélioration des tests de connexion
+     - Utilisation d'URLs absolues au lieu des chemins relatifs
+     - Ajout du suivi des redirections
+     - Configuration des timeouts
+     - Ajout de logs détaillés pour le débogage
+- Amélioration des tests CORS
+     - Vérification complète des headers CORS
+     - Ajout de logs pour les headers manquants
+- Amélioration des tests de sécurité
+     - Vérification des headers de sécurité
+     - Ajout de la politique CSP
+     - Configuration HSTS
+
+### Fixed
+
+- Correction des erreurs "Could not resolve host" dans les tests
+- Amélioration de la gestion des erreurs cURL
+- Correction de la gestion des headers CORS et de sécurité
+
+### Security
+
+- Ajout des headers de sécurité dans les réponses de test
+     - X-Content-Type-Options
+     - X-Frame-Options
+     - X-XSS-Protection
+     - Strict-Transport-Security
+     - Content-Security-Policy
+- Configuration CORS sécurisée
+     - Origines autorisées
+     - Méthodes autorisées
+     - Headers autorisés
+     - Credentials
+
+### Performance
+
+- Optimisation des tests de performance
+     - Mesure précise du temps de réponse
+     - Seuil de performance configurable
+     - Timeout adapté pour les requêtes
+
 ## Prochaines Étapes
 
 1. Documentation
