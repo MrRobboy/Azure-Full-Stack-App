@@ -176,15 +176,3 @@ function sendErrorResponse($message, $code = 500)
 	]);
 	exit;
 }
-
-// Helper function to check if string starts with
-function str_starts_with($haystack, $needle)
-{
-	return strpos($haystack, $needle) === 0;
-}
-
-// Helper function to check if string ends with
-function str_ends_with($haystack, $needle)
-{
-	return substr($haystack, -strlen($needle)) === $needle;
-}
