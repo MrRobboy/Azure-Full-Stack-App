@@ -1,0 +1,112 @@
+<?php
+// Dedicated Authentication API Endpoint - For direct login access
+header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Credentials: true');
+
+// Enable error logging
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/logs/auth_api_errors.log');
+
+// Create logs directory if needed
+if (!is_dir(__DIR__ . '/logs')) {
+	mkdir(__DIR__ . '/logs', 0755, true);
+}
+
+// Log the request for diagnostics
+error_log(sprintf(
+	"[%s] Auth API Request: Method=%s, URI=%s",
+	date('Y-m-d H:i:s'),
+	$_SERVER['REQUEST_METHOD'],
+	$_SERVER['REQUEST_URI']
+));
+
+// Handle OPTIONS requests
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+	http_response_code(204);
+	exit;
+}
+
+// Load the AuthController
+try {
+	require_once __DIR__ . '/controllers/AuthController.php';
+	$authController = new AuthController();
+} catch (Exception $e) {
+	error_log("Error loading AuthController: " . $e->getMessage());
+	http_response_code(500);
+	echo json_encode([
+		'success' => false,
+		'message' => 'Server configuration error',
+		'error' => $e->getMessage()
+	]);
+	exit;
+}
+
+// Process the request
+try {
+	// Handle POST login request
+	if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+		// Get the request body
+		$input = file_get_contents('php://input');
+		$data = json_decode($input, true);
+
+		// Log the input (without password)
+		$safe_data = $data;
+		if (isset($safe_data['password'])) {
+			$safe_data['password'] = '******';
+		}
+		error_log("Login attempt with data: " . json_encode($safe_data));
+
+		// Validate input
+		if (!$data || !isset($data['email']) || !isset($data['password'])) {
+			http_response_code(400);
+			echo json_encode([
+				'success' => false,
+				'message' => 'Missing required fields (email, password)'
+			]);
+			exit;
+		}
+
+		// Attempt login
+		$result = $authController->login($data['email'], $data['password']);
+
+		// Return the result
+		echo json_encode($result);
+		exit;
+	}
+	// Handle GET credential check (alternative method)
+	else if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['email']) && isset($_GET['password'])) {
+		$email = $_GET['email'];
+		$password = $_GET['password'];
+
+		// Log the attempt (without password)
+		error_log("GET credential check for: " . $email);
+
+		// Attempt login
+		$result = $authController->login($email, $password);
+
+		// Return the result
+		echo json_encode($result);
+		exit;
+	}
+	// Invalid request method
+	else {
+		http_response_code(405);
+		echo json_encode([
+			'success' => false,
+			'message' => 'Method not allowed. Use POST for login or GET with credentials.'
+		]);
+		exit;
+	}
+} catch (Exception $e) {
+	error_log("Auth error: " . $e->getMessage());
+	http_response_code(500);
+	echo json_encode([
+		'success' => false,
+		'message' => $e->getMessage()
+	]);
+	exit;
+}

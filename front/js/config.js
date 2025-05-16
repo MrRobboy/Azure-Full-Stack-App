@@ -176,21 +176,36 @@ async function handlePostRequest(endpoint, data, options = {}) {
 
 		// Liste des endpoints d'authentification potentiels à essayer
 		const authEndpoints = [
-			// Commencer par les endpoints qui fonctionnent selon les tests
-			"api/auth/login", // Endpoint principal (API conforme)
-			"api/auth/check-credentials", // Endpoint GET alternatif (vérifié fonctionnel)
-			"api/status", // Endpoint de statut (pour tester la connexion)
-
-			// Essayer d'autres alternatives si les premières échouent
-			"api/login",
-			"auth/login",
-			"login",
-			"api/user/login",
-			"api/v1/auth/login",
-			"api/authenticate"
+			// Essayer d'abord avec nos nouveaux points d'entrée directs
+			"api-auth-login.php", // Notre nouveau endpoint direct
+			"api/auth/login", // Endpoint standard
+			"api/auth/check-credentials" // Endpoint GET alternatif
 		];
 
-		// Essayer d'abord avec GET auth/check-credentials, qui est connu pour fonctionner
+		// Essayer d'abord api-auth-login.php (point d'entrée direct)
+		try {
+			console.log("Essai avec api-auth-login.php...");
+			const authResponse = await fetch(
+				`${appConfig.backendBaseUrl}/api-auth-login.php`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type":
+							"application/json"
+					},
+					body: JSON.stringify(data)
+				}
+			);
+
+			if (authResponse.ok) {
+				console.log("api-auth-login.php a fonctionné!");
+				return authResponse;
+			}
+		} catch (e) {
+			console.warn("Échec avec api-auth-login.php:", e);
+		}
+
+		// Essayer avec GET auth/check-credentials, qui est connu pour fonctionner
 		try {
 			console.log("Essai avec GET auth/check-credentials...");
 			const params = new URLSearchParams({
@@ -201,32 +216,26 @@ async function handlePostRequest(endpoint, data, options = {}) {
 			const checkCredsResponse = await fetch(
 				`${
 					appConfig.backendBaseUrl
-				}/api/auth/check-credentials?${params.toString()}`,
+				}/api-auth-login.php?${params.toString()}`,
 				{
 					method: "GET",
 					headers: {
-						Accept: "application/json",
-						"X-MS-REQUEST-ID": `${Date.now()}-${Math.random()
-							.toString(36)
-							.substr(2, 9)}`
+						Accept: "application/json"
 					}
 				}
 			);
 
 			if (checkCredsResponse.ok) {
 				console.log(
-					"GET auth/check-credentials a fonctionné!"
+					"GET api-auth-login.php a fonctionné!"
 				);
 				return checkCredsResponse;
 			}
 		} catch (e) {
-			console.warn(
-				"Échec avec GET auth/check-credentials:",
-				e
-			);
+			console.warn("Échec avec GET api-auth-login.php:", e);
 		}
 
-		// Essayer direct-login.php en deuxième (solution confirmée fonctionnelle)
+		// Continuer avec direct-login.php (solution existante)
 		try {
 			console.log("Essai avec direct-login.php...");
 			const directLoginResponse = await fetch(
