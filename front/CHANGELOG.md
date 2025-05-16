@@ -144,6 +144,31 @@
 - Ajout de diagrammes d'architecture
 - Documentation des processus de déploiement
 
+## [4.1.0] - 2024-05-16
+
+### Added
+
+- Configuration Nginx complète pour Azure App Service
+- Support spécifique pour les fichiers proxy dans la configuration Nginx
+- Configuration détaillée des logs d'accès et d'erreur
+
+### Changed
+
+- Amélioration de la gestion des requêtes OPTIONS pour CORS
+- Optimisation des headers de sécurité pour les fichiers proxy
+- Configuration du cache pour les ressources statiques
+
+### Security
+
+- Ajout de headers de sécurité spécifiques pour les fichiers proxy
+- Configuration renforcée de Content-Security-Policy
+- Protection contre l'accès aux fichiers cachés
+
+### Performance
+
+- Optimisation du cache pour les ressources statiques
+- Configuration du FastCGI pour une meilleure performance PHP
+
 ## Prochaines Étapes
 
 1. Documentation
