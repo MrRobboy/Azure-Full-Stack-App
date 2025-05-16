@@ -44,8 +44,12 @@ const ApiService = (function () {
 		}
 
 		try {
+			// Ensure endpoint doesn't start with a slash
+			const cleanEndpoint = endpoint.startsWith("/")
+				? endpoint.substring(1)
+				: endpoint;
 			const proxyUrl = `${_corsProxy}?endpoint=${encodeURIComponent(
-				endpoint
+				cleanEndpoint
 			)}`;
 			console.log(`Using proxy URL: ${proxyUrl}`);
 
@@ -98,7 +102,7 @@ const ApiService = (function () {
 	 */
 	async function login(email, password) {
 		console.log(`Attempting login for: ${email}`);
-		return makeRequest("api/auth/login", "POST", {
+		return makeRequest("auth/login", "POST", {
 			email,
 			password
 		});
@@ -109,7 +113,7 @@ const ApiService = (function () {
 	 * @returns {Promise} - Logout result
 	 */
 	async function logout() {
-		return makeRequest("api/auth/logout", "POST");
+		return makeRequest("auth/logout", "POST");
 	}
 
 	/**
@@ -118,7 +122,7 @@ const ApiService = (function () {
 	 */
 	async function getCurrentUser() {
 		console.log("Getting current user profile...");
-		return makeRequest("api/user/profile", "GET");
+		return makeRequest("user/profile", "GET");
 	}
 
 	// Public API
