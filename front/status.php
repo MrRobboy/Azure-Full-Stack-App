@@ -1,12 +1,10 @@
 <?php
-// Simple status file for proxy testing
+// Simple status file to test proxy operation
 header('Content-Type: application/json');
 echo json_encode([
 	'success' => true,
-	'status' => 'ok',
-	'server' => $_SERVER['SERVER_NAME'],
-	'message' => 'API status endpoint is operational',
+	'message' => 'Status check successful',
 	'timestamp' => date('Y-m-d H:i:s'),
-	'version' => '1.0',
-	'environment' => strpos($_SERVER['HTTP_HOST'] ?? '', 'azurewebsites.net') !== false ? 'azure' : 'local'
+	'server' => $_SERVER['SERVER_NAME'],
+	'info' => 'This status page can be used to test if the proxy is working correctly'
 ]);
