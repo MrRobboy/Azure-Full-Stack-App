@@ -121,9 +121,17 @@ session_start();
 		<pre id="output">Cliquez sur un bouton pour lancer un test...</pre>
 	</div>
 
+	<!-- Nouveau: Tableau de bord de débogage -->
+	<div id="debugPanel" class="card" style="display:none; border-color:#ff9800;">
+		<h2>Informations de débogage</h2>
+		<div id="debugContent"></div>
+	</div>
+
 	<script>
 		const output = document.getElementById('output');
 		const isAzureEnvironment = window.location.hostname.includes('azurewebsites.net');
+		const debugPanel = document.getElementById('debugPanel');
+		const debugContent = document.getElementById('debugContent');
 
 		// Afficher les informations d'environnement
 		document.addEventListener('DOMContentLoaded', async function() {
@@ -241,6 +249,9 @@ session_start();
 
 			displayResult('Tentative d\'authentification avec le JWT Amélioré...');
 
+			// Masquer le panneau de débogage jusqu'à ce que nous ayons des données
+			debugPanel.style.display = 'none';
+
 			// Ajouter des logs supplémentaires
 			console.log(`Tentative d'authentification sur: ${window.location.origin}/improved-jwt-bridge.php`);
 
@@ -299,6 +310,11 @@ session_start();
 				try {
 					data = JSON.parse(responseText);
 					console.log("Structure de la réponse:", data);
+
+					// Afficher les informations de débogage si disponibles
+					if (data.debug_info || data.isLocallyGenerated) {
+						showDebugInfo(data);
+					}
 				} catch (jsonError) {
 					console.error("Erreur de parsing JSON:", jsonError);
 					// Si ce n'est pas du JSON mais que ça ressemble à un token JWT
@@ -367,6 +383,11 @@ session_start();
 						if (parts.length === 3) {
 							const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
 							console.log("Contenu décodé du token:", payload);
+
+							// Afficher aussi le contenu décodé du token
+							if (!data.debug_info) {
+								showTokenDebugInfo(token, payload);
+							}
 						}
 					} catch (e) {
 						console.warn("Impossible de décoder le contenu du token:", e);
@@ -446,6 +467,119 @@ session_start();
 						"Vérifiez que le fichier improved-jwt-bridge.php est bien déployé sur Azure et que le backend est accessible" : "Vérifiez que le serveur local est en cours d'exécution"
 				}, 'error');
 			}
+		}
+
+		// Fonction pour afficher les infos de débogage retournées par le bridge
+		function showDebugInfo(data) {
+			debugPanel.style.display = 'block';
+			let debugHtml = '';
+
+			// Informations sur le token généré localement
+			if (data.isLocallyGenerated) {
+				debugHtml += `<div style="margin-bottom:15px; padding:10px; background:#fff9c4; border-radius:4px;">
+					<h3 style="margin-top:0; color:#ff6f00;">⚠️ Token généré localement</h3>
+					<p>Le backend n'a pas pu être contacté ou n'a pas fourni de token valide. Un token compatible a été généré localement.</p>
+				</div>`;
+			}
+
+			// Afficher les informations de debug si disponibles
+			if (data.debug_info) {
+				debugHtml += `<h3>Environnement</h3>
+				<p>${data.debug_info.environment}</p>`;
+
+				if (data.debug_info.backend_attempts && data.debug_info.backend_attempts.length > 0) {
+					debugHtml += `<h3>Tentatives de connexion au backend</h3>
+					<table style="width:100%; border-collapse:collapse;">
+						<tr style="background:#f5f5f5;">
+							<th style="text-align:left; padding:8px; border:1px solid #ddd;">Endpoint</th>
+							<th style="text-align:left; padding:8px; border:1px solid #ddd;">URL</th>
+							<th style="text-align:left; padding:8px; border:1px solid #ddd;">Statut</th>
+							<th style="text-align:left; padding:8px; border:1px solid #ddd;">Erreur</th>
+						</tr>`;
+
+					data.debug_info.backend_attempts.forEach(attempt => {
+						const statusColor = attempt.status >= 200 && attempt.status < 300 ? 'green' : 'red';
+						debugHtml += `<tr>
+							<td style="padding:8px; border:1px solid #ddd;">${attempt.endpoint}</td>
+							<td style="padding:8px; border:1px solid #ddd; font-size:0.9em;">${attempt.url}</td>
+							<td style="padding:8px; border:1px solid #ddd; color:${statusColor};">${attempt.status}</td>
+							<td style="padding:8px; border:1px solid #ddd;">${attempt.error || '-'}</td>
+						</tr>`;
+					});
+
+					debugHtml += `</table>`;
+				}
+
+				if (data.debug_info.last_error) {
+					debugHtml += `<h3>Dernière erreur</h3>
+					<div style="padding:8px; background:#ffebee; border-radius:4px;">
+						${data.debug_info.last_error}
+					</div>`;
+				}
+			}
+
+			debugContent.innerHTML = debugHtml;
+		}
+
+		// Fonction pour afficher les infos de débogage du token
+		function showTokenDebugInfo(token, payload) {
+			debugPanel.style.display = 'block';
+
+			// Analyser les parties du token
+			const parts = token.split('.');
+
+			let debugHtml = `<h3>Informations sur le token JWT</h3>`;
+
+			// Afficher les parties du token
+			debugHtml += `<div style="margin-bottom:15px;">
+				<strong>Header:</strong> ${parts[0].substring(0, 10)}...
+				<br><strong>Payload:</strong> ${parts[1].substring(0, 10)}...
+				<br><strong>Signature:</strong> ${parts[2].substring(0, 10)}...
+			</div>`;
+
+			// Afficher le contenu décodé
+			debugHtml += `<h3>Contenu du payload</h3>
+			<table style="width:100%; border-collapse:collapse;">
+				<tr style="background:#f5f5f5;">
+					<th style="text-align:left; padding:8px; border:1px solid #ddd;">Champ</th>
+					<th style="text-align:left; padding:8px; border:1px solid #ddd;">Valeur</th>
+				</tr>`;
+
+			// Ajouter chaque champ du payload
+			Object.keys(payload).forEach(key => {
+				let value = payload[key];
+
+				// Formater les dates pour les timestamps
+				if (key === 'exp' || key === 'iat') {
+					const date = new Date(value * 1000);
+					value = `${value} (${date.toLocaleString()})`;
+				}
+
+				debugHtml += `<tr>
+					<td style="padding:8px; border:1px solid #ddd;"><strong>${key}</strong></td>
+					<td style="padding:8px; border:1px solid #ddd;">${value}</td>
+				</tr>`;
+			});
+
+			debugHtml += `</table>`;
+
+			// Vérification de l'expiration
+			const now = Math.floor(Date.now() / 1000);
+			if (payload.exp && payload.exp < now) {
+				debugHtml += `<div style="margin-top:15px; padding:10px; background:#ffebee; border-radius:4px; color:#d32f2f;">
+					<strong>⚠️ ATTENTION:</strong> Ce token est expiré!
+				</div>`;
+			} else if (payload.exp) {
+				const expiresIn = payload.exp - now;
+				const hours = Math.floor(expiresIn / 3600);
+				const minutes = Math.floor((expiresIn % 3600) / 60);
+
+				debugHtml += `<div style="margin-top:15px; padding:10px; background:#e8f5e9; border-radius:4px; color:#2e7d32;">
+					<strong>✓ Valide:</strong> Ce token expire dans ${hours}h ${minutes}m
+				</div>`;
+			}
+
+			debugContent.innerHTML = debugHtml;
 		}
 
 		async function testProtectedResource(resource) {

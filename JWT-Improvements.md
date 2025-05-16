@@ -2,6 +2,30 @@
 
 ## Dernières modifications (Juin 2023)
 
+### Nouvelles fonctionnalités de débogage (test-improved-jwt.php)
+
+Pour faciliter le diagnostic des problèmes d'authentification, nous avons ajouté un nouveau tableau de bord de débogage à la page de test:
+
+1. **Tableau de bord de débogage** qui affiche:
+
+      - Les tentatives de connexion au backend et leurs résultats
+      - Des informations détaillées sur le token JWT généré
+      - L'analyse du contenu du payload avec formatage des timestamps
+      - Des indicateurs visuels sur la validité et l'expiration du token
+      - Des alertes en cas de génération locale de token
+
+2. **Améliorations visuelles**:
+
+      - Tableau formaté des tentatives de connexion au backend
+      - Mise en évidence des statuts HTTP (vert pour succès, rouge pour échec)
+      - Affichage convivial des informations d'expiration
+      - Présentation claire de la structure du token JWT
+
+3. **Interface utilisateur améliorée** avec:
+      - Affichage automatique des informations de débogage pertinentes
+      - Détection d'erreurs et suggestions correspondantes
+      - Présentation organisée des données techniques complexes
+
 ### Améliorations du bridge JWT
 
 Pour résoudre les problèmes d'authentification où les tokens générés localement n'étaient pas acceptés par le backend, nous avons:
