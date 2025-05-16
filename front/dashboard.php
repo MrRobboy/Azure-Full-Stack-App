@@ -181,12 +181,14 @@ ob_start();
 
         try {
             const response = await ApiService.request(endpoint);
+            console.log(`Response for ${endpoint}:`, response);
+
             if (response.success && response.data) {
                 const count = Array.isArray(response.data) ? response.data.length : 0;
                 element.querySelector('.stat-number').textContent = count;
 
                 // If using fallback data, show warning
-                if (response.data.isFallback) {
+                if (response.isFallback) {
                     element.classList.add('using-fallback');
                     NotificationSystem.warning(`Données de ${endpoint} en mode dégradé`);
                 }
@@ -206,6 +208,8 @@ ob_start();
         try {
             // Get user profile
             const userResponse = await ApiService.getCurrentUser();
+            console.log('User profile response:', userResponse);
+
             if (userResponse.success && userResponse.data) {
                 const userData = userResponse.data.user || userResponse.data;
                 document.getElementById('user-name').textContent = `${userData.prenom} ${userData.nom}`;
@@ -233,7 +237,7 @@ ob_start();
     }
 
     // Handle logout button
-    document.getElementById('logout').addEventListener('click', async function() {
+    document.getElementById('logout')?.addEventListener('click', async function() {
         try {
             const response = await fetch('session-handler.php', {
                 method: 'POST',
