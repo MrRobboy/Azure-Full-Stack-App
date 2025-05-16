@@ -99,3 +99,31 @@
 
 - L'authentification directe peut être utilisée comme alternative au proxy standard pour les problèmes d'auth
 - Les développeurs peuvent choisir entre le proxy générique et l'endpoint spécialisé selon le contexte
+
+## [2.0.3] - 2025-05-16
+
+### Ajouté
+
+- Création d'une solution d'authentification locale (`auth-api-fix.php`) pour contourner les problèmes d'accès à l'API
+- Ajout d'un bouton "Tester l'auth locale" dans la page de test
+- Implémentation d'un test automatique des matières après authentification réussie
+
+### Corrections
+
+- Correction des problèmes de chemins dans les requêtes d'authentification
+- Implémentation d'une authentification côté frontend avec des utilisateurs de test
+- Résolution des erreurs 404 lors des tentatives d'authentification
+- Ajout de journalisation détaillée pour diagnostiquer les problèmes d'URL
+
+### Technique
+
+- Stockage du token d'authentification dans localStorage
+- Transmission du token pour les requêtes authentifiées via le header Authorization
+- Implémentation d'une vérification locale des identifiants
+- Support de session PHP et token JWT pour l'authentification
+
+### Notes d'implémentation
+
+- Cette solution permet de tester l'authentification sans dépendre de l'API backend
+- Les identifiants de test prédéfinis facilitent le développement et les tests
+- Solution temporaire jusqu'à résolution des problèmes d'accès à l'API backend

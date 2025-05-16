@@ -25,7 +25,7 @@ error_log("Method: " . $_SERVER['REQUEST_METHOD']);
 
 // Configuration de base
 $apiBaseUrl = 'https://app-backend-esgi-app.azurewebsites.net';
-$authEndpoint = 'api-auth-login.php';
+$authEndpoint = '/api-auth-login.php';
 
 // Déterminer l'origine
 $allowedOrigins = [
@@ -87,7 +87,10 @@ $logCredentials['password'] = '********';
 error_log("Tentative d'authentification avec: " . json_encode($logCredentials));
 
 // Construction de l'URL d'authentification
-$authUrl = $apiBaseUrl . '/' . $authEndpoint;
+$authUrl = $apiBaseUrl . $authEndpoint;
+
+// Ajout de logs supplémentaires pour le débogage
+error_log("URL d'authentification construite: " . $authUrl);
 
 // Initialisation de cURL
 $ch = curl_init($authUrl);
@@ -115,8 +118,10 @@ curl_setopt($ch, CURLOPT_COOKIEFILE, '');
 curl_setopt($ch, CURLOPT_COOKIEJAR, '');
 curl_setopt($ch, CURLOPT_HEADER, true);
 
-// Exécution de la requête
+// Afficher plus d'informations sur la requête dans les logs
+curl_setopt($ch, CURLINFO_HEADER_OUT, true);
 $response = curl_exec($ch);
+error_log("Headers envoyés: " . curl_getinfo($ch, CURLINFO_HEADER_OUT));
 
 // Gestion des erreurs cURL
 if ($response === false) {

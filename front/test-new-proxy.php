@@ -80,6 +80,7 @@ session_start();
 		<button onclick="testAuth()">Tester l'authentification</button>
 		<button onclick="testCORS()">Tester les en-têtes CORS</button>
 		<button onclick="testDirectAuth()">Tester l'auth directe</button>
+		<button onclick="testLocalAuth()">Tester l'auth locale</button>
 	</div>
 
 	<div id="result" class="card">
@@ -163,10 +164,18 @@ session_start();
 				password: 'admin123'
 			};
 
-			const result = await fetchWithProxy('api-auth-login.php', {
+			const result = await fetchWithProxy('/api-auth-login.php', {
 				method: 'POST',
 				body: JSON.stringify(credentials)
 			});
+
+			if (result.status === 404) {
+				console.error('Erreur 404: URL de l\'API d\'authentification non trouvée');
+				result.debug = {
+					urlUsed: '/api-auth-login.php',
+					message: 'Vérifier que ce fichier existe sur le serveur backend'
+				};
+			}
 
 			displayResult(result);
 		}
@@ -236,6 +245,88 @@ session_start();
 					error: error.message
 				}, true);
 			}
+		}
+
+		async function testLocalAuth() {
+			displayResult('Test de l\'authentification locale en cours...');
+			const credentials = {
+				email: 'admin@example.com',
+				password: 'admin123'
+			};
+
+			try {
+				const response = await fetch('auth-api-fix.php', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					credentials: 'include',
+					body: JSON.stringify(credentials)
+				});
+
+				const contentType = response.headers.get('content-type') || '';
+
+				if (contentType.includes('application/json')) {
+					const data = await response.json();
+					displayResult({
+						status: response.status,
+						data: data
+					});
+
+					// Si l'authentification réussit, stocker le token
+					if (data.success && data.data && data.data.token) {
+						localStorage.setItem('auth_token', data.data.token);
+						console.log('Token stocké:', data.data.token);
+
+						// Test pour voir si on peut maintenant accéder aux matières
+						testAuthenticatedMatieres();
+					}
+				} else {
+					const text = await response.text();
+					displayResult({
+						status: response.status,
+						error: 'Réponse non-JSON',
+						data: text.substring(0, 500) + '...'
+					}, true);
+				}
+			} catch (error) {
+				displayResult({
+					status: 0,
+					error: error.message
+				}, true);
+			}
+		}
+
+		// Ajouter une fonction pour tester l'accès aux matières avec authentification
+		async function testAuthenticatedMatieres() {
+			const token = localStorage.getItem('auth_token');
+			if (!token) {
+				console.error('Aucun token trouvé, veuillez vous authentifier d\'abord');
+				return;
+			}
+
+			setTimeout(async () => {
+				displayResult('Test des matières après authentification...');
+
+				try {
+					// Utiliser le proxy
+					const result = await fetchWithProxy('api-notes.php?action=matieres', {
+						headers: {
+							'Authorization': 'Bearer ' + token
+						}
+					});
+
+					displayResult({
+						type: 'Matières authentifiées',
+						...result
+					});
+				} catch (error) {
+					displayResult({
+						status: 0,
+						error: error.message
+					}, true);
+				}
+			}, 1000); // Petit délai pour s'assurer que la session est bien établie
 		}
 	</script>
 </body>
