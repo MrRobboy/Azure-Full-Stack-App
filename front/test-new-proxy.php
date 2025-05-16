@@ -81,6 +81,9 @@ session_start();
 		<button onclick="testCORS()">Tester les en-têtes CORS</button>
 		<button onclick="testDirectAuth()">Tester l'auth directe</button>
 		<button onclick="testLocalAuth()">Tester l'auth locale</button>
+		<button onclick="window.location.href='backend-explorer.php'">Explorateur de backend</button>
+		<button onclick="testPostProxy()">Tester le proxy POST</button>
+		<button onclick="window.location.href='proxy-generator.php'">Générateur de proxy</button>
 	</div>
 
 	<div id="result" class="card">
@@ -327,6 +330,104 @@ session_start();
 					}, true);
 				}
 			}, 1000); // Petit délai pour s'assurer que la session est bien établie
+		}
+
+		async function testPostProxy() {
+			displayResult('Test du proxy POST en cours...');
+			const credentials = {
+				email: 'admin@example.com',
+				password: 'admin123'
+			};
+
+			try {
+				// Tester d'abord avec le fichier api-auth-login.php
+				let response = await fetch('proxy-post.php?target=api-auth-login.php', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify(credentials)
+				});
+
+				let firstResult = {
+					target: 'api-auth-login.php',
+					status: response.status,
+					statusText: response.statusText
+				};
+
+				try {
+					firstResult.data = await response.json();
+				} catch (e) {
+					const text = await response.text();
+					firstResult.error = 'Réponse non-JSON';
+					firstResult.rawData = text.substring(0, 200) + '...';
+				}
+
+				// Tester ensuite avec api/auth/login
+				response = await fetch('proxy-post.php?target=api/auth/login', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify(credentials)
+				});
+
+				let secondResult = {
+					target: 'api/auth/login',
+					status: response.status,
+					statusText: response.statusText
+				};
+
+				try {
+					secondResult.data = await response.json();
+				} catch (e) {
+					const text = await response.text();
+					secondResult.error = 'Réponse non-JSON';
+					secondResult.rawData = text.substring(0, 200) + '...';
+				}
+
+				// Tester avec api-router.php
+				response = await fetch('proxy-post.php?target=api-router.php', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						action: 'login',
+						email: credentials.email,
+						password: credentials.password
+					})
+				});
+
+				let thirdResult = {
+					target: 'api-router.php',
+					status: response.status,
+					statusText: response.statusText
+				};
+
+				try {
+					thirdResult.data = await response.json();
+				} catch (e) {
+					const text = await response.text();
+					thirdResult.error = 'Réponse non-JSON';
+					thirdResult.rawData = text.substring(0, 200) + '...';
+				}
+
+				// Afficher les résultats
+				displayResult({
+					message: 'Résultats des tests du proxy POST',
+					results: [
+						firstResult,
+						secondResult,
+						thirdResult
+					]
+				});
+			} catch (error) {
+				displayResult({
+					status: 0,
+					error: error.message
+				}, true);
+			}
 		}
 	</script>
 </body>
