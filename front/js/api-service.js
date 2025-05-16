@@ -9,6 +9,23 @@ const ApiService = (function () {
 	const _corsProxy = window.appConfig?.proxyUrl || "api-bridge.php";
 
 	/**
+	 * Test the proxy connection
+	 * @returns {Promise} - Test result
+	 */
+	async function testProxy() {
+		console.log("Testing proxy connection...");
+		try {
+			const response = await fetch("test-proxy.php");
+			const data = await response.json();
+			console.log("Proxy test response:", data);
+			return data;
+		} catch (error) {
+			console.error("Proxy test failed:", error);
+			throw error;
+		}
+	}
+
+	/**
 	 * Make an API request using our CORS proxy
 	 * @param {string} endpoint - API endpoint path
 	 * @param {string} method - HTTP method (GET, POST, PUT, DELETE)
@@ -44,6 +61,9 @@ const ApiService = (function () {
 		}
 
 		try {
+			// First test the proxy
+			await testProxy();
+
 			// Ensure endpoint doesn't start with a slash
 			const cleanEndpoint = endpoint.startsWith("/")
 				? endpoint.substring(1)
@@ -130,7 +150,8 @@ const ApiService = (function () {
 		login,
 		logout,
 		getCurrentUser,
-		request: makeRequest
+		request: makeRequest,
+		testProxy
 	};
 })();
 
