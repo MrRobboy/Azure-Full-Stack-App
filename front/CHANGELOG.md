@@ -169,6 +169,25 @@
 - Optimisation du cache pour les ressources statiques
 - Configuration du FastCGI pour une meilleure performance PHP
 
+## [4.2.0] - 2024-05-16
+
+### Changed
+
+- Amélioration de la configuration Nginx pour les fichiers proxy
+     - Ajout de `try_files` pour une meilleure gestion des fichiers
+     - Configuration correcte de `fastcgi_split_path_info`
+     - Ajout de `PATH_INFO` pour le traitement des paramètres
+- Amélioration des logs de débogage
+     - Activation du mode debug pour les logs d'erreur
+     - Configuration du buffer pour les logs d'accès
+     - Rotation des logs optimisée
+
+### Fixed
+
+- Correction des erreurs 404 sur les fichiers proxy
+- Amélioration de la gestion des requêtes OPTIONS
+- Correction de la configuration FastCGI
+
 ## Prochaines Étapes
 
 1. Documentation
