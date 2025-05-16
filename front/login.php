@@ -453,9 +453,6 @@ ob_start();
 		btnLoading.style.display = 'inline-block';
 		errorMessage.style.display = 'none';
 
-		// Force proxy to true for reliability
-		appConfig.useProxy = true;
-
 		// Notification pour informer l'utilisateur
 		NotificationSystem.info('Tentative de connexion...');
 
@@ -465,56 +462,32 @@ ob_start();
 			// Endpoint d'authentification
 			const loginEndpoint = 'api/auth/login';
 
-			// Utiliser le proxy qui est déjà testé et fonctionne
-			console.log('Utilisation du proxy pour la connexion: ' + proxyPath);
-			NotificationSystem.info("Connexion via proxy...");
-
 			// Données de connexion
 			const loginData = {
 				email,
 				password
 			};
 
-			// NOUVELLE MÉTHODE: Utiliser la fonction handlePostRequest de config.js
+			// Utiliser la fonction handlePostRequest optimisée
+			console.log('Utilisation de handlePostRequest pour la connexion');
+
 			let response;
 			try {
-				// Utiliser la fonction améliorée de contournement de 404
-				if (typeof handlePostRequest === 'function') {
-					console.log('Utilisation de handlePostRequest pour la connexion');
-					response = await handlePostRequest(loginEndpoint, loginData);
-				} else {
-					// Fallback si la fonction n'est pas disponible
-					console.log('Utilisation de la méthode standard pour la connexion');
-
-					// Construire l'URL d'API en utilisant le proxy
-					const loginUrl = `${proxyPath}?endpoint=${encodeURIComponent(loginEndpoint)}`;
-					console.log('URL de connexion via proxy:', loginUrl);
-
-					// Options de requête
-					const fetchOptions = {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json'
-						},
-						body: JSON.stringify(loginData),
-						credentials: 'include'
-					};
-
-					response = await fetch(loginUrl, fetchOptions);
-				}
+				// Version 3.0: Utiliser la méthode optimisée basée sur les résultats de post-test.php
+				response = await handlePostRequest(loginEndpoint, loginData);
 
 				console.log('Réponse reçue:', response);
 
 				if (!response.ok) {
 					throw new Error('Échec de la requête: ' + response.status);
 				}
-			} catch (proxyErr) {
-				console.error("Erreur de connexion:", proxyErr);
+			} catch (postErr) {
+				console.error("Erreur avec handlePostRequest:", postErr);
 
-				// Essayer avec direct-login comme solution de dernier recours
+				// Solution de secours 1: Utiliser direct-login.php
 				try {
 					console.log('Tentative avec direct-login.php...');
-					NotificationSystem.info("Tentative avec solution de secours...");
+					NotificationSystem.info("Tentative avec solution de secours 1...");
 
 					// direct-login.php fait la requête côté serveur avec PHP
 					response = await fetch('direct-login.php', {
@@ -525,14 +498,32 @@ ob_start();
 						body: JSON.stringify(loginData)
 					});
 
-					console.log('Réponse direct-login reçue:', response);
-
 					if (!response.ok) {
-						throw new Error('Toutes les tentatives ont échoué');
+						throw new Error('Solution de secours 1 a échoué');
 					}
 				} catch (directErr) {
-					console.error("Toutes les tentatives ont échoué:", directErr);
-					throw new Error("Impossible de communiquer avec le backend: " + directErr.message);
+					console.error("Solution de secours 1 a échoué:", directErr);
+
+					// Solution de secours 2: Utiliser simple-login.php qui utilise GET au lieu de POST
+					try {
+						console.log('Tentative avec simple-login.php...');
+						NotificationSystem.info("Tentative avec solution de secours 2...");
+
+						// Encoder les données de connexion dans l'URL (bien que ce ne soit pas idéal pour un mot de passe)
+						const params = new URLSearchParams({
+							email: email,
+							password: password
+						});
+
+						response = await fetch(`simple-login.php?${params.toString()}`);
+
+						if (!response.ok) {
+							throw new Error('Solution de secours 2 a échoué');
+						}
+					} catch (simpleErr) {
+						console.error("Toutes les solutions ont échoué:", simpleErr);
+						throw new Error("Impossible de communiquer avec le backend. Veuillez réessayer plus tard.");
+					}
 				}
 			}
 
@@ -544,10 +535,10 @@ ob_start();
 				data = JSON.parse(responseText);
 			} catch (e) {
 				console.error('Erreur de parsing JSON:', e);
-				throw new Error('Réponse invalide du serveur: ' + responseText);
+				throw new Error('Réponse invalide du serveur: ' + e.message);
 			}
 
-			if (response.ok && data.success) {
+			if (data.success) {
 				// Store user data in a session (using PHP session)
 				const sessionSaved = await storeSessionData(data.user, data.token);
 
@@ -576,9 +567,9 @@ ob_start();
 				message: 'Erreur de connexion au serveur: ' + error.message,
 				details: {
 					errorMessage: error.message,
-					useProxy: appConfig.useProxy,
-					proxyUrl: proxyPath,
-					isAzure: isAzure
+					useProxy: appConfig ? appConfig.useProxy : 'undefined',
+					proxyUrl: appConfig ? appConfig.proxyUrl : 'undefined',
+					isAzure: typeof isAzure !== 'undefined' ? isAzure : 'undefined'
 				}
 			});
 			console.error('Erreur:', error);

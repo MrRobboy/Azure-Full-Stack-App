@@ -1,5 +1,5 @@
 // Configuration de l'application
-// Version: 2.0 - Azure Edition avec contournement 404
+// Version: 3.0 - Azure Edition - Communication POST optimisée
 
 // Détecter l'environnement
 const isAzure = window.location.hostname.includes("azurewebsites.net");
@@ -26,7 +26,7 @@ const defaultConfig = {
 	bypass404: true,
 
 	// Version de configuration
-	version: "2.0"
+	version: "3.0"
 };
 
 // Configuration pour l'environnement
@@ -40,6 +40,7 @@ if (isAzure) {
 	const possibleProxyPaths = [
 		"simple-proxy.php", // Racine
 		"local-proxy-fix.php", // Version fixe (recommandée)
+		"post-test.php", // Nouveau proxy de test POST optimisé
 		"/api/simple-proxy.php", // Sous-dossier API
 		"/proxy/simple-proxy.php", // Sous-dossier Proxy
 		"/simple-proxy.php", // Chemin absolu
@@ -154,26 +155,55 @@ async function testBackendConnection() {
 	return false;
 }
 
-// Fonction pour gérer les erreurs 404 sur les requêtes proxy
+// Fonction optimisée pour gérer les requêtes POST, basée sur les tests réussis
 async function handlePostRequest(endpoint, data, options = {}) {
+	// Mode direct - Communication directe avec le backend (confirmé fonctionnel par post-test.php)
 	if (!appConfig.useProxy) {
-		// Connexion directe au backend
+		console.log("Using direct backend connection for POST");
 		const url = `${appConfig.apiBaseUrl}/${endpoint}`;
-		return fetch(url, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json"
-			},
-			body: JSON.stringify(data),
-			...options
-		});
+
+		// Ajout des en-têtes spécifiques Azure qui ont fonctionné dans les tests
+		const headers = {
+			"Content-Type": "application/json",
+			"X-MS-REQUEST-ID": `${Date.now()}-${Math.random()
+				.toString(36)
+				.substr(2, 9)}`,
+			"X-Original-URL": `/${endpoint}`
+		};
+
+		// Fusionner avec les en-têtes personnalisés si fournis
+		if (options.headers) {
+			Object.assign(headers, options.headers);
+		}
+
+		try {
+			return await fetch(url, {
+				method: "POST",
+				headers,
+				body: JSON.stringify(data),
+				...options,
+				headers // Écrase options.headers pour s'assurer que nos en-têtes spécifiques sont inclus
+			});
+		} catch (error) {
+			console.error("Direct POST failed:", error);
+			// Si échec, essayer avec le proxy
+			console.log("Falling back to proxy for POST");
+			return await proxyPostRequest(endpoint, data, options);
+		}
 	}
 
-	// Essayer avec le proxy normal
+	// Mode proxy - Utiliser le proxy PHP pour les requêtes POST
+	return await proxyPostRequest(endpoint, data, options);
+}
+
+// Fonction dédiée pour les requêtes via proxy
+async function proxyPostRequest(endpoint, data, options = {}) {
 	try {
+		console.log(`Using proxy for POST to ${endpoint}`);
 		const proxyUrl = `${
 			appConfig.proxyUrl
 		}?endpoint=${encodeURIComponent(endpoint)}`;
+
 		const response = await fetch(proxyUrl, {
 			method: "POST",
 			headers: {
@@ -193,24 +223,80 @@ async function handlePostRequest(endpoint, data, options = {}) {
 			console.warn(
 				"Proxy returned 404, trying alternative method"
 			);
-			// Utiliser un iframe en fallback (contournement pour nginx/Azure)
-			return await iframePostFallback(endpoint, data);
+			// Utiliser des méthodes alternatives
+			return await alternativePostMethod(endpoint, data);
 		}
 
 		return response;
 	} catch (error) {
-		console.error("Error with proxy post:", error);
+		console.error("Proxy POST error:", error);
 
 		// Si bypass404 est activé, essayer la méthode de contournement
 		if (appConfig.bypass404) {
 			console.warn(
 				"Error with proxy, trying alternative method"
 			);
-			return await iframePostFallback(endpoint, data);
+			return await alternativePostMethod(endpoint, data);
 		}
 
 		throw error;
 	}
+}
+
+// Méthodes alternatives pour POST (utilise les méthodes qui ont fonctionné lors du test)
+async function alternativePostMethod(endpoint, data) {
+	console.log("Using alternative POST method for", endpoint);
+
+	// Méthode 1: Utiliser fetch avec en-têtes Azure spécifiques (méthode ayant fonctionné dans les tests)
+	try {
+		const url = `${appConfig.backendBaseUrl}/${endpoint}`;
+
+		const response = await fetch(url, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"X-MS-SITE-RESTRICTED-TOKEN": "true",
+				"X-ARR-SSL": "true",
+				"X-MS-REQUEST-ID": `${Date.now()}-${Math.random()
+					.toString(36)
+					.substr(2, 9)}`,
+				"X-Original-URL": `/${endpoint}`
+			},
+			body: JSON.stringify(data)
+		});
+
+		if (response.ok) {
+			console.log("Alternative method 1 succeeded");
+			return response;
+		}
+	} catch (error) {
+		console.warn("Alternative method 1 failed:", error);
+	}
+
+	// Méthode 2: Utiliser fetch avec en-têtes alternatifs (méthode ayant aussi fonctionné)
+	try {
+		const url = `${appConfig.backendBaseUrl}/${endpoint}`;
+
+		const response = await fetch(url, {
+			method: "POST",
+			headers: {
+				"X-HTTP-Method-Override": "POST",
+				"User-Agent": "AzureWebApp/1.0",
+				Accept: "application/json"
+			},
+			body: JSON.stringify(data)
+		});
+
+		if (response.ok) {
+			console.log("Alternative method 2 succeeded");
+			return response;
+		}
+	} catch (error) {
+		console.warn("Alternative method 2 failed:", error);
+	}
+
+	// Méthode 3: Fallback iframe si tout échoue
+	return await iframePostFallback(endpoint, data);
 }
 
 // Fonction de contournement utilisant un iframe pour POST (évite les problèmes de CORS/404)
@@ -253,11 +339,23 @@ async function iframePostFallback(endpoint, data) {
 			delete window[uniqueId];
 		}
 
-		// Ajouter event listeners
+		// Gérer les erreurs
 		iframe.onerror = function (error) {
-			reject(error);
+			console.error("Iframe error:", error);
 			cleanup();
+			reject(new Error("Iframe communication failed"));
 		};
+
+		// Ajouter des en-têtes supplémentaires via input hidden
+		const headersInput = document.createElement("input");
+		headersInput.type = "hidden";
+		headersInput.name = "headers";
+		headersInput.value = JSON.stringify({
+			"X-MS-SITE-RESTRICTED-TOKEN": "true",
+			"X-ARR-SSL": "true",
+			"X-HTTP-Method-Override": "POST"
+		});
+		form.appendChild(headersInput);
 
 		// Soumettre le formulaire
 		document.body.appendChild(form);
@@ -265,8 +363,14 @@ async function iframePostFallback(endpoint, data) {
 
 		// Définir un timeout
 		setTimeout(() => {
-			reject(new Error("Iframe fallback timed out"));
-			cleanup();
+			if (iframe.parentNode) {
+				cleanup();
+				reject(
+					new Error(
+						"Iframe communication timed out"
+					)
+				);
+			}
 		}, 30000);
 	});
 }
