@@ -91,68 +91,39 @@ ob_start();
     <div class="dashboard-header">
         <h1>Tableau de bord</h1>
         <div class="user-info">
-            <span class="welcome-text">Bienvenue,
-                <strong>
-                    <?php
-                    if (isset($user['prenom']) && isset($user['nom'])) {
-                        echo htmlspecialchars($user['prenom'] . ' ' . $user['nom']);
-                    } elseif (isset($user['name'])) {
-                        echo htmlspecialchars($user['name']);
-                    } elseif (isset($user['email'])) {
-                        echo htmlspecialchars($user['email']);
-                    } else {
-                        echo "Utilisateur";
-                    }
-                    ?>
-                </strong>
-            </span>
-            <span class="user-role badge badge-primary">
-                <?php echo htmlspecialchars($user['role'] ?? 'Utilisateur'); ?>
-            </span>
+            <span id="user-name">Chargement...</span>
+            <span id="user-role" class="role-badge">Chargement...</span>
         </div>
     </div>
 
-    <div class="dashboard-grid">
-        <div class="dashboard-card">
-            <i class="fas fa-book fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
-            <h3>Matières</h3>
-            <p id="matieresCount"><?php echo $counts['matieres']; ?></p>
-            <button onclick="navigateToGestion('matieres')" class="btn btn-primary">Gérer les matières</button>
+    <div class="dashboard-stats">
+        <div class="stat-card" id="matieres-count">
+            <i class="fas fa-book"></i>
+            <div class="stat-content">
+                <h3>Matières</h3>
+                <p class="stat-number">Chargement...</p>
+            </div>
         </div>
-
-        <div class="dashboard-card">
-            <i class="fas fa-users fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
-            <h3>Classes</h3>
-            <p id="classesCount"><?php echo $counts['classes']; ?></p>
-            <button onclick="navigateToGestion('classes')" class="btn btn-primary">Gérer les classes</button>
+        <div class="stat-card" id="classes-count">
+            <i class="fas fa-chalkboard"></i>
+            <div class="stat-content">
+                <h3>Classes</h3>
+                <p class="stat-number">Chargement...</p>
+            </div>
         </div>
-
-        <div class="dashboard-card">
-            <i class="fas fa-calendar-alt fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
-            <h3>Examens</h3>
-            <p id="examensCount"><?php echo $counts['examens']; ?></p>
-            <button onclick="navigateToGestion('exams')" class="btn btn-primary">Gérer les examens</button>
+        <div class="stat-card" id="examens-count">
+            <i class="fas fa-file-alt"></i>
+            <div class="stat-content">
+                <h3>Examens</h3>
+                <p class="stat-number">Chargement...</p>
+            </div>
         </div>
-
-        <div class="dashboard-card">
-            <i class="fas fa-chalkboard-teacher fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
-            <h3>Professeurs</h3>
-            <p id="profsCount"><?php echo $counts['professeurs']; ?></p>
-            <button onclick="navigateToGestion('profs')" class="btn btn-primary">Gérer les professeurs</button>
-        </div>
-
-        <div class="dashboard-card">
-            <i class="fas fa-users-cog fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
-            <h3>Utilisateurs</h3>
-            <p id="usersCount"><?php echo $counts['users']; ?></p>
-            <button onclick="navigateToGestion('users')" class="btn btn-primary">Gérer les utilisateurs</button>
-        </div>
-
-        <div class="dashboard-card">
-            <i class="fas fa-user-circle fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
-            <h3>Mon compte</h3>
-            <p>Informations et paramètres</p>
-            <button id="logout" class="btn btn-danger">Déconnexion</button>
+        <div class="stat-card" id="professeurs-count">
+            <i class="fas fa-user-tie"></i>
+            <div class="stat-content">
+                <h3>Professeurs</h3>
+                <p class="stat-number">Chargement...</p>
+            </div>
         </div>
     </div>
 </div>
@@ -195,559 +166,70 @@ ob_start();
 
         // Load dashboard data
         loadDashboardData();
-
-        // Load counter values
-        loadCounters();
     });
 
-    // Function to navigate to management pages with availability check
-    async function navigateToGestion(pageName) {
-        console.log(`Attempting to navigate to gestion_${pageName}.php`);
+    // Function to fetch count for a specific entity
+    async function fetchCountFor(elementId, endpoint) {
+        const element = document.getElementById(elementId);
+        if (!element) {
+            console.warn(`Element ${elementId} not found`);
+            return;
+        }
 
         // Show loading state
-        NotificationSystem.info(`Vérification de l'accès à la page de gestion...`);
+        element.querySelector('.stat-number').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
         try {
-            // Check if session is valid first
-            const sessionCheck = await checkSessionIsValid();
-            if (!sessionCheck) {
-                console.error('Session invalid, redirecting to login');
-                NotificationSystem.error('Votre session a expiré. Veuillez vous reconnecter.');
-                setTimeout(() => window.location.href = 'login.php', 1500);
-                return;
-            }
+            const response = await ApiService.request(endpoint);
+            if (response.success && response.data) {
+                const count = Array.isArray(response.data) ? response.data.length : 0;
+                element.querySelector('.stat-number').textContent = count;
 
-            // Check if user has admin role
-            const userResult = await ApiService.getCurrentUser();
-            if (!userResult.success || userResult.data.user.role !== 'admin') {
-                NotificationSystem.error('Accès non autorisé. Vous devez être administrateur.');
-                return;
-            }
-
-            // Check if the target page exists
-            const response = await fetch(`gestion_${pageName}.php`, {
-                method: 'HEAD'
-            });
-            if (!response.ok) {
-                throw new Error('Page non trouvée');
-            }
-
-            // Navigate to the page
-            window.location.href = `gestion_${pageName}.php`;
-        } catch (error) {
-            console.error('Navigation error:', error);
-            NotificationSystem.error('Erreur lors de la navigation. Utilisation de la page de secours...');
-            window.location.href = `gestion_fallback.php?page=${pageName}`;
-        }
-    }
-
-    // Check if session is valid
-    async function checkSessionIsValid() {
-        try {
-            const response = await fetch('session-handler.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    action: 'check'
-                })
-            });
-
-            if (!response.ok) return false;
-
-            const data = await response.json();
-            return data.success && data.loggedIn;
-        } catch (error) {
-            console.error('Session check error:', error);
-            return false;
-        }
-    }
-
-    // Function to get API endpoint URL
-    function getApiEndpoint(endpoint) {
-        const baseUrl = 'https://app-backend-esgi-app.azurewebsites.net';
-        return `${baseUrl}/${endpoint}`;
-    }
-
-    // Function to load counters in dashboard cards
-    async function loadCounters() {
-        try {
-            // Get elements
-            const matieresCount = document.getElementById('matieresCount');
-            const classesCount = document.getElementById('classesCount');
-            const examensCount = document.getElementById('examensCount');
-            const profsCount = document.getElementById('profsCount');
-            const usersCount = document.getElementById('usersCount');
-
-            // First, set elements to loading state
-            setLoadingState(matieresCount);
-            setLoadingState(classesCount);
-            setLoadingState(examensCount);
-            setLoadingState(profsCount);
-            setLoadingState(usersCount);
-
-            // Individual API calls for each entity type to get precise counts
-            // Each call is independent to avoid one failure affecting others
-            await fetchCountFor('subjects.getAll', 'api/matieres', matieresCount);
-            await fetchCountFor('classes.getAll', 'api/classes', classesCount);
-            await fetchCountFor('exams.getAll', 'api/examens', examensCount);
-            await fetchCountFor('teachers.getAll', 'api/professeurs', profsCount);
-            await fetchCountFor(null, 'api/admin/users', usersCount);
-        } catch (error) {
-            console.error('Error initializing counters:', error);
-            NotificationSystem.error('Erreur lors du chargement des compteurs');
-        }
-    }
-
-    // Set an element to loading state
-    function setLoadingState(element) {
-        if (element) {
-            element.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        }
-    }
-
-    // Function to safely set content with error handling
-    function safeSetContent(elementId, content) {
-        const element = document.getElementById(elementId);
-        if (element) {
-            element.textContent = content;
-        }
-    }
-
-    // Function to fetch count for a specific entity
-    async function fetchCountFor(apiServiceMethod, elementId, fallbackValue = 0) {
-        try {
-            const element = document.getElementById(elementId);
-            if (!element) {
-                console.warn(`Element ${elementId} not found`);
-                return;
-            }
-
-            // Show loading state
-            element.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
-            // Split the method name to get the service and method
-            const [service, method] = apiServiceMethod.split('.');
-            if (!ApiService[service] || typeof ApiService[service][method] !== 'function') {
-                throw new Error(`Invalid API service method: ${apiServiceMethod}`);
-            }
-
-            const result = await ApiService[service][method]();
-            console.log(`${apiServiceMethod} result:`, result);
-
-            if (result.success && result.data) {
-                // Check if we're using fallback data
-                if (result.isFallback) {
-                    element.textContent = Array.isArray(result.data) ? result.data.length : fallbackValue;
-                    element.classList.add('text-warning');
-                    element.title = 'Données de secours (API non disponible)';
-                    NotificationSystem.warning(`Données de secours utilisées pour ${elementId}`);
-                } else {
-                    element.textContent = Array.isArray(result.data) ? result.data.length : fallbackValue;
-                    element.classList.remove('text-warning');
-                    element.title = '';
+                // If using fallback data, show warning
+                if (response.data.isFallback) {
+                    element.classList.add('using-fallback');
+                    NotificationSystem.warning(`Données de ${endpoint} en mode dégradé`);
                 }
             } else {
-                throw new Error(result.message || 'Erreur lors du chargement des données');
+                throw new Error('Invalid response format');
             }
         } catch (error) {
-            console.error(`Error fetching count for ${apiServiceMethod}:`, error);
-            const element = document.getElementById(elementId);
-            if (element) {
-                element.textContent = fallbackValue;
-                element.classList.add('text-warning');
-                element.title = 'Données de secours (Erreur API)';
-            }
-            NotificationSystem.error(`Erreur lors du chargement de ${elementId}`);
+            console.error(`Error fetching ${endpoint}:`, error);
+            element.querySelector('.stat-number').textContent = '0';
+            element.classList.add('error');
+            NotificationSystem.error(`Erreur lors du chargement de ${endpoint}`);
         }
     }
 
     // Function to load all dashboard data
     async function loadDashboardData() {
         try {
-            // Get user profile data
-            const userResult = await ApiService.getCurrentUser();
-            console.log('User profile API result:', userResult);
-
-            if (userResult.success && userResult.data) {
-                // Check if we're using fallback data
-                if (userResult.isFallback) {
-                    console.log('Using fallback user data');
-                    NotificationSystem.warning('Données utilisateur de secours utilisées');
-                }
-
-                const userData = userResult.data.user || userResult.data;
-                console.log('API user data:', userData);
-
-                if (!userData || typeof userData !== 'object') {
-                    throw new Error('Invalid user data format');
-                }
-
-                // Update UI with user data
-                console.log('Updating UI with user data:', userData);
-                updateUserInfo(userData);
-
-                // Load additional data based on user role
-                if (userData.role === 'ADMIN') {
-                    await loadCounters();
-                } else if (userData.role === 'PROF') {
-                    await loadTeacherData(userData.id);
-                } else if (userData.role === 'ELEVE') {
-                    await loadStudentData(userData.id);
-                }
+            // Get user profile
+            const userResponse = await ApiService.getCurrentUser();
+            if (userResponse.success && userResponse.data) {
+                const userData = userResponse.data.user || userResponse.data;
+                document.getElementById('user-name').textContent = `${userData.prenom} ${userData.nom}`;
+                document.getElementById('user-role').textContent = userData.role;
+                document.getElementById('user-role').classList.add(userData.role.toLowerCase());
             } else {
-                throw new Error(userResult.message || 'Failed to load user data');
+                throw new Error('Invalid user data');
             }
+
+            // Fetch all counts
+            await Promise.all([
+                fetchCountFor('matieres-count', 'api/matieres'),
+                fetchCountFor('classes-count', 'api/classes'),
+                fetchCountFor('examens-count', 'api/examens'),
+                fetchCountFor('professeurs-count', 'api/professeurs')
+            ]);
+
         } catch (error) {
             console.error('Error loading dashboard data:', error);
-            NotificationSystem.error('Erreur lors du chargement des données');
+            NotificationSystem.error('Erreur lors du chargement du tableau de bord');
         } finally {
             // Hide loading indicator
             document.getElementById('loading-indicator').style.display = 'none';
         }
-    }
-
-    // Update user information on the page
-    function updateUserInfo(userData) {
-        console.log('Updating UI with user data:', userData);
-
-        if (!userData || !userData.user) {
-            console.error('Invalid user data format:', userData);
-            return;
-        }
-
-        // Get user object - handle both direct user object and nested user object
-        const user = userData.user;
-
-        // Update user name - handle different user data formats
-        const userNameElements = document.querySelectorAll('.user-name');
-        userNameElements.forEach(el => {
-            // Try different name formats
-            if (user.prenom && user.nom) {
-                el.textContent = `${user.prenom} ${user.nom}`;
-            } else if (user.name) {
-                el.textContent = user.name;
-            } else if (user.email) {
-                el.textContent = user.email;
-            } else {
-                el.textContent = "Utilisateur";
-            }
-        });
-
-        // Update user role
-        const userRoleElements = document.querySelectorAll('.user-role');
-        userRoleElements.forEach(el => {
-            el.textContent = user.role || "Utilisateur";
-        });
-
-        // Update profile picture if available
-        if (user.photo) {
-            const userPhotoElements = document.querySelectorAll('.user-photo');
-            userPhotoElements.forEach(el => {
-                el.src = user.photo;
-            });
-        }
-
-        // Update welcome text with name if available
-        const welcomeTextElements = document.querySelectorAll('.welcome-text');
-        welcomeTextElements.forEach(el => {
-            let displayName = "Utilisateur";
-
-            // Try different name formats
-            if (user.prenom && user.nom) {
-                displayName = `${user.prenom} ${user.nom}`;
-            } else if (user.name) {
-                displayName = user.name;
-            } else if (user.email) {
-                displayName = user.email;
-            }
-
-            el.innerHTML = `Bienvenue, <strong>${displayName}</strong>`;
-        });
-    }
-
-    // Load student notes
-    async function loadStudentNotes(studentId) {
-        try {
-            const notesResult = await ApiService.notes.getByStudent(studentId);
-
-            if (!notesResult.success) {
-                console.error('Error loading student notes:', notesResult);
-                return;
-            }
-
-            // Display the notes data in the appropriate section
-            displayStudentNotes(notesResult.data);
-
-        } catch (error) {
-            console.error('Error in loadStudentNotes:', error);
-        }
-    }
-
-    // Load teacher dashboard data
-    async function loadTeacherData(teacherId) {
-        try {
-            // Load classes taught by this teacher
-            const classesResult = await ApiService.request(`api/professeurs/${teacherId}/classes`, 'GET');
-
-            if (!classesResult.success) {
-                console.error('Error loading teacher classes:', classesResult);
-                return;
-            }
-
-            // Display classes
-            displayTeacherClasses(classesResult.data);
-
-            // Load recent notes given by this teacher
-            const notesResult = await ApiService.request(`api/professeurs/${teacherId}/notes`, 'GET');
-
-            if (notesResult.success) {
-                displayTeacherNotes(notesResult.data);
-            }
-
-        } catch (error) {
-            console.error('Error in loadTeacherData:', error);
-        }
-    }
-
-    // Load admin dashboard
-    async function loadAdminDashboard() {
-        try {
-            // Load summary data
-            const summaryResult = await ApiService.request('api/admin/summary', 'GET');
-
-            if (!summaryResult.success) {
-                console.error('Error loading admin summary:', summaryResult);
-                return;
-            }
-
-            // Display admin summary
-            displayAdminSummary(summaryResult.data);
-
-            // Load recent activity
-            const activityResult = await ApiService.request('api/admin/activity', 'GET');
-
-            if (activityResult.success) {
-                displayAdminActivity(activityResult.data);
-            }
-
-        } catch (error) {
-            console.error('Error in loadAdminDashboard:', error);
-        }
-    }
-
-    // Display functions for different data types
-    function displayStudentNotes(notesData) {
-        const notesContainer = document.getElementById('notes-container');
-        if (!notesContainer) return;
-
-        // Clear container
-        notesContainer.innerHTML = '';
-
-        // Check if we have notes
-        if (!notesData || !notesData.notes || notesData.notes.length === 0) {
-            notesContainer.innerHTML = '<div class="alert alert-info">Aucune note disponible.</div>';
-            return;
-        }
-
-        // Build notes table
-        const table = document.createElement('table');
-        table.className = 'table table-striped';
-
-        // Create header
-        const thead = document.createElement('thead');
-        thead.innerHTML = `
-            <tr>
-                <th>Matière</th>
-                <th>Note</th>
-                <th>Examen</th>
-                <th>Date</th>
-            </tr>
-        `;
-        table.appendChild(thead);
-
-        // Create body
-        const tbody = document.createElement('tbody');
-
-        notesData.notes.forEach(note => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${note.matiere}</td>
-                <td>${note.valeur}/20</td>
-                <td>${note.examen}</td>
-                <td>${new Date(note.date).toLocaleDateString()}</td>
-            `;
-            tbody.appendChild(row);
-        });
-
-        table.appendChild(tbody);
-        notesContainer.appendChild(table);
-    }
-
-    function displayTeacherClasses(classesData) {
-        const classesContainer = document.getElementById('classes-container');
-        if (!classesContainer) return;
-
-        // Clear container
-        classesContainer.innerHTML = '';
-
-        // Check if we have classes
-        if (!classesData || !classesData.classes || classesData.classes.length === 0) {
-            classesContainer.innerHTML = '<div class="alert alert-info">Aucune classe attribuée.</div>';
-            return;
-        }
-
-        // Display classes
-        classesData.classes.forEach(classe => {
-            const classCard = document.createElement('div');
-            classCard.className = 'card mb-3';
-            classCard.innerHTML = `
-                <div class="card-header">
-                    <h5>${classe.nom}</h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>Nombre d'élèves:</strong> ${classe.nb_eleves}</p>
-                    <p><strong>Matières:</strong> ${classe.matieres.join(', ')}</p>
-                    <a href="classe.php?id=${classe.id}" class="btn btn-primary">Voir détails</a>
-                </div>
-            `;
-            classesContainer.appendChild(classCard);
-        });
-    }
-
-    function displayTeacherNotes(notesData) {
-        const notesContainer = document.getElementById('recent-notes-container');
-        if (!notesContainer) return;
-
-        // Clear container
-        notesContainer.innerHTML = '';
-
-        // Check if we have notes
-        if (!notesData || !notesData.notes || notesData.notes.length === 0) {
-            notesContainer.innerHTML = '<div class="alert alert-info">Aucune note récente.</div>';
-            return;
-        }
-
-        // Build notes table
-        const table = document.createElement('table');
-        table.className = 'table table-striped';
-
-        // Create header
-        const thead = document.createElement('thead');
-        thead.innerHTML = `
-            <tr>
-                <th>Élève</th>
-                <th>Classe</th>
-                <th>Matière</th>
-                <th>Note</th>
-                <th>Date</th>
-            </tr>
-        `;
-        table.appendChild(thead);
-
-        // Create body
-        const tbody = document.createElement('tbody');
-
-        notesData.notes.forEach(note => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${note.eleve}</td>
-                <td>${note.classe}</td>
-                <td>${note.matiere}</td>
-                <td>${note.valeur}/20</td>
-                <td>${new Date(note.date).toLocaleDateString()}</td>
-            `;
-            tbody.appendChild(row);
-        });
-
-        table.appendChild(tbody);
-        notesContainer.appendChild(table);
-    }
-
-    function displayAdminSummary(summaryData) {
-        const summaryContainer = document.getElementById('admin-summary-container');
-        if (!summaryContainer) return;
-
-        // Clear container
-        summaryContainer.innerHTML = '';
-
-        // Build summary cards
-        const row = document.createElement('div');
-        row.className = 'row';
-
-        // Create cards for each type of data
-        const items = [{
-                title: 'Élèves',
-                count: summaryData.nb_eleves,
-                icon: 'users'
-            },
-            {
-                title: 'Professeurs',
-                count: summaryData.nb_profs,
-                icon: 'chalkboard-teacher'
-            },
-            {
-                title: 'Classes',
-                count: summaryData.nb_classes,
-                icon: 'school'
-            },
-            {
-                title: 'Matières',
-                count: summaryData.nb_matieres,
-                icon: 'book'
-            }
-        ];
-
-        items.forEach(item => {
-            const col = document.createElement('div');
-            col.className = 'col-md-3 col-sm-6 mb-3';
-            col.innerHTML = `
-                <div class="card bg-light">
-                    <div class="card-body text-center">
-                        <i class="fas fa-${item.icon} fa-3x mb-3"></i>
-                        <h5 class="card-title">${item.title}</h5>
-                        <h3>${item.count}</h3>
-                    </div>
-                </div>
-            `;
-            row.appendChild(col);
-        });
-
-        summaryContainer.appendChild(row);
-    }
-
-    function displayAdminActivity(activityData) {
-        const activityContainer = document.getElementById('admin-activity-container');
-        if (!activityContainer) return;
-
-        // Clear container
-        activityContainer.innerHTML = '';
-
-        // Check if we have activity
-        if (!activityData || !activityData.activities || activityData.activities.length === 0) {
-            activityContainer.innerHTML = '<div class="alert alert-info">Aucune activité récente.</div>';
-            return;
-        }
-
-        // Create activity list
-        const list = document.createElement('ul');
-        list.className = 'list-group';
-
-        activityData.activities.forEach(activity => {
-            const item = document.createElement('li');
-            item.className = 'list-group-item d-flex justify-content-between align-items-center';
-            item.innerHTML = `
-                <div>
-                    <strong>${activity.user}</strong> ${activity.action}
-                    <small class="text-muted">${activity.target_type}: ${activity.target}</small>
-                </div>
-                <span class="badge bg-primary rounded-pill">${new Date(activity.date).toLocaleString()}</span>
-            `;
-            list.appendChild(item);
-        });
-
-        activityContainer.appendChild(list);
     }
 
     // Handle logout button
@@ -802,70 +284,68 @@ ob_start();
         gap: 10px;
     }
 
-    .user-role {
+    .role-badge {
         padding: 5px 10px;
-        background-color: #007bff;
-        color: white;
-        border-radius: 20px;
-        font-size: 0.8rem;
-    }
-
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 20px;
-        margin-top: 20px;
-    }
-
-    .dashboard-card {
-        background: #fff;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-        text-align: center;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .dashboard-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 7px 15px rgba(0, 0, 0, 0.1);
-    }
-
-    .dashboard-card h3 {
-        margin: 10px 0;
-        color: #333;
-    }
-
-    .dashboard-card p {
-        font-size: 2rem;
+        border-radius: 15px;
+        font-size: 0.9em;
         font-weight: bold;
-        margin: 10px 0 20px;
-        color: var(--primary-color, #007bff);
     }
 
-    .btn {
-        padding: 8px 16px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: bold;
-        display: inline-block;
-        text-decoration: none;
-    }
-
-    .btn-primary {
-        background-color: #007bff;
-        color: white;
-    }
-
-    .btn-danger {
+    .role-badge.admin {
         background-color: #dc3545;
         color: white;
     }
 
-    .btn-secondary {
-        background-color: #6c757d;
+    .role-badge.prof {
+        background-color: #0d6efd;
         color: white;
+    }
+
+    .role-badge.eleve {
+        background-color: #198754;
+        color: white;
+    }
+
+    .dashboard-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .stat-card i {
+        font-size: 2em;
+        color: #0d6efd;
+    }
+
+    .stat-content h3 {
+        margin: 0;
+        font-size: 1.1em;
+        color: #666;
+    }
+
+    .stat-number {
+        margin: 5px 0 0;
+        font-size: 1.5em;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .stat-card.using-fallback {
+        border: 2px solid #ffc107;
+    }
+
+    .stat-card.error {
+        border: 2px solid #dc3545;
     }
 </style>
 
