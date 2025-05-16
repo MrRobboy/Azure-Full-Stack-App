@@ -304,8 +304,13 @@ ob_start();
                     throw new Error(`API method ${apiServiceMethod} not found`);
                 }
             } else {
-                const response = await fetch(getApiEndpoint(endpoint));
-                result = await response.json();
+                // Special handling for admin/users endpoint
+                if (endpoint === 'api/admin/users') {
+                    result = await ApiService.request('api/admin/users', 'GET');
+                } else {
+                    const response = await fetch(getApiEndpoint(endpoint));
+                    result = await response.json();
+                }
             }
 
             if (result.success && result.data) {

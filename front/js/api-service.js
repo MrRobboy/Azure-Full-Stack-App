@@ -37,6 +37,11 @@ const ApiService = (function () {
 			{ id: 1, nom: "Dupont", prenom: "Jean" },
 			{ id: 2, nom: "Martin", prenom: "Marie" },
 			{ id: 3, nom: "Bernard", prenom: "Pierre" }
+		],
+		"admin/users": [
+			{ id: 1, nom: "Admin", prenom: "Super", role: "ADMIN" },
+			{ id: 2, nom: "Prof", prenom: "Test", role: "PROF" },
+			{ id: 3, nom: "Eleve", prenom: "Test", role: "ELEVE" }
 		]
 	};
 
@@ -164,6 +169,18 @@ const ApiService = (function () {
 						status: 200,
 						data: _fallbackData[
 							endpointKey
+						],
+						isFallback: true
+					};
+				}
+
+				// Special handling for admin/users endpoint
+				if (endpoint === "api/admin/users") {
+					return {
+						success: true,
+						status: 200,
+						data: _fallbackData[
+							"admin/users"
 						],
 						isFallback: true
 					};
