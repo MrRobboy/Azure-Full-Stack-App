@@ -392,7 +392,27 @@ const ApiService = (function () {
 		teachers,
 
 		// Generic request method for custom endpoints
-		request: makeRequest
+		request: makeRequest,
+
+		// Direct access to methods for backward compatibility
+		subjects: {
+			getAll: () => makeRequest("api/matieres", "GET"),
+			getById: (id) =>
+				makeRequest(`api/matieres/${id}`, "GET")
+		},
+		classes: {
+			getAll: () => makeRequest("api/classes", "GET"),
+			getById: (id) => makeRequest(`api/classes/${id}`, "GET")
+		},
+		exams: {
+			getAll: () => makeRequest("api/examens", "GET"),
+			getById: (id) => makeRequest(`api/examens/${id}`, "GET")
+		},
+		teachers: {
+			getAll: () => makeRequest("api/professeurs", "GET"),
+			getById: (id) =>
+				makeRequest(`api/professeurs/${id}`, "GET")
+		}
 	};
 })();
 

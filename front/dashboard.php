@@ -240,6 +240,12 @@ ob_start();
         }
     }
 
+    // Function to get API endpoint URL
+    function getApiEndpoint(endpoint) {
+        const baseUrl = 'https://app-backend-esgi-app.azurewebsites.net';
+        return `${baseUrl}/${endpoint}`;
+    }
+
     // Function to load counters in dashboard cards
     async function loadCounters() {
         try {
@@ -259,11 +265,11 @@ ob_start();
 
             // Individual API calls for each entity type to get precise counts
             // Each call is independent to avoid one failure affecting others
-            await fetchCountFor('subjects', 'matieres', matieresCount);
-            await fetchCountFor('classes', 'classes', classesCount);
-            await fetchCountFor('exams', 'examens', examensCount);
-            await fetchCountFor('teachers', 'professeurs', profsCount);
-            await fetchCountFor(null, null, usersCount, null, 'api/admin/users'); // Special case
+            await fetchCountFor('subjects.getAll', 'api/matieres', matieresCount);
+            await fetchCountFor('classes.getAll', 'api/classes', classesCount);
+            await fetchCountFor('exams.getAll', 'api/examens', examensCount);
+            await fetchCountFor('teachers.getAll', 'api/professeurs', profsCount);
+            await fetchCountFor(null, 'api/admin/users', usersCount);
         } catch (error) {
             console.error('Error initializing counters:', error);
             NotificationSystem.error('Erreur lors du chargement des compteurs');
@@ -290,7 +296,13 @@ ob_start();
         try {
             let result;
             if (apiServiceMethod) {
-                result = await ApiService[apiServiceMethod]();
+                // Split the method name to get the object and method
+                const [objectName, methodName] = apiServiceMethod.split('.');
+                if (ApiService[objectName] && typeof ApiService[objectName][methodName] === 'function') {
+                    result = await ApiService[objectName][methodName]();
+                } else {
+                    throw new Error(`API method ${apiServiceMethod} not found`);
+                }
             } else {
                 const response = await fetch(getApiEndpoint(endpoint));
                 result = await response.json();
@@ -337,19 +349,24 @@ ob_start();
             }
 
             // Update user information on the page
-            updateUserInfo(userData);
+            if (userData && userData.user) {
+                updateUserInfo(userData);
 
-            // Load additional data based on user role
-            if (userData.user.role === 'ELEVE' && userData.user.id) {
-                await loadStudentNotes(userData.user.id);
-            }
-            // Load teacher data if we have a teacher ID
-            else if (userData.user.role === 'PROF' && userData.user.id) {
-                await loadTeacherData(userData.user.id);
-            }
-            // Load admin data
-            else if (userData.user.role === 'ADMIN') {
-                await loadAdminDashboard();
+                // Load additional data based on user role
+                if (userData.user.role === 'ELEVE' && userData.user.id) {
+                    await loadStudentNotes(userData.user.id);
+                }
+                // Load teacher data if we have a teacher ID
+                else if (userData.user.role === 'PROF' && userData.user.id) {
+                    await loadTeacherData(userData.user.id);
+                }
+                // Load admin data
+                else if (userData.user.role === 'ADMIN') {
+                    await loadAdminDashboard();
+                }
+            } else {
+                console.error('Invalid user data format:', userData);
+                NotificationSystem.error('Données utilisateur invalides');
             }
 
             // Hide loading indicator
