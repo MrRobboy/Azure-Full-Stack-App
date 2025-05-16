@@ -6,7 +6,7 @@
 // Singleton API Service
 const ApiService = (function () {
 	// Private properties
-	const _corsProxy = "unified-proxy.php"; // Updated to use unified proxy
+	const _corsProxy = "unified-proxy.php";
 	const _matieresProxy = "matieres-proxy.php"; // Dedicated matières proxy
 	const _directLoginPath = "unified-login.php";
 	const _directDataProxy = "direct-matieres.php"; // Direct data fallback
@@ -60,6 +60,9 @@ const ApiService = (function () {
 		options = {}
 	) {
 		console.log(`Making ${method} request to: ${endpoint}`);
+		if (data) {
+			console.log("Request data:", data);
+		}
 
 		const requestOptions = {
 			method: method,
@@ -78,109 +81,49 @@ const ApiService = (function () {
 		}
 
 		try {
-			// Try each proxy method in sequence until one works
-			let response, result;
+			const proxyUrl = `${_corsProxy}?endpoint=${encodeURIComponent(
+				endpoint
+			)}`;
+			console.log(`Using proxy URL: ${proxyUrl}`);
 
-			// Method 1: Special handling for matieres endpoint
-			if (endpoint.includes("matieres")) {
-				try {
-					const matieresProxyUrl = `${_matieresProxy}?endpoint=${encodeURIComponent(
-						endpoint
-					)}`;
-					console.log(
-						`Using special matieres proxy URL: ${matieresProxyUrl}`
-					);
-					response = await fetch(
-						matieresProxyUrl,
-						requestOptions
-					);
+			const response = await fetch(proxyUrl, requestOptions);
+			console.log(
+				`Response status: ${response.status} for ${endpoint}`
+			);
 
-					if (response.ok) {
-						return handleResponse(
-							response,
-							endpoint
-						);
-					}
-					console.warn(
-						"Matieres proxy failed, trying unified proxy"
-					);
-				} catch (matieresError) {
-					console.warn(
-						"Matieres proxy error:",
-						matieresError.message
-					);
-				}
-			}
+			const contentType =
+				response.headers.get("content-type");
+			console.log(`Response content-type: ${contentType}`);
 
-			// Method 2: Try using our unified CORS proxy
-			try {
-				const proxyUrl = `${_corsProxy}?endpoint=${encodeURIComponent(
-					endpoint
-				)}`;
+			if (
+				contentType &&
+				contentType.includes("application/json")
+			) {
+				const jsonData = await response.json();
 				console.log(
-					`Using unified proxy URL: ${proxyUrl}`
+					`Response data for ${endpoint}:`,
+					jsonData
 				);
-				response = await fetch(
-					proxyUrl,
-					requestOptions
-				);
-
-				if (response.ok) {
-					return handleResponse(
-						response,
-						endpoint
-					);
-				}
-				console.warn(
-					"Unified proxy failed, trying direct data fallback"
-				);
-			} catch (proxyError) {
-				console.warn(
-					"Unified proxy error:",
-					proxyError.message
-				);
-			}
-
-			// Method 3: Last resort - try direct data fallback
-			try {
-				const directUrl = `${_directDataProxy}?endpoint=${encodeURIComponent(
-					endpoint
-				)}`;
+				return {
+					success: response.ok,
+					status: response.status,
+					data: jsonData
+				};
+			} else {
+				const textData = await response.text();
 				console.log(
-					`Using direct data fallback: ${directUrl}`
+					`Non-JSON response from ${endpoint}:`,
+					textData
 				);
-				response = await fetch(
-					directUrl,
-					requestOptions
-				);
-				const result = await handleResponse(
-					response,
-					endpoint
-				);
-
-				// If direct proxy fails or returns an error, use fallback data
-				if (
-					!result.success ||
-					result.message?.includes(
-						"non pris en charge"
-					)
-				) {
-					console.warn(
-						"Direct proxy failed or unsupported endpoint, using fallback data"
-					);
-					return getFallbackData(endpoint);
-				}
-
-				return result;
-			} catch (directError) {
-				console.warn(
-					"All proxy methods failed, using fallback data"
-				);
-				return getFallbackData(endpoint);
+				return {
+					success: response.ok,
+					status: response.status,
+					data: textData
+				};
 			}
 		} catch (error) {
-			console.error("Request failed:", error);
-			return getFallbackData(endpoint);
+			console.error(`Request failed for ${endpoint}:`, error);
+			throw error;
 		}
 	}
 
@@ -303,31 +246,10 @@ const ApiService = (function () {
 	 */
 	async function login(email, password) {
 		console.log(`Attempting login for: ${email}`);
-
-		try {
-			const response = await fetch(_directLoginPath, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Accept: "application/json"
-				},
-				body: JSON.stringify({ email, password })
-			});
-
-			const data = await response.json();
-			return {
-				success: data.success,
-				data: data,
-				status: response.status
-			};
-		} catch (error) {
-			console.error("Login error:", error);
-			return {
-				success: false,
-				error: error.message,
-				status: 0
-			};
-		}
+		return makeRequest("api/auth/login", "POST", {
+			email,
+			password
+		});
 	}
 
 	/**
@@ -343,6 +265,7 @@ const ApiService = (function () {
 	 * @returns {Promise} - User profile data
 	 */
 	async function getCurrentUser() {
+		console.log("Getting current user profile...");
 		return makeRequest("api/user/profile", "GET");
 	}
 

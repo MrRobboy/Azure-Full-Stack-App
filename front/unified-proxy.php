@@ -17,10 +17,10 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 // Set CORS headers
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-header('Content-Type: application/json');
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Content-Type: application/json; charset=UTF-8");
 
 // Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -28,10 +28,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 	exit();
 }
 
-// Get the endpoint from the query string
-$endpoint = $_GET['endpoint'] ?? '';
+// Get the endpoint from query string
+$endpoint = isset($_GET['endpoint']) ? $_GET['endpoint'] : '';
+error_log("Received request for endpoint: " . $endpoint);
+
 if (empty($endpoint)) {
+	error_log("No endpoint provided in request");
 	http_response_code(400);
+	echo json_encode(['error' => 'No endpoint provided']);
 	echo json_encode([
 		'success' => false,
 		'error' => 'No endpoint specified',
