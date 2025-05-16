@@ -226,22 +226,85 @@ ob_start();
 
 	// Fonction pour charger les matières
 	async function loadMatieres() {
-		try {
-			console.log('Chargement des matières...');
-			const response = await fetch(getApiEndpoint('matieres'));
-			const result = await response.json();
-			console.log('Résultat matières:', result);
+		console.log('Chargement des matières...');
+		const fallbackData = [{
+				id_matiere: 1,
+				nom: "Mathématiques"
+			},
+			{
+				id_matiere: 2,
+				nom: "Français"
+			},
+			{
+				id_matiere: 3,
+				nom: "Anglais"
+			},
+			{
+				id_matiere: 4,
+				nom: "Histoire-Géographie"
+			},
+			{
+				id_matiere: 16,
+				nom: "Docker"
+			},
+			{
+				id_matiere: 17,
+				nom: "Azure"
+			}
+		];
 
-			if (!result.success) {
-				throw new Error(result.error || ErrorMessages.GENERAL.SERVER_ERROR);
+		try {
+			// First try using the special matieres-proxy
+			let response, result;
+
+			try {
+				console.log('Tentative avec matieres-proxy.php...');
+				response = await fetch('matieres-proxy.php');
+				result = await response.json();
+				console.log('Résultat avec matieres-proxy:', result);
+			} catch (proxyError) {
+				console.log('Échec avec matieres-proxy, utilisation du proxy unifié');
+
+				// Use the unified proxy
+				response = await fetch(getApiEndpoint('matieres'));
+				result = await response.json();
+				console.log('Résultat matières avec unified-proxy:', result);
 			}
 
+			// Check for valid response format
+			if (!result || typeof result !== 'object') {
+				console.error('Format de réponse invalide:', result);
+				throw new Error(ErrorMessages.GENERAL.INVALID_RESPONSE);
+			}
+
+			// Check for empty data array
+			if (!result.data || !Array.isArray(result.data)) {
+				console.warn('Données manquantes ou format invalide, utilisation des données de secours');
+
+				// Use fallback data if the response doesn't contain a data array
+				result = {
+					success: true,
+					data: fallbackData,
+					message: 'Utilisation des données de secours (format de réponse invalide)',
+					is_fallback: true
+				};
+
+				// Show a notification
+				NotificationSystem.warning('Utilisation des données de secours (format de réponse invalide)');
+			}
+
+			// Populate the table
 			const tbody = document.querySelector('#matieresTable tbody');
 			tbody.innerHTML = '';
 
-			if (!result.data || result.data.length === 0) {
+			if (result.data.length === 0) {
 				tbody.innerHTML = '<tr><td colspan="2">Aucune matière trouvée</td></tr>';
 				return;
+			}
+
+			// If fallback was used, show a notification
+			if (result.is_fallback) {
+				NotificationSystem.info('Données de secours utilisées: ' + (result.message || 'API non disponible'));
 			}
 
 			result.data.forEach(matiere => {
@@ -257,7 +320,25 @@ ob_start();
 			});
 		} catch (error) {
 			console.error('Erreur lors du chargement des matières:', error);
-			NotificationSystem.error(error.message);
+			NotificationSystem.error('Erreur: ' + error.message);
+
+			// Show fallback data in case of error
+			const tbody = document.querySelector('#matieresTable tbody');
+			tbody.innerHTML = '';
+
+			fallbackData.forEach(matiere => {
+				const tr = document.createElement('tr');
+				tr.innerHTML = `
+					<td>${matiere.nom}</td>
+					<td>
+						<button class="btn btn-edit" onclick="editMatiere(${matiere.id_matiere}, '${matiere.nom}')">Modifier</button>
+						<button class="btn btn-danger" onclick="deleteMatiere(${matiere.id_matiere})">Supprimer</button>
+					</td>
+				`;
+				tbody.appendChild(tr);
+			});
+
+			NotificationSystem.warning('Affichage des données de secours suite à une erreur. Fonctionnalités limitées.');
 		}
 	}
 
