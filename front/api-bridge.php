@@ -65,12 +65,21 @@ curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 curl_setopt($ch, CURLOPT_TIMEOUT, 10); // 10-second timeout
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Disable SSL verification (not recommended for production)
+curl_setopt($ch, CURLOPT_VERBOSE, true); // Enable verbose output
+
+// Create a temporary file handle for CURL debug output
+$verbose = fopen('php://temp', 'w+');
+curl_setopt($ch, CURLOPT_STDERR, $verbose);
 
 // Set request method
 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
 
 // Add request headers
-$headers = ['Content-Type: application/json'];
+$headers = [
+	'Content-Type: application/json',
+	'Accept: application/json',
+	'X-Requested-With: XMLHttpRequest'
+];
 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
 // Add request body for POST, PUT, PATCH
@@ -112,8 +121,19 @@ $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 $error = curl_error($ch);
 $errorCode = curl_errno($ch);
 
+// Get verbose debug information
+rewind($verbose);
+$verboseLog = stream_get_contents($verbose);
+error_log("CURL Verbose Log: " . $verboseLog);
+
 // Close cURL resource
 curl_close($ch);
+fclose($verbose);
+
+// Log detailed response information
+error_log("Response HTTP Code: " . $httpCode);
+error_log("Response Content-Type: " . $contentType);
+error_log("Response Body: " . $response);
 
 // Handle cURL errors
 if ($errorCode > 0) {
@@ -128,8 +148,6 @@ if ($errorCode > 0) {
 
 // Forward the response
 http_response_code($httpCode);
-error_log("Response code: " . $httpCode);
-error_log("Response body: " . $response);
 echo $response;
 exit;
 
@@ -190,7 +208,13 @@ function sendErrorResponse($message, $code = 500)
 	echo json_encode([
 		'success' => false,
 		'error' => $message,
-		'source' => 'api-bridge.php'
+		'source' => 'api-bridge.php',
+		'debug' => [
+			'endpoint' => $endpoint ?? null,
+			'method' => $method ?? null,
+			'requestBody' => $requestBody ?? null,
+			'targetUrl' => $targetUrl ?? null
+		]
 	]);
 }
 
