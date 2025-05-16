@@ -12,7 +12,7 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 // Set headers for CORS and JSON response
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=UTF-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
@@ -25,14 +25,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Get the target endpoint from query parameter
 $endpoint = isset($_GET['endpoint']) ? $_GET['endpoint'] : '';
+error_log("Received request for endpoint: " . $endpoint);
 
 if (empty($endpoint)) {
+	error_log("No endpoint provided in request");
 	sendErrorResponse('No endpoint specified', 400);
 	exit;
 }
 
 // Backend API base URL
-$backendBaseUrl = 'https://app-backend-esgi-app.azurewebsites.net';
+$backendBaseUrl = 'https://app-backend-esgi-app.azurewebsites.net/api';
 
 // Build the full target URL
 $targetUrl = $backendBaseUrl;
@@ -43,10 +45,16 @@ if (!str_starts_with($endpoint, '/') && !str_ends_with($backendBaseUrl, '/')) {
 }
 
 $targetUrl .= $endpoint;
+error_log("Making request to: " . $targetUrl);
 
 // Get request method and body
 $method = $_SERVER['REQUEST_METHOD'];
+error_log("Request method: " . $method);
+
 $requestBody = file_get_contents('php://input');
+if ($requestBody) {
+	error_log("Request body: " . $requestBody);
+}
 
 // Create a new cURL resource
 $ch = curl_init();
@@ -109,6 +117,7 @@ curl_close($ch);
 
 // Handle cURL errors
 if ($errorCode > 0) {
+	error_log("cURL error: " . $error . " (code: " . $errorCode . ")");
 	// Try to use direct-matieres.php as fallback for some endpoints
 	tryFallbackEndpoint($endpoint, $method, $requestBody);
 
@@ -119,6 +128,8 @@ if ($errorCode > 0) {
 
 // Forward the response
 http_response_code($httpCode);
+error_log("Response code: " . $httpCode);
+error_log("Response body: " . $response);
 echo $response;
 exit;
 
@@ -135,6 +146,7 @@ function getSessionUser()
 // Helper function to try fallback endpoint
 function tryFallbackEndpoint($endpoint, $method, $requestBody)
 {
+	error_log("Trying fallback endpoint for: " . $endpoint);
 	// Check if the endpoint is one we can handle with our direct provider
 	if (
 		strpos($endpoint, 'matieres') !== false ||
@@ -142,9 +154,9 @@ function tryFallbackEndpoint($endpoint, $method, $requestBody)
 		strpos($endpoint, 'examens') !== false ||
 		strpos($endpoint, 'professeurs') !== false
 	) {
-
 		// Redirect to our direct data provider
 		$fallbackUrl = "direct-matieres.php?endpoint=" . urlencode($endpoint);
+		error_log("Using fallback URL: " . $fallbackUrl);
 
 		// Execute a local request to our fallback
 		$ch = curl_init();
@@ -173,6 +185,7 @@ function tryFallbackEndpoint($endpoint, $method, $requestBody)
 // Helper function to send error response
 function sendErrorResponse($message, $code = 500)
 {
+	error_log("Error response: " . $message . " (code: " . $code . ")");
 	http_response_code($code);
 	echo json_encode([
 		'success' => false,

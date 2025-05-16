@@ -6,7 +6,7 @@
 // Singleton API Service
 const ApiService = (function () {
 	// Private properties
-	const _corsProxy = "unified-proxy.php";
+	const _corsProxy = window.appConfig?.proxyUrl || "unified-proxy.php";
 	const _matieresProxy = "matieres-proxy.php"; // Dedicated matières proxy
 	const _directLoginPath = "unified-login.php";
 	const _directDataProxy = "direct-matieres.php"; // Direct data fallback

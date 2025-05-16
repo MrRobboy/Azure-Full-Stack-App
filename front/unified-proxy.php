@@ -36,31 +36,24 @@ if (empty($endpoint)) {
 	error_log("No endpoint provided in request");
 	http_response_code(400);
 	echo json_encode(['error' => 'No endpoint provided']);
-	echo json_encode([
-		'success' => false,
-		'error' => 'No endpoint specified',
-		'message' => 'Please provide an endpoint in the query string'
-	]);
 	exit();
 }
 
 // Base URL for the backend API
-$baseUrl = 'https://app-backend-esgi-app.azurewebsites.net';
+$baseUrl = 'https://app-backend-esgi-app.azurewebsites.net/api';
 
 // Construct the full URL
 $url = $baseUrl . '/' . $endpoint;
-
-// Log the request for debugging
-error_log("Proxy request to: " . $url);
+error_log("Making request to: " . $url);
 
 // Get the request method
 $method = $_SERVER['REQUEST_METHOD'];
+error_log("Request method: " . $method);
 
 // Initialize cURL
-$ch = curl_init();
+$ch = curl_init($url);
 
 // Set cURL options
-curl_setopt($ch, CURLOPT_URL, $url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
 
@@ -73,27 +66,26 @@ foreach ($headers as $key => $value) {
 	}
 }
 curl_setopt($ch, CURLOPT_HTTPHEADER, $forwardHeaders);
+error_log("Forwarding headers: " . json_encode($forwardHeaders));
 
-// Forward request body for POST, PUT, etc.
+// Forward request body for POST, PUT, PATCH
 if (in_array($method, ['POST', 'PUT', 'PATCH'])) {
 	$input = file_get_contents('php://input');
+	error_log("Request body: " . $input);
 	curl_setopt($ch, CURLOPT_POSTFIELDS, $input);
 }
 
 // Execute the request
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+error_log("Response code: " . $httpCode);
 
-// Check for cURL errors
-if (curl_errno($ch)) {
+if ($response === false) {
 	$error = curl_error($ch);
-	error_log("cURL Error for endpoint $endpoint: " . $error);
-
+	error_log("cURL error: " . $error);
 	http_response_code(500);
 	echo json_encode([
-		'success' => false,
-		'error' => 'API Connection Error',
-		'message' => 'Could not connect to the backend API',
+		'error' => 'Failed to connect to API',
 		'details' => $error
 	]);
 	exit();
@@ -102,11 +94,7 @@ if (curl_errno($ch)) {
 // Close cURL
 curl_close($ch);
 
-// Log the response for debugging
-error_log("API Response for $endpoint: " . substr($response, 0, 200) . "...");
-
-// Set the response code
-http_response_code($httpCode);
-
 // Forward the response
+http_response_code($httpCode);
+error_log("Response body: " . $response);
 echo $response;
