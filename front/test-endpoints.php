@@ -15,8 +15,21 @@ $api_base_url = 'https://app-backend-esgi-app.azurewebsites.net';
 
 // Liste des endpoints à tester
 $endpoints_to_test = [
-	// Endpoints standards d'authentification
+	// Endpoints confirmés dans le backend (api.php)
 	'api/auth/login',
+	'api/auth/check-credentials',
+	'api/status',
+	'api/auth/user',
+	'api/notes',
+	'api/matieres',
+	'api/classes',
+	'api/classes/eleves/1',
+	'api/examens',
+	'api/profs',
+	'api/users',
+	'api/privileges',
+
+	// Autres endpoints alternatifs à tester
 	'api/login',
 	'auth/login',
 	'login',
@@ -24,18 +37,10 @@ $endpoints_to_test = [
 	'api/user/login',
 	'api/v1/auth/login',
 	'api/authenticate',
-
-	// Endpoints standards d'API
-	'api/status',
-	'status',
 	'api/health',
 	'health',
 	'api/version',
 	'version',
-
-	// Endpoints divers
-	'api/users',
-	'users',
 	'api/products',
 	'products'
 ];

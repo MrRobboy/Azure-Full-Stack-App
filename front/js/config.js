@@ -176,7 +176,12 @@ async function handlePostRequest(endpoint, data, options = {}) {
 
 		// Liste des endpoints d'authentification potentiels à essayer
 		const authEndpoints = [
-			"api/auth/login",
+			// Commencer par les endpoints qui fonctionnent selon les tests
+			"api/auth/login", // Endpoint principal (API conforme)
+			"api/auth/check-credentials", // Endpoint GET alternatif (vérifié fonctionnel)
+			"api/status", // Endpoint de statut (pour tester la connexion)
+
+			// Essayer d'autres alternatives si les premières échouent
 			"api/login",
 			"auth/login",
 			"login",
@@ -185,7 +190,43 @@ async function handlePostRequest(endpoint, data, options = {}) {
 			"api/authenticate"
 		];
 
-		// Essayer direct-login.php en premier (solution la plus fiable)
+		// Essayer d'abord avec GET auth/check-credentials, qui est connu pour fonctionner
+		try {
+			console.log("Essai avec GET auth/check-credentials...");
+			const params = new URLSearchParams({
+				email: data.email || "",
+				password: data.password || ""
+			});
+
+			const checkCredsResponse = await fetch(
+				`${
+					appConfig.backendBaseUrl
+				}/api/auth/check-credentials?${params.toString()}`,
+				{
+					method: "GET",
+					headers: {
+						Accept: "application/json",
+						"X-MS-REQUEST-ID": `${Date.now()}-${Math.random()
+							.toString(36)
+							.substr(2, 9)}`
+					}
+				}
+			);
+
+			if (checkCredsResponse.ok) {
+				console.log(
+					"GET auth/check-credentials a fonctionné!"
+				);
+				return checkCredsResponse;
+			}
+		} catch (e) {
+			console.warn(
+				"Échec avec GET auth/check-credentials:",
+				e
+			);
+		}
+
+		// Essayer direct-login.php en deuxième (solution confirmée fonctionnelle)
 		try {
 			console.log("Essai avec direct-login.php...");
 			const directLoginResponse = await fetch(
@@ -856,3 +897,69 @@ window.appConfig = appConfig;
 window.getApiUrl = getApiUrl;
 window.getBackendUrl = getBackendUrl;
 window.getFullUrl = getFullUrl;
+
+// Fonction pour détecter l'URL du backend
+async function detectBackendUrl() {
+	console.log("Détection de l'URL du backend en cours...");
+
+	// Liste des URL de backend potentielles
+	const possibleBackends = [
+		"https://app-backend-esgi-app.azurewebsites.net",
+		"https://api-backend-esgi-app.azurewebsites.net",
+		"https://backend-esgi-app.azurewebsites.net",
+		"https://esgi-app-backend.azurewebsites.net",
+
+		// Même sous-domaine
+		`${
+			window.location.protocol
+		}//${window.location.hostname.replace("frontend", "backend")}`,
+
+		// Même domaine, sous-domaine différent
+		`${window.location.protocol}//api.${window.location.hostname
+			.split(".")
+			.slice(1)
+			.join(".")}`,
+
+		// URL locale pour le développement
+		"http://localhost:3000",
+		"http://localhost:8000"
+	];
+
+	// URL testées
+	const testedUrls = {};
+
+	// Tester chaque backend potentiel
+	for (const backendUrl of possibleBackends) {
+		try {
+			console.log(`Test du backend: ${backendUrl}`);
+
+			// Tester avec /status.php d'abord (détecté comme fonctionnel dans les tests)
+			const statusResponse = await fetch(
+				`${backendUrl}/status.php`,
+				{
+					method: "GET",
+					headers: {
+						Accept: "application/json"
+					},
+					mode: "no-cors" // Pour éviter les erreurs CORS pendant la détection
+				}
+			);
+
+			testedUrls[backendUrl] = statusResponse.status;
+
+			// Si une réponse est reçue (même no-cors retourne une réponse opaque)
+			if (statusResponse) {
+				console.log(`Backend trouvé: ${backendUrl}`);
+				appConfig.backendBaseUrl = backendUrl;
+				appConfig.apiBaseUrl = `${backendUrl}/api`;
+				return true;
+			}
+		} catch (e) {
+			console.warn(`Échec avec ${backendUrl}:`, e.message);
+			testedUrls[backendUrl] = "error";
+		}
+	}
+
+	console.error("Aucun backend détecté! URLs testées:", testedUrls);
+	return false;
+}

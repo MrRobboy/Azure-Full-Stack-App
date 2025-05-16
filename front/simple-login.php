@@ -36,13 +36,49 @@ if (isset($_GET['email']) && isset($_GET['password'])) {
 	error_log("Login attempt for email: " . $email);
 
 	// Configuration du backend
-	$api_url = 'https://app-backend-esgi-app.azurewebsites.net/api/auth/login';
+	$api_base_url = 'https://app-backend-esgi-app.azurewebsites.net';
+	$login_endpoint = '/api/auth/login';
+	$fallback_endpoint = '/api/auth/check-credentials';
 
 	// Données à envoyer
 	$data = [
 		'email' => $email,
 		'password' => $password
 	];
+
+	// NOUVELLE APPROCHE: Essayer d'abord avec le endpoint GET authentifié
+	try {
+		error_log("Tentative avec l'endpoint GET authentifié: " . $fallback_endpoint);
+		$get_auth_url = $api_base_url . $fallback_endpoint . '?email=' . urlencode($email) . '&password=' . urlencode($password);
+
+		// Utiliser cURL pour la requête GET
+		$ch = curl_init($get_auth_url);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+
+		$response = curl_exec($ch);
+		$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		$curl_error = curl_error($ch);
+		curl_close($ch);
+
+		if ($response && $http_code >= 200 && $http_code < 300) {
+			$result = json_decode($response, true);
+			error_log("GET auth response: " . json_encode($result));
+
+			if ($result && isset($result['token'])) {
+				error_log("GET authentication successful!");
+				// Pas besoin d'essayer les autres méthodes
+				goto process_result;
+			}
+		} else {
+			error_log("GET auth failed: HTTP " . $http_code . ", Error: " . $curl_error);
+		}
+	} catch (Exception $e) {
+		error_log("Exception during GET auth: " . $e->getMessage());
+	}
+
+	// Fallback to normal POST methods if GET auth failed
+	$api_url = $api_base_url . $login_endpoint;
 
 	// Essayer d'abord avec file_get_contents (méthode 1)
 	try {
@@ -93,6 +129,7 @@ if (isset($_GET['email']) && isset($_GET['password'])) {
 		error_log("Exception during login: " . $e->getMessage());
 	}
 
+	process_result:
 	// Si on a un résultat mais pas de token, c'est une erreur
 	if ($result && !isset($result['token'])) {
 		$error = isset($result['message']) ? $result['message'] : "Identifiants incorrects";
@@ -131,6 +168,9 @@ if ($wantJson) {
 	]);
 	exit;
 }
+
+// Vérifier si on est dans une boucle de redirection
+$is_loop = isset($_GET['redirected']) && $_GET['redirected'] === 'true';
 
 // Sinon, afficher le formulaire HTML
 ?>
@@ -226,6 +266,33 @@ if ($wantJson) {
 			text-decoration: none;
 			margin: 0 10px;
 		}
+
+		.warning-box {
+			background-color: #fff3e0;
+			border: 1px solid #ffcc80;
+			padding: 10px;
+			border-radius: 4px;
+			margin-bottom: 20px;
+			font-size: 14px;
+			color: #e65100;
+		}
+
+		.button-secondary {
+			background-color: #757575;
+			color: white;
+			border: none;
+			padding: 10px;
+			border-radius: 4px;
+			cursor: pointer;
+			font-weight: bold;
+			text-decoration: none;
+			display: inline-block;
+			margin-top: 10px;
+		}
+
+		.button-secondary:hover {
+			background-color: #616161;
+		}
 	</style>
 </head>
 
@@ -233,16 +300,25 @@ if ($wantJson) {
 	<div class="login-container">
 		<h1>Connexion Simplifiée</h1>
 
-		<div class="info-box">
-			<strong>Note importante:</strong> Cette page utilise une méthode de connexion simplifiée
-			pour contourner les problèmes de requêtes POST sur Azure. Ne pas utiliser en production.
-		</div>
+		<?php if ($is_loop): ?>
+			<div class="warning-box">
+				<strong>Attention!</strong> Vous semblez être dans une boucle de redirection.
+				<p>Le backend ne semble pas configuré correctement ou l'URL d'authentification est incorrecte.</p>
+				<a href="login.php" class="button-secondary">Retourner à la page de connexion principale</a>
+			</div>
+		<?php else: ?>
+			<div class="info-box">
+				<strong>Note importante:</strong> Cette page utilise une méthode de connexion simplifiée
+				pour contourner les problèmes de requêtes POST sur Azure. Ne pas utiliser en production.
+			</div>
+		<?php endif; ?>
 
 		<?php if ($error): ?>
 			<div class="error"><?php echo htmlspecialchars($error); ?></div>
 		<?php endif; ?>
 
 		<form method="GET" action="simple-login.php">
+			<input type="hidden" name="redirected" value="true">
 			<div class="form-group">
 				<label for="email">Email</label>
 				<input type="email" id="email" name="email" required>
@@ -260,6 +336,20 @@ if ($wantJson) {
 			<a href="login.php">Connexion standard</a>
 			<a href="index.php">Accueil</a>
 		</div>
+
+		<?php if ($is_loop): ?>
+			<div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #ddd;">
+				<h3>Diagnostic</h3>
+				<p>L'API backend ne répond pas correctement. Vérifiez les points suivants:</p>
+				<ul>
+					<li>Le backend est bien déployé et en fonctionnement</li>
+					<li>L'URL du backend est correcte: <code><?php echo htmlspecialchars($api_url); ?></code></li>
+					<li>L'endpoint d'authentification existe sur le backend</li>
+					<li>Les requêtes CORS sont bien configurées</li>
+				</ul>
+				<p><a href="test-endpoints.php" target="_blank">Voir l'outil de diagnostic des endpoints</a></p>
+			</div>
+		<?php endif; ?>
 	</div>
 </body>
 

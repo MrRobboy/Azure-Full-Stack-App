@@ -50,6 +50,10 @@ $query_string = $_SERVER['QUERY_STRING'];
 // Remove endpoint parameter from query string
 $query_string = preg_replace('/(&|\?)endpoint=[^&]*/', '', $query_string);
 
+// Special handling for auth requests to try multiple approaches
+$is_auth_request = (strpos($endpoint, 'auth/login') !== false ||
+	strpos($endpoint, 'login') !== false);
+
 // Check if endpoint is provided
 if (empty($endpoint)) {
 	http_response_code(400);
@@ -64,13 +68,52 @@ if (empty($endpoint)) {
 // Log the request if enabled
 if ($log_requests) {
 	error_log(sprintf(
-		"[%s] API Bridge request: Endpoint=%s, Method=%s",
+		"[%s] API Bridge request: Endpoint=%s, Method=%s, IsAuth=%s",
 		date('Y-m-d H:i:s'),
 		$endpoint,
-		$_SERVER['REQUEST_METHOD']
+		$_SERVER['REQUEST_METHOD'],
+		$is_auth_request ? 'yes' : 'no'
 	));
 }
 
+// For auth requests, we'll try both the POST and GET methods
+if ($is_auth_request && $_SERVER['REQUEST_METHOD'] === 'POST') {
+	// Get the JSON data
+	$auth_data = json_decode(file_get_contents('php://input'), true);
+
+	if (!empty($auth_data) && isset($auth_data['email']) && isset($auth_data['password'])) {
+		error_log("Auth request detected, trying multiple methods");
+
+		// Try GET auth/check-credentials first (known working endpoint)
+		$get_auth_url = $api_base_url . '/api/auth/check-credentials?email=' .
+			urlencode($auth_data['email']) .
+			'&password=' . urlencode($auth_data['password']);
+
+		error_log("Trying GET auth endpoint: " . $get_auth_url);
+
+		$ch = curl_init($get_auth_url);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+
+		$response = curl_exec($ch);
+		$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		curl_close($ch);
+
+		if ($response && $http_code >= 200 && $http_code < 300) {
+			$result = json_decode($response, true);
+
+			if ($result && isset($result['token'])) {
+				error_log("GET auth/check-credentials succeeded!");
+				echo $response;
+				exit;
+			}
+		}
+
+		error_log("GET auth method didn't work, continuing with standard method");
+	}
+}
+
+// Proceed with normal request handling
 // Construct API URL
 $api_url = $api_base_url;
 if (strpos($endpoint, 'http') === 0) {

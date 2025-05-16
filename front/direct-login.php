@@ -225,12 +225,16 @@ $result = try_multiple_request_methods($login_url, $json_data);
 if (!$result['success']) {
 	error_log("Toutes les méthodes ont échoué avec l'URL principale, essai avec des chemins alternatifs");
 
-	// Essai avec des chemins alternatifs pour l'endpoint d'authentification
+	// Liste des endpoints d'authentification alternatifs à essayer, dans l'ordre de priorité
 	$alternative_endpoints = [
+		// Endpoints qui devraient fonctionner selon les routes définies dans api.php
+		'/api/auth/check-credentials', // Endpoint GET spécial pour vérification (voir api.php)
+		'/api/status', // Route de statut qui devrait fonctionner
+
+		// Autres tentatives (moins prioritaires)
 		'/api/login',
 		'/auth/login',
 		'/login',
-		'/user/login',
 		'/api/user/login',
 		'/api/v1/auth/login',
 		'/api/authenticate'
@@ -239,6 +243,44 @@ if (!$result['success']) {
 	foreach ($alternative_endpoints as $alt_endpoint) {
 		error_log("Essai avec l'endpoint alternatif: " . $alt_endpoint);
 		$alt_url = $api_base_url . $alt_endpoint;
+
+		// Si c'est l'endpoint de vérification par GET, utiliser une approche spéciale
+		if ($alt_endpoint === '/api/auth/check-credentials') {
+			error_log("Tentative avec GET auth/check-credentials comme solution de secours");
+
+			// Construire l'URL avec les paramètres
+			$check_url = $alt_url . '?email=' . urlencode($json_data['email']) . '&password=' . urlencode($json_data['password']);
+
+			// Tentative avec GET
+			$ch = curl_init($check_url);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($ch, CURLOPT_HTTPGET, true);
+			curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+
+			$response = curl_exec($ch);
+			$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+			$curl_error = curl_error($ch);
+			curl_close($ch);
+
+			if ($response && $http_code >= 200 && $http_code < 300) {
+				$json_response = json_decode($response, true);
+				if ($json_response && isset($json_response['token'])) {
+					error_log("Endpoint GET auth/check-credentials a fonctionné!");
+					$result = [
+						'success' => true,
+						'method' => 'get_check_credentials',
+						'status' => $http_code,
+						'response' => $json_response
+					];
+					break;
+				}
+			}
+
+			error_log("Échec avec GET auth/check-credentials: HTTP $http_code, Erreur: $curl_error");
+			continue;
+		}
+
+		// Pour les autres endpoints, utiliser l'approche standard
 		$alt_result = try_multiple_request_methods($alt_url, $json_data);
 
 		if ($alt_result['success']) {

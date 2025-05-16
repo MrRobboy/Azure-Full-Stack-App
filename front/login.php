@@ -222,6 +222,7 @@ ob_start();
 				<li><a href="simple-login.php">Connexion par méthode GET</a> (contournement des limitations POST)</li>
 				<li><a href="post-test.php" target="_blank">Test POST</a> (diagnostic des méthodes HTTP)</li>
 				<li><a href="test-endpoints.php" target="_blank">Test des endpoints API</a> (identification des URLs valides)</li>
+				<li><a href="backend-check.php" target="_blank">Diagnostic du backend</a> (analyse de la structure et de l'accessibilité)</li>
 			</ul>
 		</div>
 	</div>
