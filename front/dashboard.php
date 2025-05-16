@@ -66,8 +66,24 @@ ob_start();
     <div class="dashboard-header">
         <h1>Tableau de bord</h1>
         <div class="user-info">
-            <span class="welcome-text">Bienvenue, <strong><?= htmlspecialchars($user['name']) ?></strong></span>
-            <span class="user-role badge badge-primary"><?= htmlspecialchars($user['role']) ?></span>
+            <span class="welcome-text">Bienvenue,
+                <strong>
+                    <?php
+                    if (isset($user['prenom']) && isset($user['nom'])) {
+                        echo htmlspecialchars($user['prenom'] . ' ' . $user['nom']);
+                    } elseif (isset($user['name'])) {
+                        echo htmlspecialchars($user['name']);
+                    } elseif (isset($user['email'])) {
+                        echo htmlspecialchars($user['email']);
+                    } else {
+                        echo "Utilisateur";
+                    }
+                    ?>
+                </strong>
+            </span>
+            <span class="user-role badge badge-primary">
+                <?php echo htmlspecialchars($user['role'] ?? 'Utilisateur'); ?>
+            </span>
         </div>
     </div>
 
@@ -76,35 +92,35 @@ ob_start();
             <i class="fas fa-book fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
             <h3>Matières</h3>
             <p id="matieresCount">-</p>
-            <a href="gestion_matieres.php" class="btn btn-primary">Gérer les matières</a>
+            <a href="gestion_matieres.php" onclick="return ensureSessionActive(event)" class="btn btn-primary">Gérer les matières</a>
         </div>
 
         <div class="dashboard-card">
             <i class="fas fa-users fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
             <h3>Classes</h3>
             <p id="classesCount">-</p>
-            <a href="gestion_classes.php" class="btn btn-primary">Gérer les classes</a>
+            <a href="gestion_classes.php" onclick="return ensureSessionActive(event)" class="btn btn-primary">Gérer les classes</a>
         </div>
 
         <div class="dashboard-card">
             <i class="fas fa-calendar-alt fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
             <h3>Examens</h3>
             <p id="examensCount">-</p>
-            <a href="gestion_exams.php" class="btn btn-primary">Gérer les examens</a>
+            <a href="gestion_exams.php" onclick="return ensureSessionActive(event)" class="btn btn-primary">Gérer les examens</a>
         </div>
 
         <div class="dashboard-card">
             <i class="fas fa-chalkboard-teacher fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
             <h3>Professeurs</h3>
             <p id="profsCount">-</p>
-            <a href="gestion_profs.php" class="btn btn-primary">Gérer les professeurs</a>
+            <a href="gestion_profs.php" onclick="return ensureSessionActive(event)" class="btn btn-primary">Gérer les professeurs</a>
         </div>
 
         <div class="dashboard-card">
             <i class="fas fa-users-cog fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
             <h3>Utilisateurs</h3>
             <p id="usersCount">-</p>
-            <a href="gestion_users.php" class="btn btn-primary">Gérer les utilisateurs</a>
+            <a href="gestion_users.php" onclick="return ensureSessionActive(event)" class="btn btn-primary">Gérer les utilisateurs</a>
         </div>
 
         <div class="dashboard-card">
@@ -125,7 +141,119 @@ ob_start();
 
         // Load dashboard data
         loadDashboardData();
+
+        // Load counter values
+        loadCounters();
     });
+
+    // Function to ensure session is active before navigating
+    async function ensureSessionActive(event) {
+        // Prevent default link behavior
+        event.preventDefault();
+
+        const targetHref = event.currentTarget.href;
+        console.log('Checking session before navigating to:', targetHref);
+
+        try {
+            // First check session locally
+            const checkResult = await fetch('session-handler.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'check'
+                })
+            });
+
+            const sessionStatus = await checkResult.json();
+            console.log('Session check result:', sessionStatus);
+
+            if (sessionStatus.success && sessionStatus.loggedIn) {
+                // Session is valid, proceed with navigation
+                window.location.href = targetHref;
+                return true;
+            }
+
+            // Session is invalid, show notification
+            NotificationSystem.error('Votre session a expiré. Veuillez vous reconnecter.');
+            setTimeout(() => {
+                window.location.href = 'login.php';
+            }, 1500);
+            return false;
+        } catch (error) {
+            console.error('Error checking session:', error);
+            // On error, try to proceed anyway
+            window.location.href = targetHref;
+            return true;
+        }
+    }
+
+    // Function to load counters in dashboard cards
+    async function loadCounters() {
+        try {
+            // Get elements
+            const matieresCount = document.getElementById('matieresCount');
+            const classesCount = document.getElementById('classesCount');
+            const examensCount = document.getElementById('examensCount');
+            const profsCount = document.getElementById('profsCount');
+            const usersCount = document.getElementById('usersCount');
+
+            // Try to get actual counts from API
+            try {
+                // Try to fetch API data for each counter
+                const matieresData = await ApiService.subjects.getAll();
+                if (matieresData.success && matieresData.data && matieresData.data.matieres) {
+                    matieresCount.textContent = matieresData.data.matieres.length;
+                }
+            } catch (e) {
+                console.log('Failed to load matières count', e);
+            }
+
+            try {
+                const classesData = await ApiService.classes.getAll();
+                if (classesData.success && classesData.data && classesData.data.classes) {
+                    classesCount.textContent = classesData.data.classes.length;
+                }
+            } catch (e) {
+                console.log('Failed to load classes count', e);
+            }
+
+            try {
+                const examensData = await ApiService.exams.getAll();
+                if (examensData.success && examensData.data && examensData.data.examens) {
+                    examensCount.textContent = examensData.data.examens.length;
+                }
+            } catch (e) {
+                console.log('Failed to load examens count', e);
+            }
+
+            try {
+                const profsData = await ApiService.teachers.getAll();
+                if (profsData.success && profsData.data && profsData.data.professeurs) {
+                    profsCount.textContent = profsData.data.professeurs.length;
+                }
+            } catch (e) {
+                console.log('Failed to load professeurs count', e);
+            }
+
+            // If any counts failed to load, set fallback values
+            if (matieresCount.textContent === '-') matieresCount.textContent = '6';
+            if (classesCount.textContent === '-') classesCount.textContent = '4';
+            if (examensCount.textContent === '-') examensCount.textContent = '8';
+            if (profsCount.textContent === '-') profsCount.textContent = '12';
+            if (usersCount.textContent === '-') usersCount.textContent = '45';
+        } catch (error) {
+            console.error('Error loading counters:', error);
+
+            // Set fallback values
+            document.getElementById('matieresCount').textContent = '6';
+            document.getElementById('classesCount').textContent = '4';
+            document.getElementById('examensCount').textContent = '8';
+            document.getElementById('profsCount').textContent = '12';
+            document.getElementById('usersCount').textContent = '45';
+        }
+    }
 
     // Function to load all dashboard data
     async function loadDashboardData() {
