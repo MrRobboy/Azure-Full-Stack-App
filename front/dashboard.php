@@ -1,9 +1,45 @@
 <?php
 session_start();
 
+// Debug session
+error_log('Dashboard session check: ' . json_encode($_SESSION));
+
+// Check for debug mode
+$debug_mode = isset($_GET['debug']) && $_GET['debug'] == '1';
+
+// More detailed session check
+if (!isset($_SESSION['user'])) {
+    error_log('Session user data missing');
+}
+
+if (!isset($_SESSION['token'])) {
+    error_log('Session token missing');
+}
+
+// In debug mode, display session info instead of redirecting
+if ($debug_mode && (!isset($_SESSION['user']) || !isset($_SESSION['token']))) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'debug' => true,
+        'session_exists' => session_status() === PHP_SESSION_ACTIVE,
+        'session_id' => session_id(),
+        'session_data' => $_SESSION,
+        'cookies' => $_COOKIE,
+        'server' => [
+            'php_version' => PHP_VERSION,
+            'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'unknown',
+            'request_method' => $_SERVER['REQUEST_METHOD'] ?? 'unknown',
+            'http_host' => $_SERVER['HTTP_HOST'] ?? 'unknown',
+            'path' => $_SERVER['REQUEST_URI'] ?? 'unknown'
+        ]
+    ]);
+    exit;
+}
+
 // Check if user is logged in
 if (!isset($_SESSION['user']) || !isset($_SESSION['token'])) {
     // Redirect to login page
+    error_log('Dashboard redirecting to login due to incomplete session');
     header('Location: login.php');
     exit;
 }
@@ -12,6 +48,8 @@ if (!isset($_SESSION['user']) || !isset($_SESSION['token'])) {
 $user = $_SESSION['user'];
 $token = $_SESSION['token'];
 $loginTime = $_SESSION['loginTime'] ?? time();
+
+error_log('User logged in: ' . json_encode($user));
 
 $pageTitle = "Tableau de bord";
 ob_start();

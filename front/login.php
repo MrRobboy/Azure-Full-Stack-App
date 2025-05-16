@@ -438,6 +438,11 @@ ob_start();
 
 	// Function to store session data via AJAX
 	async function storeSessionData(userData, token) {
+		console.log('Storing session data...', {
+			userData,
+			token
+		});
+
 		try {
 			const response = await fetch('session-handler.php', {
 				method: 'POST',
@@ -451,7 +456,29 @@ ob_start();
 				})
 			});
 
-			return response.ok;
+			const data = await response.json();
+			console.log('Session handler response:', data);
+
+			if (!data.success) {
+				console.error('Session storage failed:', data.message);
+				return false;
+			}
+
+			// Verify the session was actually set
+			const sessionCheckResponse = await fetch('session-handler.php', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					action: 'check'
+				})
+			});
+
+			const sessionStatus = await sessionCheckResponse.json();
+			console.log('Session verification:', sessionStatus);
+
+			return sessionStatus.loggedIn === true;
 		} catch (error) {
 			console.error('Session storage error:', error);
 			return false;
@@ -478,15 +505,39 @@ ob_start();
 				// Use our API Service for login
 				const result = await ApiService.login(email, password);
 
-				console.log('Réponse reçue:', result);
+				console.log('Login response:', result);
+				console.log('Response data structure:', JSON.stringify(result.data, null, 2));
 
 				if (result.success && result.data.success) {
-					// Success - redirect to dashboard
+					// Success - check for user data and token in the response
+					if (!result.data.user || !result.data.token) {
+						console.error('Missing user data or token in login response:', result.data);
+						NotificationSystem.error('Réponse de connexion incomplète. Contactez l\'administrateur.');
+						return;
+					}
+
+					console.log('Login successful, storing session data...');
+
+					// Store session data on server side before redirect
+					const sessionStored = await storeSessionData(result.data.user, result.data.token);
+					console.log('Session stored:', sessionStored);
+
+					if (!sessionStored) {
+						console.error('Failed to store session data');
+						NotificationSystem.error('Erreur lors de la création de la session. Veuillez réessayer.');
+						return;
+					}
+
 					NotificationSystem.success('Connexion réussie. Redirection...');
-					window.location.href = 'dashboard.php';
+
+					// Short delay before redirect to ensure session is fully established
+					setTimeout(() => {
+						window.location.href = 'dashboard.php';
+					}, 500);
 				} else {
 					// Login failed
 					const errorMessage = result.data.message || 'Erreur de connexion';
+					console.error('Login failed:', errorMessage);
 					NotificationSystem.error(errorMessage);
 					console.log('Erreur de connexion:', result.data);
 				}

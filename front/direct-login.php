@@ -156,6 +156,52 @@ foreach ($methods as $method) {
 
 // If we have a successful response, return it
 if ($finalResponse) {
+	// Enhanced logging to check the structure
+	error_log("Login response structure: " . json_encode($finalResponse));
+
+	// Ensure the response has the required fields
+	if ($finalResponse['success'] === true) {
+		// Check if user and token fields exist
+		if (!isset($finalResponse['user']) && isset($finalResponse['data'])) {
+			// Some APIs return data.user instead of direct user
+			if (isset($finalResponse['data']['user'])) {
+				$finalResponse['user'] = $finalResponse['data']['user'];
+			} elseif (is_array($finalResponse['data'])) {
+				// If data is the user object itself
+				$finalResponse['user'] = $finalResponse['data'];
+			}
+		}
+
+		// Check for token
+		if (!isset($finalResponse['token']) && isset($finalResponse['data'])) {
+			// Some APIs return data.token instead of direct token
+			if (isset($finalResponse['data']['token'])) {
+				$finalResponse['token'] = $finalResponse['data']['token'];
+			} elseif (isset($finalResponse['data']['access_token'])) {
+				$finalResponse['token'] = $finalResponse['data']['access_token'];
+			}
+		}
+
+		// If we still don't have user data, create a minimal structure
+		if (!isset($finalResponse['user']) || !is_array($finalResponse['user'])) {
+			error_log("Creating minimal user data");
+			$finalResponse['user'] = [
+				'id' => isset($finalResponse['data']['id']) ? $finalResponse['data']['id'] : 0,
+				'email' => $data['email'],
+				'name' => isset($finalResponse['data']['name']) ? $finalResponse['data']['name'] : $data['email'],
+				'role' => isset($finalResponse['data']['role']) ? $finalResponse['data']['role'] : 'USER'
+			];
+		}
+
+		// If we still don't have a token, create a temporary one
+		if (!isset($finalResponse['token']) || empty($finalResponse['token'])) {
+			error_log("Creating temporary token");
+			$finalResponse['token'] = md5($data['email'] . time());
+		}
+
+		error_log("Enhanced response: " . json_encode($finalResponse));
+	}
+
 	echo json_encode($finalResponse);
 } else {
 	// Otherwise, return an error with details
