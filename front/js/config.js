@@ -1,5 +1,5 @@
 // Configuration de l'application
-// Version: 4.2 - Azure Edition - Proxy Fix
+// Version: 4.3 - Azure Edition - Enhanced Proxy
 
 // Détecter l'environnement
 const isAzure = window.location.hostname.includes("azurewebsites.net");
@@ -21,23 +21,24 @@ const defaultConfig = {
 
 	// URL des proxies - avec priorité
 	proxyUrls: [
-		"api-bridge.php", // Proxy principal
+		"azure-proxy.php", // Nouveau proxy optimisé pour Azure
+		"simple-proxy.php", // Alternative fonctionnelle
+		"api-bridge.php", // Proxy principal (fallback)
 		"matieres-proxy.php", // Proxy spécifique pour les matières
-		"simple-proxy.php", // Alternative
 		"unified-proxy.php" // Original
 	],
 
 	// URL du proxy par défaut
-	proxyUrl: "api-bridge.php",
+	proxyUrl: "azure-proxy.php",
 
 	// Pour les matières spécifiquement
-	matieresProxyUrl: "matieres-proxy.php",
+	matieresProxyUrl: "azure-proxy.php",
 
 	// Stratégie de contournement pour les erreurs 404
 	bypass404: true,
 
 	// Version de configuration
-	version: "4.2"
+	version: "4.3"
 };
 
 // Configuration pour l'environnement

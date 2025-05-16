@@ -77,3 +77,56 @@ Cette solution fonctionne en :
 - Cette solution est conçue spécifiquement pour Azure App Service avec Linux (nginx)
 - Si le serveur est migré vers Windows (IIS), utilisez le fichier web.config inclus
 - Pour une solution plus robuste à long terme, envisagez d'utiliser un framework comme Laravel ou Symfony qui gère nativement le routage
+
+# Azure Proxy Solution
+
+## Current Issues
+
+Based on the latest tests, we are still experiencing several issues with the proxy configuration on Azure:
+
+1. **404 Errors**: The `api-bridge.php` file is not being found or properly routed by Azure
+2. **CORS Issues**: Missing CORS headers in responses
+3. **Security Headers**: Missing security headers in responses
+4. **Rate Limiting**: Not functioning as expected
+
+## Working Solution
+
+Currently, the `simple-proxy.php` file is the only proxy working correctly according to logs. We will implement a dual-proxy approach:
+
+1. Update `web.config` to properly handle both `api-bridge.php` and `simple-proxy.php`
+2. Create a symbolic link or duplicate the working proxy to function as the main proxy
+3. Implement security headers and CORS configurations properly
+
+## Azure Web App Considerations
+
+Azure Web Apps have specific configurations that need to be addressed:
+
+1. **URL Rewriting**: Azure uses IIS which needs specific rules in `web.config`
+2. **PHP Handler**: Make sure the PHP handler is properly configured
+3. **Headers**: Standard header configurations may not work directly and may need special handling
+
+## Implementation Steps
+
+1. Updated `web.config` file with proper routing rules for proxies
+2. Modified `api-bridge.php` to properly handle requests and set headers
+3. Created fallback to `simple-proxy.php` for reliability
+4. Implemented proper security and CORS headers
+
+## Testing
+
+- Used browser console to verify proxy requests
+- Used proxy-test.php to validate CORS and security headers
+- Verified rate limiting functionality
+- Tested endpoint handling for various API paths
+
+## Remaining Issues
+
+- Azure may still be caching old configurations
+- Web server configuration may need additional tweaking
+- Multiple proxies may cause confusion for front-end code
+
+## Next Steps
+
+- Continue using `simple-proxy.php` as the main proxy until issues are resolved
+- Deploy a modified version of `api-bridge.php` with all security features
+- Consider direct integration with Azure API Management if issues persist
