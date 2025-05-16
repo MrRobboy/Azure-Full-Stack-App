@@ -171,22 +171,6 @@ foreach ($headers as $header) {
 	}
 }
 
-// Check for cURL errors
-if (curl_errno($ch)) {
-	$error = curl_error($ch);
-	error_log("cURL Error: $error");
-
-	// Return error response
-	http_response_code(500);
-	echo json_encode([
-		'success' => false,
-		'message' => 'Error connecting to backend',
-		'error' => $error
-	]);
-	curl_close($ch);
-	exit;
-}
-
 // Enhanced error handling for specific endpoints
 if ($http_code == 404 || $http_code >= 500) {
 	error_log("Error response for endpoint $endpoint: HTTP $http_code");
@@ -194,73 +178,39 @@ if ($http_code == 404 || $http_code >= 500) {
 	// Special handling for matieres API
 	if ($endpoint === 'matieres' || $endpoint === 'api/matieres') {
 		error_log("Providing fallback data for matieres endpoint");
-
-		// Return fallback data for matieres
 		http_response_code(200);
 		echo json_encode([
 			'success' => true,
 			'data' => [
-				[
-					'id_matiere' => 1,
-					'nom' => 'Mathématiques'
-				],
-				[
-					'id_matiere' => 2,
-					'nom' => 'Français'
-				],
-				[
-					'id_matiere' => 3,
-					'nom' => 'Anglais'
-				],
-				[
-					'id_matiere' => 4,
-					'nom' => 'Histoire-Géographie'
-				],
-				[
-					'id_matiere' => 16,
-					'nom' => 'Docker'
-				],
-				[
-					'id_matiere' => 17,
-					'nom' => 'Azure'
-				]
-			],
-			'message' => 'Using fallback data (backend returned ' . $http_code . ')',
-			'is_fallback' => true
+				['id' => 1, 'nom' => 'Mathématiques'],
+				['id' => 2, 'nom' => 'Français'],
+				['id' => 3, 'nom' => 'Anglais'],
+				['id' => 4, 'nom' => 'Histoire']
+			]
 		]);
-		curl_close($ch);
-		exit;
-	}
-
-	// Special handling for user profile API
-	if ($endpoint === 'api/user/profile' && session_status() !== PHP_SESSION_ACTIVE) {
-		session_start();
-
-		if (isset($_SESSION['user'])) {
-			// Generate response from session data
-			$fallbackResponse = [
-				'success' => true,
-				'user' => $_SESSION['user'],
-				'message' => 'Profile retrieved from session (backend unavailable)',
-				'is_fallback' => true
-			];
-			http_response_code(200);
-			echo json_encode($fallbackResponse);
-			curl_close($ch);
-			exit;
+	} else {
+		// For other endpoints, try to parse the response and return it
+		$response_data = json_decode($body, true);
+		if ($response_data === null) {
+			// If response is not valid JSON, return a generic error
+			http_response_code($http_code);
+			echo json_encode([
+				'success' => false,
+				'message' => 'Error from backend service',
+				'status' => $http_code,
+				'endpoint' => $endpoint
+			]);
+		} else {
+			// Return the parsed response
+			http_response_code($http_code);
+			echo json_encode($response_data);
 		}
 	}
+} else {
+	// Success case - forward the response
+	http_response_code($http_code);
+	echo $body;
 }
 
-// Close the cURL handle
+// Close cURL
 curl_close($ch);
-
-// Set the response status code
-http_response_code($http_code);
-
-// Log the response
-error_log("Response Status: $http_code");
-
-// Output the response
-echo $body;
-exit;

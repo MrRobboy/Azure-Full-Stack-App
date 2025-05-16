@@ -304,7 +304,11 @@ ob_start();
             }
         } catch (error) {
             console.error(`Error fetching count for ${apiServiceMethod || endpoint}:`, error);
-            if (element) element.textContent = fallbackValue;
+            if (element) {
+                element.textContent = fallbackValue;
+                element.classList.add('text-muted');
+                element.title = 'Valeur par défaut (données non disponibles)';
+            }
         }
     }
 
@@ -320,13 +324,13 @@ ob_start();
             // If API call fails, use session data from PHP
             if (!userResult.success) {
                 console.error('User profile API error:', userResult);
+                NotificationSystem.warning('Utilisation des données de session locales (API non disponible)');
 
                 // Create a user object from PHP session data
                 userData = {
                     user: <?php echo json_encode($user); ?>
                 };
                 console.log('Using PHP session data as fallback:', userData);
-                NotificationSystem.info('Utilisation des données de session locales (API non disponible)');
             } else {
                 userData = userResult.data;
                 console.log('API user data:', userData);

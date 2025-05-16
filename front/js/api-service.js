@@ -6,7 +6,7 @@
 // Singleton API Service
 const ApiService = (function () {
 	// Private properties
-	const _corsProxy = "api-bridge.php"; // Updated proxy that works best
+	const _corsProxy = "unified-proxy.php"; // Updated to use unified proxy
 	const _matieresProxy = "matieres-proxy.php"; // Dedicated matières proxy
 	const _directLoginPath = "unified-login.php";
 	const _directDataProxy = "direct-matieres.php"; // Direct data fallback
@@ -64,7 +64,6 @@ const ApiService = (function () {
 						requestOptions
 					);
 
-					// Only consider as success if status is 200
 					if (response.ok) {
 						return handleResponse(
 							response,
@@ -72,7 +71,7 @@ const ApiService = (function () {
 						);
 					}
 					console.warn(
-						"Matieres proxy failed, trying standard proxy"
+						"Matieres proxy failed, trying unified proxy"
 					);
 				} catch (matieresError) {
 					console.warn(
@@ -82,19 +81,20 @@ const ApiService = (function () {
 				}
 			}
 
-			// Method 2: Try using our standard CORS proxy
+			// Method 2: Try using our unified CORS proxy
 			try {
 				const proxyUrl = `${_corsProxy}?endpoint=${encodeURIComponent(
 					endpoint
 				)}`;
-				console.log(`Using proxy URL: ${proxyUrl}`);
+				console.log(
+					`Using unified proxy URL: ${proxyUrl}`
+				);
 
 				response = await fetch(
 					proxyUrl,
 					requestOptions
 				);
 
-				// Only consider as success if status is 200
 				if (response.ok) {
 					return handleResponse(
 						response,
@@ -102,11 +102,11 @@ const ApiService = (function () {
 					);
 				}
 				console.warn(
-					"Standard proxy failed, trying direct data fallback"
+					"Unified proxy failed, trying direct data fallback"
 				);
 			} catch (proxyError) {
 				console.warn(
-					"Standard proxy error:",
+					"Unified proxy error:",
 					proxyError.message
 				);
 			}
@@ -130,22 +130,14 @@ const ApiService = (function () {
 					"All proxy methods failed:",
 					directError.message
 				);
-				throw directError; // Re-throw to be caught in outer catch
+				throw directError;
 			}
 		} catch (error) {
-			console.error(
-				`API Request Error (${endpoint}):`,
-				error
-			);
-
-			// Create a more detailed error response
+			console.error("Request failed:", error);
 			return {
 				success: false,
-				status: 0,
-				data: null,
-				error: error.message,
-				errorType: error.name,
-				errorStack: error.stack
+				message: error.message || "Request failed",
+				error: error
 			};
 		}
 	}
