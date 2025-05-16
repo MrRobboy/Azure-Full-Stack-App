@@ -78,9 +78,23 @@ if (!$endpoint) {
 // Construction de l'URL cible
 $baseUrl = rtrim(BACKEND_BASE_URL, '/');
 $endpoint = ltrim($endpoint, '/');
-if (strpos($endpoint, '.php') === false) {
+
+// Gestion des endpoints spéciaux
+$endpointMap = [
+	'auth/login' => 'auth/login.php',
+	'auth/logout' => 'auth/logout.php',
+	'matieres' => 'matieres.php',
+	'notes' => 'notes.php',
+	'status' => 'status.php'
+];
+
+// Vérifier si l'endpoint est dans la map
+if (isset($endpointMap[$endpoint])) {
+	$endpoint = $endpointMap[$endpoint];
+} else if (strpos($endpoint, '.php') === false) {
 	$endpoint .= '.php';
 }
+
 $targetUrl = $baseUrl . '/' . $endpoint;
 
 error_log("Target URL: " . $targetUrl);

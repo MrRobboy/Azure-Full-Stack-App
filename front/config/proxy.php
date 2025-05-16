@@ -19,9 +19,10 @@ define('BACKEND_BASE_URL', 'https://app-backend-esgi-app.azurewebsites.net');
 define('CORS_CONFIG', [
 	'allowed_origins' => ['*'],
 	'allowed_methods' => ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-	'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With'],
+	'allowed_headers' => ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
 	'exposed_headers' => ['X-Rate-Limit-Remaining', 'X-Rate-Limit-Reset'],
-	'max_age' => 86400
+	'max_age' => 86400,
+	'allow_credentials' => true
 ]);
 
 // Configuration des timeouts
@@ -52,7 +53,12 @@ define('SECURITY_CONFIG', [
 		'X-Frame-Options: DENY',
 		'X-XSS-Protection: 1; mode=block',
 		'Strict-Transport-Security: max-age=31536000; includeSubDomains',
-		'Content-Security-Policy: default-src \'self\'; script-src \'self\' \'unsafe-inline\' \'unsafe-eval\'; style-src \'self\' \'unsafe-inline\';'
+		'Content-Security-Policy: default-src \'self\'; script-src \'self\' \'unsafe-inline\' \'unsafe-eval\'; style-src \'self\' \'unsafe-inline\';',
+		'Access-Control-Allow-Origin: *',
+		'Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS',
+		'Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Origin',
+		'Access-Control-Max-Age: 86400',
+		'Access-Control-Allow-Credentials: true'
 	]
 ]);
 
@@ -81,7 +87,8 @@ function getCorsHeaders()
 		'Access-Control-Allow-Methods' => implode(', ', CORS_CONFIG['allowed_methods']),
 		'Access-Control-Allow-Headers' => implode(', ', CORS_CONFIG['allowed_headers']),
 		'Access-Control-Expose-Headers' => implode(', ', CORS_CONFIG['exposed_headers']),
-		'Access-Control-Max-Age' => CORS_CONFIG['max_age']
+		'Access-Control-Max-Age' => CORS_CONFIG['max_age'],
+		'Access-Control-Allow-Credentials' => CORS_CONFIG['allow_credentials'] ? 'true' : 'false'
 	];
 }
 
@@ -123,24 +130,50 @@ function checkRateLimit($ip)
 		return true;
 	}
 
-	$cacheFile = sys_get_temp_dir() . '/rate_limit_' . md5($ip) . '.json';
+	$cacheKey = 'rate_limit_' . md5($ip);
 	$now = time();
 
-	if (file_exists($cacheFile)) {
-		$data = json_decode(file_get_contents($cacheFile), true);
-		if ($data && $data['timestamp'] > ($now - SECURITY_CONFIG['rate_limit']['window'])) {
+	// Utiliser APCu si disponible, sinon utiliser le système de fichiers
+	if (function_exists('apcu_store')) {
+		$data = apcu_fetch($cacheKey);
+		if ($data === false) {
+			$data = ['count' => 1, 'timestamp' => $now];
+			apcu_store($cacheKey, $data, SECURITY_CONFIG['rate_limit']['window']);
+			return true;
+		}
+
+		if ($data['timestamp'] > ($now - SECURITY_CONFIG['rate_limit']['window'])) {
 			if ($data['count'] >= SECURITY_CONFIG['rate_limit']['max_requests']) {
+				error_log("Rate limit exceeded for IP: $ip");
 				return false;
 			}
 			$data['count']++;
+			apcu_store($cacheKey, $data, SECURITY_CONFIG['rate_limit']['window']);
+		} else {
+			$data = ['count' => 1, 'timestamp' => $now];
+			apcu_store($cacheKey, $data, SECURITY_CONFIG['rate_limit']['window']);
+		}
+	} else {
+		$cacheFile = sys_get_temp_dir() . '/' . $cacheKey . '.json';
+
+		if (file_exists($cacheFile)) {
+			$data = json_decode(file_get_contents($cacheFile), true);
+			if ($data && $data['timestamp'] > ($now - SECURITY_CONFIG['rate_limit']['window'])) {
+				if ($data['count'] >= SECURITY_CONFIG['rate_limit']['max_requests']) {
+					error_log("Rate limit exceeded for IP: $ip");
+					return false;
+				}
+				$data['count']++;
+			} else {
+				$data = ['count' => 1, 'timestamp' => $now];
+			}
 		} else {
 			$data = ['count' => 1, 'timestamp' => $now];
 		}
-	} else {
-		$data = ['count' => 1, 'timestamp' => $now];
+
+		file_put_contents($cacheFile, json_encode($data));
 	}
 
-	file_put_contents($cacheFile, json_encode($data));
 	return true;
 }
 
