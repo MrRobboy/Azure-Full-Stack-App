@@ -44,6 +44,12 @@ ob_start();
 			<a href="login.php" class="btn btn-primary btn-lg">
 				<i class="fas fa-sign-in-alt"></i> Se connecter
 			</a>
+			<a href="simple-login.php" class="btn btn-secondary btn-lg" style="margin-left: 10px;">
+				<i class="fas fa-bolt"></i> Connexion simplifiée
+			</a>
+			<div style="margin-top: 10px; font-size: 0.8rem;">
+				<i class="fas fa-info-circle"></i> La connexion simplifiée est recommandée pour Azure
+			</div>
 		</div>
 	</div>
 </div>

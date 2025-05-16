@@ -224,45 +224,99 @@ try {
 	error_log("Chemin: " . $path);
 	error_log("Segments: " . print_r($segments, true));
 
-	// Routes d'authentification
-	if ($segments[0] === 'auth') {
+	// Routage des requêtes
+	if ($path === 'status') {
+		$status = [
+			'success' => true,
+			'message' => 'Le serveur backend est opérationnel',
+			'timestamp' => date('Y-m-d H:i:s'),
+			'environment' => 'development',
+			'api_base_url' => 'https://app-backend-esgi-app.azurewebsites.net/api',
+			'php_version' => PHP_VERSION,
+			'server_info' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown',
+			'request' => [
+				'method' => $_SERVER['REQUEST_METHOD'],
+				'uri' => $_SERVER['REQUEST_URI'],
+				'origin' => $_SERVER['HTTP_ORIGIN'] ?? '*',
+				'headers' => getallheaders(),
+				'cookies' => $_COOKIE,
+			],
+			'session' => [
+				'status' => session_status(),
+				'id' => session_id(),
+				'cookie_params' => session_get_cookie_params()
+			],
+			'cors' => [
+				'allowed_origins' => ['https://app-frontend-esgi-app.azurewebsites.net', 'http://localhost', 'http://127.0.0.1'],
+				'current_origin' => $_SERVER['HTTP_ORIGIN'] ?? '*',
+				'is_allowed' => in_array($_SERVER['HTTP_ORIGIN'] ?? '*', ['https://app-frontend-esgi-app.azurewebsites.net', 'http://localhost', 'http://127.0.0.1']) || strpos($_SERVER['HTTP_ORIGIN'] ?? '', 'azurewebsites.net') !== false
+			],
+			'database' => [
+				'type' => 'sqlsrv',
+				'host' => 'sql-esgi-app.database.windows.net',
+				'name' => 'sqldb-esgi-app',
+				'connected' => true
+			]
+		];
+		sendResponse($status);
+	}
+
+	// Routes pour l'authentification
+	else if ($segments[0] === 'auth') {
 		if ($method === 'POST' && $segments[1] === 'login') {
-			error_log("Traitement de la requête de login");
-
+			// Récupérer les données JSON
 			$data = json_decode(file_get_contents('php://input'), true);
-			error_log("Données reçues: " . print_r($data, true));
 
-			if (!$data) {
-				error_log("Données JSON invalides");
-				throw new Exception(json_encode(
-					$errorService->logError('api', 'Données JSON invalides', ['input' => file_get_contents('php://input')])
-				), 400);
+			// Vérifier les données
+			if (!$data || !isset($data['email']) || !isset($data['password'])) {
+				throw new Exception("Données invalides", 400);
 			}
 
-			$result = $authController->login($data['email'], $data['password']);
-			error_log("Réponse du contrôleur: " . print_r($result, true));
+			$login = $authController->login($data['email'], $data['password']);
+			sendResponse($login);
+		}
 
-			// Renvoyer directement le résultat complet du contrôleur
-			if ($result['success']) {
-				// Le format adapté au frontend avec token et user
+		// NOUVELLE ROUTE: Vérification des identifiants par GET (uniquement pour l'exercice)
+		else if ($method === 'GET' && $segments[1] === 'check-credentials') {
+			// Récupérer les paramètres GET
+			$email = $_GET['email'] ?? '';
+			$password = $_GET['password'] ?? '';
+
+			// Log de la tentative
+			error_log("Tentative de vérification d'identifiants via GET pour: $email (NON SÉCURISÉ!)");
+
+			// Vérifier les données
+			if (empty($email) || empty($password)) {
+				error_log("Données manquantes pour check-credentials");
+				sendResponse([
+					'success' => false,
+					'message' => 'Email et mot de passe requis'
+				], 400);
+			}
+
+			try {
+				// Utiliser le même contrôleur que pour le login normal
+				$result = $authController->login($email, $password);
 				sendResponse($result);
-			} else {
-				sendResponse(['success' => false, 'message' => $result['message']], $result['code'] ?? 401);
+			} catch (Exception $e) {
+				sendResponse([
+					'success' => false,
+					'message' => $e->getMessage()
+				], 401);
 			}
-		} elseif ($method === 'POST' && $segments[1] === 'logout') {
-			error_log("Traitement de la requête de logout");
-
-			$result = $authController->logout();
-			if ($result['success']) {
-				sendResponse(['message' => $result['message']]);
-			} else {
-				sendResponse(['error' => $result['error']], $result['code']);
+		} else if ($method === 'POST' && $segments[1] === 'logout') {
+			$logout = $authController->logout();
+			sendResponse($logout);
+		} else if ($method === 'GET' && $segments[1] === 'user') {
+			try {
+				checkAuth();
+				$user = $authController->getCurrentUser();
+				sendResponse($user);
+			} catch (Exception $e) {
+				handleError($e);
 			}
 		} else {
-			error_log("Route d'authentification non trouvée");
-			throw new Exception(json_encode(
-				$errorService->logError('api', 'Route d\'authentification non trouvée', ['uri' => $segments])
-			), 404);
+			throw new Exception("Route d'authentification non trouvée", 404);
 		}
 	}
 
