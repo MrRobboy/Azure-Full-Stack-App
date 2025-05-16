@@ -124,6 +124,19 @@ session_start();
 		</p>
 	</div>
 
+	<div class="card" id="troubleshooting" style="display: none; border-color: #ff9800;">
+		<h2>⚠️ Guide de dépannage</h2>
+		<p id="troubleshootingText">Des problèmes ont été détectés avec la configuration.</p>
+		<div id="troubleshootingSteps">
+			<h3>Vérifications à effectuer:</h3>
+			<ol>
+				<li>Vérifiez que le fichier <code>enhanced-proxy.php</code> existe dans le même répertoire que cette page</li>
+				<li>Ouvrez <a href="enhanced-proxy.php?endpoint=status.php" target="_blank">enhanced-proxy.php?endpoint=status.php</a> directement pour tester le proxy</li>
+				<li>Consultez les logs d'erreur dans le répertoire <code>logs/</code></li>
+			</ol>
+		</div>
+	</div>
+
 	<div class="card">
 		<h2>Authentification</h2>
 		<p>Un token JWT valide est nécessaire pour tester les endpoints protégés.</p>
@@ -166,6 +179,41 @@ session_start();
 	</div>
 
 	<script>
+		// Information sur l'environnement
+		console.log("Base URL: " + window.location.origin);
+		console.log("Path: " + window.location.pathname);
+
+		// Fonction pour vérifier l'accès au proxy
+		async function checkProxyAccess() {
+			try {
+				const response = await fetch('enhanced-proxy.php?endpoint=status.php');
+				console.log("Proxy check status:", response.status);
+				return response.status >= 200 && response.status < 400;
+			} catch (error) {
+				console.error("Erreur de connexion au proxy:", error);
+				return false;
+			}
+		}
+
+		// Vérifier l'accès au démarrage
+		window.addEventListener('DOMContentLoaded', async function() {
+			// Vérifier si le proxy est accessible
+			const proxyOk = await checkProxyAccess();
+			if (!proxyOk) {
+				document.getElementById('troubleshooting').style.display = 'block';
+				document.getElementById('troubleshootingText').innerHTML =
+					"<strong>Le proxy amélioré n'est pas accessible.</strong> Vérifiez que le fichier enhanced-proxy.php existe dans le même répertoire que cette page et qu'il fonctionne correctement.";
+			}
+
+			initEndpointsTable();
+
+			// Essayer de récupérer le token du localStorage au chargement
+			const token = localStorage.getItem('jwt_token');
+			if (token) {
+				document.getElementById('tokenInput').value = token;
+			}
+		});
+
 		// Définition des endpoints à tester
 		const endpoints = [
 			// Endpoints publics
@@ -321,6 +369,7 @@ session_start();
 
 			try {
 				const token = document.getElementById('tokenInput').value || localStorage.getItem('jwt_token');
+				// Utiliser un chemin relatif au lieu d'une URL absolue
 				const proxyUrl = `enhanced-proxy.php?endpoint=${endpoint.path}`;
 
 				const options = {
@@ -333,6 +382,13 @@ session_start();
 				// Ajouter l'en-tête d'autorisation pour les endpoints protégés
 				if (endpoint.type === 'Protégé' && token) {
 					options.headers['Authorization'] = 'Bearer ' + token;
+				} else if (endpoint.type === 'Protégé' && !token) {
+					// Si endpoint protégé mais pas de token, avertir et continuer quand même
+					console.warn("Tentative d'accès à un endpoint protégé sans token");
+					document.getElementById('troubleshooting').style.display = 'block';
+					document.getElementById('troubleshootingText').innerHTML =
+						"<strong>Attention:</strong> Vous tentez d'accéder à des ressources protégées sans token d'authentification valide. " +
+						"Utilisez d'abord l'authentification pour obtenir un token.";
 				}
 
 				// Ajouter le corps pour les requêtes POST/PUT
@@ -340,6 +396,7 @@ session_start();
 					options.body = JSON.stringify(endpoint.body);
 				}
 
+				console.log(`Fetching: ${proxyUrl} with method: ${endpoint.method}`); // Debug log
 				const response = await fetch(proxyUrl, options);
 				const contentType = response.headers.get('content-type') || '';
 
@@ -450,17 +507,6 @@ session_start();
 				alert('Veuillez saisir un token avant de sauvegarder.');
 			}
 		}
-
-		// Initialiser la page
-		window.addEventListener('DOMContentLoaded', function() {
-			initEndpointsTable();
-
-			// Essayer de récupérer le token du localStorage au chargement
-			const token = localStorage.getItem('jwt_token');
-			if (token) {
-				document.getElementById('tokenInput').value = token;
-			}
-		});
 	</script>
 </body>
 
