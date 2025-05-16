@@ -51,9 +51,6 @@ $loginTime = $_SESSION['loginTime'] ?? time();
 
 error_log('User logged in: ' . json_encode($user));
 
-// Database connection
-require_once 'includes/db-config.php';
-
 // Function to get count from database
 function getCount($table)
 {
