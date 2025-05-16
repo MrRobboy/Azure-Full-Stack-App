@@ -188,6 +188,31 @@
 - Amélioration de la gestion des requêtes OPTIONS
 - Correction de la configuration FastCGI
 
+## [4.3.0] - 2024-05-16
+
+### Added
+
+- Logging détaillé dans api-bridge.php
+     - Log des requêtes entrantes
+     - Log des URLs cibles
+     - Log des données POST
+     - Log des informations cURL
+     - Log des réponses
+
+### Changed
+
+- Amélioration de la construction des URLs cibles
+     - Séparation claire de l'URL de base et de l'endpoint
+     - Meilleure gestion des slashes
+- Activation du mode verbeux pour cURL
+     - Plus de détails sur les requêtes
+     - Meilleur débogage des erreurs
+
+### Fixed
+
+- Correction de la construction des URLs pour le backend
+- Amélioration de la gestion des erreurs avec plus de contexte
+
 ## Prochaines Étapes
 
 1. Documentation
