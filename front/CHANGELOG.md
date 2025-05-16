@@ -1,5 +1,48 @@
 # Changelog
 
+## [4.0.0] - 2024-05-16
+
+### Ajouté
+
+- Documentation complète des endpoints API dans `docs/API.md`
+- Système de logging amélioré avec rotation des fichiers
+- Support du rate limiting avec APCu pour Azure
+- Headers de sécurité renforcés
+- Configuration CORS optimisée
+
+### Modifié
+
+- Amélioration de la configuration IIS dans `web.config`
+     - Ajout de règles spécifiques pour les fichiers proxy
+     - Optimisation des règles de réécriture
+     - Headers de sécurité mis à jour
+- Mise à jour de la configuration du proxy
+     - Alignement des headers CORS
+     - Amélioration de la gestion du rate limit
+     - Optimisation des timeouts
+
+### Corrigé
+
+- Erreurs 404 sur les fichiers proxy
+- Problèmes de CORS sur les requêtes OPTIONS
+- Gestion des erreurs de rate limiting
+- Headers de sécurité manquants
+
+### Sécurité
+
+- Ajout de headers de sécurité supplémentaires
+- Amélioration de la validation des entrées
+- Protection contre les attaques XSS
+- Configuration CSP renforcée
+
+### Performance
+
+- Optimisation du rate limiting avec APCu
+- Amélioration de la gestion du cache
+- Réduction des timeouts
+
+## [3.0.0] - 2024-05-15
+
 ## [1.0.0] - 2024-05-16
 
 ### Nettoyage

@@ -7,6 +7,14 @@
  * et la gestion de la sécurité.
  */
 
+// Vérification des extensions requises
+if (!extension_loaded('curl')) {
+	die('L\'extension cURL est requise pour le fonctionnement du proxy.');
+}
+
+// Vérification de l'extension APCu
+define('APCU_AVAILABLE', extension_loaded('apcu'));
+
 // Configuration de l'URL du backend
 define('BACKEND_BASE_URL', 'https://app-backend-esgi-app.azurewebsites.net/api');
 
@@ -115,8 +123,8 @@ function checkRateLimit($ip)
 		return true;
 	}
 
-	// Utiliser le système de cache d'Azure si disponible
-	if (function_exists('apcu_fetch')) {
+	// Utiliser APCu si disponible
+	if (APCU_AVAILABLE) {
 		$key = 'rate_limit_' . md5($ip);
 		$data = apcu_fetch($key);
 
