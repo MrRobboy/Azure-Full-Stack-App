@@ -41,7 +41,7 @@ define('SECURITY_CONFIG', [
 	'rate_limit' => [
 		'enabled' => true,
 		'max_requests' => 100,
-		'time_window' => 60 // secondes
+		'time_window' => 3600 // secondes (1 heure)
 	],
 	'input_validation' => [
 		'enabled' => true,
@@ -70,9 +70,9 @@ function getCorsHeaders()
 
 	return [
 		'Access-Control-Allow-Origin' => $allowed ? $origin : CORS_ALLOWED_ORIGINS[0],
-		'Access-Control-Allow-Methods' => 'GET, POST, OPTIONS',
-		'Access-Control-Allow-Headers' => 'Content-Type, Authorization, X-Requested-With',
-		'Access-Control-Max-Age' => '86400',  // 24 heures
+		'Access-Control-Allow-Methods' => 'GET, POST, OPTIONS, PUT, DELETE',
+		'Access-Control-Allow-Headers' => 'Content-Type, Authorization, X-Requested-With, X-CSRF-Token',
+		'Access-Control-Max-Age' => '3600',  // 1 heure
 		'Access-Control-Allow-Credentials' => 'true'
 	];
 }
@@ -115,6 +115,29 @@ function checkRateLimit($ip)
 		return true;
 	}
 
+	// Utiliser le système de cache d'Azure si disponible
+	if (function_exists('apcu_fetch')) {
+		$key = 'rate_limit_' . md5($ip);
+		$data = apcu_fetch($key);
+
+		if ($data === false) {
+			apcu_store($key, ['count' => 1, 'timestamp' => time()], SECURITY_CONFIG['rate_limit']['time_window']);
+			return true;
+		}
+
+		if (time() - $data['timestamp'] < SECURITY_CONFIG['rate_limit']['time_window']) {
+			if ($data['count'] >= SECURITY_CONFIG['rate_limit']['max_requests']) {
+				return false;
+			}
+			$data['count']++;
+			apcu_store($key, $data, SECURITY_CONFIG['rate_limit']['time_window']);
+		} else {
+			apcu_store($key, ['count' => 1, 'timestamp' => time()], SECURITY_CONFIG['rate_limit']['time_window']);
+		}
+		return true;
+	}
+
+	// Fallback sur le système de fichiers
 	$cacheFile = LOG_DIR . '/rate_limit_' . md5($ip) . '.json';
 	$now = time();
 
