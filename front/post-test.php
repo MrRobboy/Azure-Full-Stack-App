@@ -183,6 +183,76 @@ try {
 	error_log("POST-TEST: Erreur cURL Azure headers: " . $e->getMessage());
 }
 
+// Test spécifique pour l'authentification (problématique identifiée)
+try {
+	echo "<h2>Test d'authentification spécifique</h2>";
+
+	// Données de test pour l'authentification
+	$auth_data = [
+		'email' => 'test@example.com',
+		'password' => 'password123'
+	];
+
+	// Test 1: Via simple-login.php avec JSON
+	echo "<h3>Test via simple-login.php</h3>";
+	// Construction de l'URL avec les paramètres
+	$auth_url = "simple-login.php?email=" . urlencode($auth_data['email']) .
+		"&password=" . urlencode($auth_data['password']) .
+		"&json=true";
+
+	$auth_response = file_get_contents($auth_url);
+	$auth_result = json_decode($auth_response, true);
+
+	echo "<pre>";
+	echo "URL: {$auth_url}\n";
+	echo "Résultat: " . json_encode($auth_result, JSON_PRETTY_PRINT);
+	echo "</pre>";
+
+	// Test 2: Via direct-login.php
+	echo "<h3>Test via direct-login.php</h3>";
+
+	$ch = curl_init('direct-login.php');
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt($ch, CURLOPT_POST, true);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($auth_data));
+	curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+
+	$direct_response = curl_exec($ch);
+	$direct_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+	$direct_error = curl_error($ch);
+	curl_close($ch);
+
+	echo "<pre>";
+	echo "Status: {$direct_status}\n";
+	echo "Error: {$direct_error}\n";
+	echo "Résultat: " . $direct_response;
+	echo "</pre>";
+
+	// Test 3: Via proxy
+	echo "<h3>Test via proxy standard</h3>";
+
+	$proxy_url = "simple-proxy.php?endpoint=" . urlencode('api/auth/login');
+	$ch = curl_init($proxy_url);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt($ch, CURLOPT_POST, true);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($auth_data));
+	curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+
+	$proxy_response = curl_exec($ch);
+	$proxy_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+	$proxy_error = curl_error($ch);
+	curl_close($ch);
+
+	echo "<pre>";
+	echo "URL: {$proxy_url}\n";
+	echo "Status: {$proxy_status}\n";
+	echo "Error: {$proxy_error}\n";
+	echo "Résultat: " . $proxy_response;
+	echo "</pre>";
+} catch (Exception $e) {
+	echo "<div style='color:red'>Erreur dans le test d'authentification: " . $e->getMessage() . "</div>";
+}
+
 // Déterminer le résultat global
 $results['success'] = false;
 foreach ($results['tests'] as $test) {

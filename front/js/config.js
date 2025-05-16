@@ -1,5 +1,5 @@
 // Configuration de l'application
-// Version: 3.0 - Azure Edition - Communication POST optimisée
+// Version: 3.1 - Azure Edition - Communication POST optimisée
 
 // Détecter l'environnement
 const isAzure = window.location.hostname.includes("azurewebsites.net");
@@ -26,19 +26,22 @@ const defaultConfig = {
 	bypass404: true,
 
 	// Version de configuration
-	version: "3.0"
+	version: "3.1"
 };
 
 // Configuration pour l'environnement
 let appConfig = { ...defaultConfig };
 
-// Sur Azure, tester les différents chemins proxy possibles
-if (isAzure) {
-	console.log("Running on Azure, testing various proxy paths");
+// Fonction pour trouver un chemin de proxy fonctionnel
+async function findWorkingProxyPath() {
+	if (!isAzure) return; // Seulement exécuter sur Azure
+
+	console.log("Searching for working proxy path...");
 
 	// Liste des chemins proxy à tester, par ordre de préférence
 	const possibleProxyPaths = [
 		"simple-proxy.php", // Racine
+		"api-bridge.php", // Alternative principale
 		"local-proxy-fix.php", // Version fixe (recommandée)
 		"post-test.php", // Nouveau proxy de test POST optimisé
 		"/api/simple-proxy.php", // Sous-dossier API
@@ -47,6 +50,50 @@ if (isAzure) {
 		"/api/local-proxy-fix.php", // Version fixe dans API
 		"/proxy/local-proxy-fix.php" // Version fixe dans Proxy
 	];
+
+	for (const path of possibleProxyPaths) {
+		console.log("Testing proxy path:", path);
+		try {
+			// Utiliser un signal pour limiter la durée d'attente
+			const controller = new AbortController();
+			const timeoutId = setTimeout(
+				() => controller.abort(),
+				5000
+			);
+
+			// Ajouter un paramètre unique pour éviter la mise en cache
+			const response = await fetch(
+				`${path}?endpoint=status.php&_=${Date.now()}`,
+				{
+					method: "GET",
+					signal: controller.signal
+				}
+			);
+
+			clearTimeout(timeoutId);
+
+			if (response.ok) {
+				console.log(`Proxy path ${path} is working!`);
+				// Mettre à jour la configuration avec ce chemin
+				appConfig.proxyUrl = path;
+				console.log("Found working proxy path:", path);
+				return true;
+			}
+		} catch (error) {
+			console.warn(
+				`Failed to access proxy at ${path}:`,
+				error.message
+			);
+		}
+	}
+
+	console.error("No working proxy path found!");
+	return false;
+}
+
+// Sur Azure, tester les différents chemins proxy possibles
+if (isAzure) {
+	console.log("Running on Azure, testing various proxy paths");
 
 	// Fonction pour initialiser avec chemin de proxy en cours
 	function initConfig() {
@@ -65,46 +112,8 @@ if (isAzure) {
 	async function verifyProxyAccess() {
 		console.log("Testing proxy paths...");
 
-		for (const path of possibleProxyPaths) {
-			console.log("Testing proxy path:", path);
-			try {
-				// Utiliser un signal pour limiter la durée d'attente
-				const controller = new AbortController();
-				const timeoutId = setTimeout(
-					() => controller.abort(),
-					5000
-				);
-
-				// Ajouter un paramètre unique pour éviter la mise en cache
-				const response = await fetch(
-					`${path}?endpoint=status.php&_=${Date.now()}`,
-					{
-						method: "GET",
-						signal: controller.signal
-					}
-				);
-
-				clearTimeout(timeoutId);
-
-				if (response.ok) {
-					console.log(
-						`Proxy path ${path} is working!`
-					);
-					// Mettre à jour la configuration avec ce chemin
-					appConfig.proxyUrl = path;
-					console.log(
-						"Found working proxy path:",
-						path
-					);
-					break;
-				}
-			} catch (error) {
-				console.warn(
-					`Failed to access proxy at ${path}:`,
-					error.message
-				);
-			}
-		}
+		// Utiliser la fonction pour trouver un proxy qui fonctionne
+		await findWorkingProxyPath();
 	}
 
 	// Appeler la fonction d'initialisation
@@ -157,6 +166,26 @@ async function testBackendConnection() {
 
 // Fonction optimisée pour gérer les requêtes POST, basée sur les tests réussis
 async function handlePostRequest(endpoint, data, options = {}) {
+	console.log(`Handling POST request to ${endpoint}`);
+
+	// Si l'URL du proxy est 404, essayer d'en trouver un nouveau avant de continuer
+	try {
+		// Test préalable du proxy pour éviter les redirections 404
+		if (appConfig.useProxy) {
+			const testResponse = await fetch(
+				`${appConfig.proxyUrl}?_=${Date.now()}`
+			);
+			if (testResponse.status === 404) {
+				console.warn(
+					"Current proxy returns 404, trying to find a working one..."
+				);
+				await findWorkingProxyPath();
+			}
+		}
+	} catch (e) {
+		console.warn("Error checking proxy:", e);
+	}
+
 	// Mode direct - Communication directe avec le backend (confirmé fonctionnel par post-test.php)
 	if (!appConfig.useProxy) {
 		console.log("Using direct backend connection for POST");
@@ -200,6 +229,36 @@ async function handlePostRequest(endpoint, data, options = {}) {
 async function proxyPostRequest(endpoint, data, options = {}) {
 	try {
 		console.log(`Using proxy for POST to ${endpoint}`);
+		// Utiliser direct-login.php comme proxy principal s'il s'agit d'une demande de connexion
+		if (endpoint.includes("auth/login")) {
+			console.log(
+				"Authentication request detected, using direct-login.php"
+			);
+			try {
+				const response = await fetch(
+					"direct-login.php",
+					{
+						method: "POST",
+						headers: {
+							"Content-Type":
+								"application/json"
+						},
+						body: JSON.stringify(data)
+					}
+				);
+
+				if (response.ok) {
+					return response;
+				}
+				console.warn(
+					"direct-login.php failed, trying standard proxy"
+				);
+			} catch (e) {
+				console.warn("direct-login.php error:", e);
+			}
+		}
+
+		// Proxy standard
 		const proxyUrl = `${
 			appConfig.proxyUrl
 		}?endpoint=${encodeURIComponent(endpoint)}`;
@@ -246,6 +305,45 @@ async function proxyPostRequest(endpoint, data, options = {}) {
 // Méthodes alternatives pour POST (utilise les méthodes qui ont fonctionné lors du test)
 async function alternativePostMethod(endpoint, data) {
 	console.log("Using alternative POST method for", endpoint);
+
+	// Méthode spéciale pour l'authentification
+	if (endpoint.includes("auth/login")) {
+		try {
+			console.log("Trying simple-login.php for auth...");
+			const params = new URLSearchParams({
+				email: data.email || "",
+				password: data.password || "",
+				json: "true" // Demander une réponse JSON
+			});
+
+			const response = await fetch(
+				`simple-login.php?${params.toString()}`
+			);
+			if (response.ok) {
+				// Vérifier si la réponse est du JSON
+				const text = await response.text();
+				try {
+					const json = JSON.parse(text);
+					// Simuler une réponse fetch
+					return {
+						ok: true,
+						status: 200,
+						json: () =>
+							Promise.resolve(json),
+						text: () =>
+							Promise.resolve(text)
+					};
+				} catch (e) {
+					console.warn(
+						"simple-login.php did not return JSON:",
+						e
+					);
+				}
+			}
+		} catch (e) {
+			console.warn("Error with simple-login.php:", e);
+		}
+	}
 
 	// Méthode 1: Utiliser fetch avec en-têtes Azure spécifiques (méthode ayant fonctionné dans les tests)
 	try {
@@ -334,9 +432,15 @@ async function iframePostFallback(endpoint, data) {
 
 		// Fonction pour nettoyer les éléments DOM
 		function cleanup() {
-			document.body.removeChild(iframe);
-			document.body.removeChild(form);
-			delete window[uniqueId];
+			try {
+				if (iframe.parentNode)
+					document.body.removeChild(iframe);
+				if (form.parentNode)
+					document.body.removeChild(form);
+				delete window[uniqueId];
+			} catch (e) {
+				console.warn("Cleanup error:", e);
+			}
 		}
 
 		// Gérer les erreurs
@@ -361,7 +465,7 @@ async function iframePostFallback(endpoint, data) {
 		document.body.appendChild(form);
 		form.submit();
 
-		// Définir un timeout
+		// Définir un timeout plus court (10 secondes au lieu de 30)
 		setTimeout(() => {
 			if (iframe.parentNode) {
 				cleanup();
@@ -371,7 +475,7 @@ async function iframePostFallback(endpoint, data) {
 					)
 				);
 			}
-		}, 30000);
+		}, 10000);
 	});
 }
 
@@ -391,35 +495,12 @@ async function iframePostFallback(endpoint, data) {
 			);
 
 			// Si le proxy ne fonctionne pas correctement, essayer de trouver une alternative
-			const alternatives = [
-				"local-proxy-fix.php",
-				"/api/simple-proxy.php",
-				"/proxy/simple-proxy.php",
-				"/simple-proxy.php"
-			];
-
-			for (const alt of alternatives) {
-				try {
-					const testResponse = await fetch(
-						`${alt}?endpoint=status.php&_=${Date.now()}`
-					);
-					if (testResponse.ok) {
-						console.log(
-							`Alternative proxy found: ${alt}`
-						);
-						appConfig.proxyUrl = alt;
-						break;
-					}
-				} catch (e) {
-					console.warn(
-						`Alternative ${alt} failed:`,
-						e.message
-					);
-				}
-			}
+			await findWorkingProxyPath();
 		}
 	} catch (error) {
 		console.error("Error testing proxy:", error);
+		// Essayer de trouver un proxy qui fonctionne
+		await findWorkingProxyPath();
 	} finally {
 		console.log("Configuration finale:");
 		console.log("Proxy URL:", appConfig.proxyUrl);

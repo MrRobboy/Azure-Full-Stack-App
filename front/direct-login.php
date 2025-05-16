@@ -1,103 +1,243 @@
 <?php
 
 /**
- * Direct Login - Version améliorée pour Azure
+ * Direct Login - Script de communication directe serveur-à-serveur
  * 
- * Ce script fait office de solution de contournement pour les erreurs 404 avec les proxies sur Azure.
- * Il effectue une requête directe au backend depuis le serveur, évitant les problèmes CORS et 404.
+ * Ce script contourne les limitations CORS en effectuant les requêtes
+ * directement du serveur frontend vers le backend sans passer par le navigateur.
  */
 
-// Activer les rapports d'erreurs
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-ini_set('log_errors', 1);
-ini_set('error_log', 'direct_login_errors.log');
-
-// En-têtes HTTP
+// Configuration des en-têtes
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
-// Traiter les requêtes OPTIONS (CORS pre-flight)
+// Logs pour le débogage
+error_log('Direct-login called with method: ' . $_SERVER['REQUEST_METHOD']);
+error_log('Query string: ' . $_SERVER['QUERY_STRING']);
+
+// Gérer les requêtes OPTIONS (pre-flight CORS)
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 	http_response_code(200);
 	exit;
 }
 
-// URL de base de l'API backend
-$backendBaseUrl = 'https://app-backend-esgi-app.azurewebsites.net';
-$apiBaseUrl = $backendBaseUrl . '/api';
+// Configuration backend
+$api_base_url = 'https://app-backend-esgi-app.azurewebsites.net';
+$login_endpoint = '/api/auth/login';
 
-// Loguer l'accès
-error_log('Direct Login accédé le ' . date('Y-m-d H:i:s') . ' depuis ' . ($_SERVER['REMOTE_ADDR'] ?? 'inconnu'));
-error_log('Méthode: ' . ($_SERVER['REQUEST_METHOD'] ?? 'inconnue'));
+// Récupérer les données JSON envoyées en POST
+$post_data = file_get_contents('php://input');
+$json_data = json_decode($post_data, true);
 
-// Récupérer les données POST
-$requestBody = file_get_contents('php://input');
-$requestData = json_decode($requestBody, true);
-
-// Vérifier si c'est une requête de login
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($requestData)) {
-	// Endpoint
-	$endpoint = 'api/auth/login';
-	$url = $backendBaseUrl . '/' . $endpoint;
-
-	error_log('Tentative de connexion directe à ' . $url);
-
-	// Construire la requête cURL
-	$ch = curl_init($url);
-
-	// Configuration cURL
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($ch, CURLOPT_POST, true);
-	curl_setopt($ch, CURLOPT_POSTFIELDS, $requestBody);
-	curl_setopt($ch, CURLOPT_HTTPHEADER, [
-		'Content-Type: application/json',
-		'Accept: application/json',
-		'User-Agent: ESGI-App-DirectLogin/1.0',
-		'X-Request-Source: DirectLogin'
-	]);
-	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-	curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-
-	// Exécuter la requête
-	$response = curl_exec($ch);
-	$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-	// Vérifier les erreurs
-	if ($response === false) {
-		$error = curl_error($ch);
-		error_log('Erreur cURL: ' . $error);
-
-		echo json_encode([
-			'success' => false,
-			'message' => 'Erreur de connexion au backend: ' . $error,
-			'timestamp' => date('Y-m-d H:i:s'),
-			'error_code' => 'CURL_ERROR'
-		]);
-	} else {
-		// Transmettre le code HTTP
-		http_response_code($httpCode);
-
-		// Logguer la réponse
-		error_log('Réponse du backend: ' . $httpCode);
-
-		// Relayer la réponse au client
-		echo $response;
+// Log des données reçues (anonymisées pour la sécurité)
+if ($json_data) {
+	$log_data = $json_data;
+	if (isset($log_data['password'])) {
+		$log_data['password'] = '******';
 	}
-
-	curl_close($ch);
+	error_log('Données reçues: ' . json_encode($log_data));
 } else {
-	// Requête non supportée
-	http_response_code(400);
+	error_log('Aucune donnée JSON valide reçue');
+}
+
+// Vérifier si les données sont valides
+if (!$json_data || !isset($json_data['email']) || !isset($json_data['password'])) {
 	echo json_encode([
 		'success' => false,
-		'message' => 'Méthode non supportée ou données manquantes',
-		'timestamp' => date('Y-m-d H:i:s'),
-		'method' => $_SERVER['REQUEST_METHOD'] ?? 'unknown',
-		'has_body' => !empty($requestBody) ? 'yes' : 'no'
+		'message' => 'Données manquantes ou format invalide'
+	]);
+	exit;
+}
+
+// Fonction pour essayer plusieurs méthodes de requête
+function try_multiple_request_methods($url, $data)
+{
+	$result = null;
+	$errors = [];
+
+	// Méthode 1: cURL standard
+	try {
+		error_log("Essai méthode 1: cURL standard");
+
+		$ch = curl_init($url);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+		curl_setopt($ch, CURLOPT_HTTPHEADER, [
+			'Content-Type: application/json',
+			'User-Agent: AzureAppService/1.0',
+			'Accept: application/json'
+		]);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+
+		$response = curl_exec($ch);
+		$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		$curl_error = curl_error($ch);
+		curl_close($ch);
+
+		error_log("Résultat méthode 1: HTTP $http_code");
+
+		if ($response && $http_code >= 200 && $http_code < 300) {
+			$json_response = json_decode($response, true);
+			if ($json_response) {
+				return [
+					'success' => true,
+					'method' => 'curl_standard',
+					'status' => $http_code,
+					'response' => $json_response
+				];
+			}
+		}
+
+		$errors[] = "cURL standard: HTTP $http_code, Erreur: $curl_error";
+	} catch (Exception $e) {
+		$errors[] = "cURL standard exception: " . $e->getMessage();
+	}
+
+	// Méthode 2: file_get_contents avec context
+	try {
+		error_log("Essai méthode 2: file_get_contents");
+
+		$options = [
+			'http' => [
+				'method' => 'POST',
+				'header' => "Content-Type: application/json\r\n",
+				'content' => json_encode($data),
+				'timeout' => 15
+			]
+		];
+
+		$context = stream_context_create($options);
+		$response = @file_get_contents($url, false, $context);
+
+		if ($response !== false) {
+			$json_response = json_decode($response, true);
+			if ($json_response) {
+				return [
+					'success' => true,
+					'method' => 'file_get_contents',
+					'response' => $json_response
+				];
+			}
+		}
+
+		$errors[] = "file_get_contents: Échec";
+	} catch (Exception $e) {
+		$errors[] = "file_get_contents exception: " . $e->getMessage();
+	}
+
+	// Méthode 3: cURL avec en-têtes spécifiques Azure
+	try {
+		error_log("Essai méthode 3: cURL avec en-têtes Azure");
+
+		$ch = curl_init($url);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+		curl_setopt($ch, CURLOPT_HTTPHEADER, [
+			'Content-Type: application/json',
+			'X-MS-SITE-RESTRICTED-TOKEN: true',
+			'X-ARR-SSL: true',
+			'X-MS-REQUEST-ID: ' . uniqid(),
+			'X-Original-URL: /api/auth/login'
+		]);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+
+		$response = curl_exec($ch);
+		$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		$curl_error = curl_error($ch);
+		curl_close($ch);
+
+		error_log("Résultat méthode 3: HTTP $http_code");
+
+		if ($response && $http_code >= 200 && $http_code < 300) {
+			$json_response = json_decode($response, true);
+			if ($json_response) {
+				return [
+					'success' => true,
+					'method' => 'curl_azure_headers',
+					'status' => $http_code,
+					'response' => $json_response
+				];
+			}
+		}
+
+		$errors[] = "cURL Azure: HTTP $http_code, Erreur: $curl_error";
+	} catch (Exception $e) {
+		$errors[] = "cURL Azure exception: " . $e->getMessage();
+	}
+
+	// Méthode 4: cURL avec méthode alternative (X-HTTP-Method-Override)
+	try {
+		error_log("Essai méthode 4: cURL avec X-HTTP-Method-Override");
+
+		$ch = curl_init($url);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+		curl_setopt($ch, CURLOPT_HTTPHEADER, [
+			'Content-Type: application/json',
+			'X-HTTP-Method-Override: POST',
+			'User-Agent: AzureWebApp/1.0',
+			'Accept: application/json'
+		]);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+
+		$response = curl_exec($ch);
+		$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		$curl_error = curl_error($ch);
+		curl_close($ch);
+
+		error_log("Résultat méthode 4: HTTP $http_code");
+
+		if ($response && $http_code >= 200 && $http_code < 300) {
+			$json_response = json_decode($response, true);
+			if ($json_response) {
+				return [
+					'success' => true,
+					'method' => 'curl_method_override',
+					'status' => $http_code,
+					'response' => $json_response
+				];
+			}
+		}
+
+		$errors[] = "cURL Method Override: HTTP $http_code, Erreur: $curl_error";
+	} catch (Exception $e) {
+		$errors[] = "cURL Method Override exception: " . $e->getMessage();
+	}
+
+	// Si toutes les méthodes ont échoué
+	return [
+		'success' => false,
+		'message' => 'Toutes les méthodes de requête ont échoué',
+		'errors' => $errors
+	];
+}
+
+// Tenter la connexion avec les différentes méthodes
+$login_url = $api_base_url . $login_endpoint;
+$result = try_multiple_request_methods($login_url, $json_data);
+
+// Traiter le résultat
+if ($result['success']) {
+	$response_data = $result['response'];
+
+	// Log de succès (anonymisé)
+	error_log('Login réussi avec méthode: ' . $result['method']);
+
+	// Renvoyer la réponse au client
+	echo json_encode($response_data);
+} else {
+	// Log d'échec
+	error_log('Échec de toutes les méthodes de login: ' . json_encode($result['errors']));
+
+	// Renvoyer un message d'erreur adapté
+	echo json_encode([
+		'success' => false,
+		'message' => 'Erreur de connexion au serveur backend',
+		'details' => $result['errors']
 	]);
 }
