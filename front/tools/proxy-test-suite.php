@@ -147,7 +147,10 @@ function testSecurity($url)
 			'message' => 'SSL Check',
 			'details' => ['protocol' => parse_url($url, PHP_URL_SCHEME)]
 		],
-		'Headers' => testCorsHeaders($url)
+		'Headers' => testCorsHeaders($url),
+		'RateLimit' => testRateLimit(),
+		'InputValidation' => testInputValidation(),
+		'SecurityHeaders' => testSecurityHeaders($url)
 	];
 
 	$overallSuccess = true;
@@ -162,6 +165,97 @@ function testSecurity($url)
 		'success' => $overallSuccess,
 		'message' => 'Security Tests',
 		'details' => $securityTests
+	];
+}
+
+// Fonction pour tester la limitation de taux
+function testRateLimit()
+{
+	$testResults = [];
+	$ip = '127.0.0.1';
+
+	// Test de la limite de taux
+	for ($i = 0; $i < SECURITY_CONFIG['rate_limit']['max_requests'] + 1; $i++) {
+		$result = checkRateLimit($ip);
+		if ($i < SECURITY_CONFIG['rate_limit']['max_requests']) {
+			$testResults[] = $result;
+		} else {
+			$testResults[] = !$result; // Le dernier devrait être bloqué
+		}
+	}
+
+	return [
+		'success' => !in_array(false, array_slice($testResults, 0, -1)) && !end($testResults),
+		'message' => 'Rate Limit Test',
+		'details' => [
+			'max_requests' => SECURITY_CONFIG['rate_limit']['max_requests'],
+			'time_window' => SECURITY_CONFIG['rate_limit']['time_window'],
+			'test_results' => $testResults
+		]
+	];
+}
+
+// Fonction pour tester la validation des entrées
+function testInputValidation()
+{
+	$testCases = [
+		'valid' => 'test123',
+		'too_long' => str_repeat('a', SECURITY_CONFIG['input_validation']['max_length'] + 1),
+		'empty' => '',
+		'xss' => '<script>alert("xss")</script>',
+		'sql_injection' => "' OR '1'='1"
+	];
+
+	$results = [];
+	foreach ($testCases as $case => $input) {
+		$results[$case] = [
+			'input' => $input,
+			'validated' => validateInput($input)
+		];
+	}
+
+	return [
+		'success' => $results['valid']['validated'] &&
+			!$results['too_long']['validated'] &&
+			!$results['empty']['validated'] &&
+			$results['xss']['validated'] !== $testCases['xss'] &&
+			$results['sql_injection']['validated'] !== $testCases['sql_injection'],
+		'message' => 'Input Validation Test',
+		'details' => $results
+	];
+}
+
+// Fonction pour tester les headers de sécurité
+function testSecurityHeaders($url)
+{
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, $url);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	curl_setopt($ch, CURLOPT_HEADER, true);
+	curl_setopt($ch, CURLOPT_NOBODY, true);
+
+	$response = curl_exec($ch);
+	$headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+	$headers = substr($response, 0, $headerSize);
+	curl_close($ch);
+
+	$requiredHeaders = [
+		'X-Content-Type-Options',
+		'X-Frame-Options',
+		'X-XSS-Protection',
+		'Strict-Transport-Security',
+		'Content-Security-Policy'
+	];
+
+	$foundHeaders = [];
+	foreach ($requiredHeaders as $header) {
+		$foundHeaders[$header] = stripos($headers, $header) !== false;
+	}
+
+	return [
+		'success' => !in_array(false, $foundHeaders),
+		'message' => 'Security Headers Test',
+		'details' => $foundHeaders
 	];
 }
 
@@ -190,6 +284,9 @@ $results['performance']['status'] = formatResult("Performance Test: status.php",
 
 // Tests de sécurité
 $results['security']['overall'] = formatResult("Security Test", testSecurity($backendUrl));
+$results['security']['rate_limit'] = formatResult("Rate Limit Test", testRateLimit());
+$results['security']['input_validation'] = formatResult("Input Validation Test", testInputValidation());
+$results['security']['security_headers'] = formatResult("Security Headers Test", testSecurityHeaders($backendUrl));
 
 // Affichage des résultats
 ?>
