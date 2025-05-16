@@ -2,6 +2,20 @@
 // Fichier de test unifié pour le proxy
 header('Content-Type: application/json');
 
+// Headers CORS
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-CSRF-Token');
+header('Access-Control-Max-Age: 3600');
+header('Access-Control-Allow-Credentials: true');
+
+// Headers de sécurité
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('X-XSS-Protection: 1; mode=block');
+header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+header('Content-Security-Policy: default-src \'self\'; script-src \'self\' \'unsafe-inline\' \'unsafe-eval\'; style-src \'self\' \'unsafe-inline\';');
+
 // Configuration des tests
 $testConfig = [
 	'endpoints' => [
@@ -60,7 +74,7 @@ function runTests($config)
 function testConnection($endpoint)
 {
 	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, "https://app-backend-esgi-app.azurewebsites.net/api/$endpoint");
+	curl_setopt($ch, CURLOPT_URL, "api-bridge.php?endpoint=$endpoint");
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 	$response = curl_exec($ch);
@@ -84,7 +98,7 @@ function testConnection($endpoint)
 function testCORS($endpoint, $requiredHeaders)
 {
 	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, "https://app-backend-esgi-app.azurewebsites.net/api/$endpoint");
+	curl_setopt($ch, CURLOPT_URL, "api-bridge.php?endpoint=$endpoint");
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_HEADER, true);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -139,7 +153,7 @@ function testPerformance()
 {
 	$start = microtime(true);
 	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, "https://app-backend-esgi-app.azurewebsites.net/api/status.php");
+	curl_setopt($ch, CURLOPT_URL, "api-bridge.php?endpoint=status.php");
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 	curl_exec($ch);
@@ -165,7 +179,7 @@ function testRateLimit()
 	$responses = [];
 	for ($i = 0; $i < 10; $i++) {
 		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, "https://app-backend-esgi-app.azurewebsites.net/api/status.php");
+		curl_setopt($ch, CURLOPT_URL, "api-bridge.php?endpoint=status.php");
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 		$response = curl_exec($ch);
@@ -210,7 +224,7 @@ function testInputValidation()
 	$results = [];
 	foreach ($testInputs as $type => $input) {
 		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, "https://app-backend-esgi-app.azurewebsites.net/api/status.php");
+		curl_setopt($ch, CURLOPT_URL, "api-bridge.php?endpoint=status.php");
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_POST, true);
 		curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['input' => $input]));
