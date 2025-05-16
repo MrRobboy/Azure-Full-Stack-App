@@ -6,7 +6,7 @@
 // Singleton API Service
 const ApiService = (function () {
 	// Private properties
-	const _corsProxy = window.appConfig?.proxyUrl || "api-bridge.php";
+	const _corsProxy = "matieres-proxy.php";
 
 	/**
 	 * Test the proxy connection
