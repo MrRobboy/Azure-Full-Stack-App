@@ -13,6 +13,17 @@ require_once __DIR__ . '/config/proxy.php';
 // Configurer le logging
 setupLogging();
 
+// Set CORS headers first
+$corsHeaders = getCorsHeaders();
+foreach ($corsHeaders as $header => $value) {
+	header("$header: $value");
+}
+
+// Set security headers
+foreach (SECURITY_CONFIG['headers'] as $header) {
+	header($header);
+}
+
 // Log de la requête entrante
 error_log("Proxy Request: " . $_SERVER['REQUEST_METHOD'] . " " . $_SERVER['REQUEST_URI']);
 error_log("Query String: " . $_SERVER['QUERY_STRING']);
@@ -47,10 +58,6 @@ if (!in_array($method, SECURITY_CONFIG['input_validation']['allowed_methods'])) 
 // Gestion des requêtes OPTIONS (preflight CORS)
 if ($method === 'OPTIONS') {
 	error_log("Handling OPTIONS request");
-	$corsHeaders = getCorsHeaders();
-	foreach ($corsHeaders as $header => $value) {
-		header("$header: $value");
-	}
 	exit(0);
 }
 
@@ -165,16 +172,6 @@ if ($error) {
 // Log de la réponse
 error_log("Response Code: " . $httpCode);
 error_log("Response: " . $response);
-
-// Envoi des headers CORS
-$corsHeaders = getCorsHeaders();
-foreach ($corsHeaders as $header => $value) {
-	header("$header: $value");
-}
-// Envoi des headers de sécurité
-foreach (SECURITY_CONFIG['headers'] as $header) {
-	header($header);
-}
 
 // Envoi de la réponse
 http_response_code($httpCode);

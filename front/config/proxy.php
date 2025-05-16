@@ -40,7 +40,7 @@ define('LOG_CONFIG', [
 define('SECURITY_CONFIG', [
 	'rate_limit' => [
 		'enabled' => true,
-		'max_requests' => 100,
+		'max_requests' => 1000,
 		'window' => 3600
 	],
 	'input_validation' => [
@@ -130,50 +130,32 @@ function checkRateLimit($ip)
 		return true;
 	}
 
-	$cacheKey = 'rate_limit_' . md5($ip);
+	$cacheDir = sys_get_temp_dir() . '/rate_limit';
+	if (!is_dir($cacheDir)) {
+		mkdir($cacheDir, 0755, true);
+	}
+
+	$cacheFile = $cacheDir . '/' . md5($ip) . '.json';
 	$now = time();
+	$window = SECURITY_CONFIG['rate_limit']['window'];
+	$maxRequests = SECURITY_CONFIG['rate_limit']['max_requests'];
 
-	// Utiliser APCu si disponible, sinon utiliser le système de fichiers
-	if (function_exists('apcu_store')) {
-		$data = apcu_fetch($cacheKey);
-		if ($data === false) {
-			$data = ['count' => 1, 'timestamp' => $now];
-			apcu_store($cacheKey, $data, SECURITY_CONFIG['rate_limit']['window']);
-			return true;
-		}
-
-		if ($data['timestamp'] > ($now - SECURITY_CONFIG['rate_limit']['window'])) {
-			if ($data['count'] >= SECURITY_CONFIG['rate_limit']['max_requests']) {
+	if (file_exists($cacheFile)) {
+		$data = json_decode(file_get_contents($cacheFile), true);
+		if ($data && $data['timestamp'] > ($now - $window)) {
+			if ($data['count'] >= $maxRequests) {
 				error_log("Rate limit exceeded for IP: $ip");
 				return false;
 			}
 			$data['count']++;
-			apcu_store($cacheKey, $data, SECURITY_CONFIG['rate_limit']['window']);
 		} else {
 			$data = ['count' => 1, 'timestamp' => $now];
-			apcu_store($cacheKey, $data, SECURITY_CONFIG['rate_limit']['window']);
 		}
 	} else {
-		$cacheFile = sys_get_temp_dir() . '/' . $cacheKey . '.json';
-
-		if (file_exists($cacheFile)) {
-			$data = json_decode(file_get_contents($cacheFile), true);
-			if ($data && $data['timestamp'] > ($now - SECURITY_CONFIG['rate_limit']['window'])) {
-				if ($data['count'] >= SECURITY_CONFIG['rate_limit']['max_requests']) {
-					error_log("Rate limit exceeded for IP: $ip");
-					return false;
-				}
-				$data['count']++;
-			} else {
-				$data = ['count' => 1, 'timestamp' => $now];
-			}
-		} else {
-			$data = ['count' => 1, 'timestamp' => $now];
-		}
-
-		file_put_contents($cacheFile, json_encode($data));
+		$data = ['count' => 1, 'timestamp' => $now];
 	}
 
+	file_put_contents($cacheFile, json_encode($data));
 	return true;
 }
 
