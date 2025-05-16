@@ -80,6 +80,12 @@ $headers = [
 	'Accept: application/json',
 	'X-Requested-With: XMLHttpRequest'
 ];
+
+// Add Authorization header if present in original request
+if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+	$headers[] = 'Authorization: ' . $_SERVER['HTTP_AUTHORIZATION'];
+}
+
 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
 // Add request body for POST, PUT, PATCH
@@ -93,23 +99,32 @@ if (strpos($endpoint, 'status.php') !== false) {
 		'status' => 'ok',
 		'message' => 'API Bridge is working',
 		'timestamp' => date('Y-m-d H:i:s'),
-		'source' => 'api-bridge.php'
+		'source' => 'api-bridge.php',
+		'endpoint' => $endpoint,
+		'method' => $method
 	]);
 	exit;
 }
 
-// Special case handling for some endpoints
-if ($method === 'GET') {
-	$isUserProfile = strpos($endpoint, 'user/profile') !== false;
-	$sessionUser = getSessionUser();
+// Special case handling for login endpoint
+if (strpos($endpoint, 'auth/login') !== false) {
+	error_log("Handling login request");
+	// Ensure we're using POST method
+	if ($method !== 'POST') {
+		sendErrorResponse('Login requires POST method', 405);
+		exit;
+	}
 
-	// Handle user profile request - return session data
-	if ($isUserProfile && !empty($sessionUser)) {
-		echo json_encode([
-			'success' => true,
-			'user' => $sessionUser,
-			'source' => 'api-bridge.php (session data)'
-		]);
+	// Validate request body
+	if (empty($requestBody)) {
+		sendErrorResponse('Login request requires email and password', 400);
+		exit;
+	}
+
+	// Parse request body
+	$loginData = json_decode($requestBody, true);
+	if (!isset($loginData['email']) || !isset($loginData['password'])) {
+		sendErrorResponse('Login request must include email and password', 400);
 		exit;
 	}
 }
@@ -138,10 +153,6 @@ error_log("Response Body: " . $response);
 // Handle cURL errors
 if ($errorCode > 0) {
 	error_log("cURL error: " . $error . " (code: " . $errorCode . ")");
-	// Try to use direct-matieres.php as fallback for some endpoints
-	tryFallbackEndpoint($endpoint, $method, $requestBody);
-
-	// If we reached here, fallback didn't work either
 	sendErrorResponse("cURL Error: $error ($errorCode)", 500);
 	exit;
 }
@@ -151,84 +162,29 @@ http_response_code($httpCode);
 echo $response;
 exit;
 
-// Helper function to get user data from session
-function getSessionUser()
-{
-	session_start();
-	if (isset($_SESSION['user'])) {
-		return $_SESSION['user'];
-	}
-	return null;
-}
-
-// Helper function to try fallback endpoint
-function tryFallbackEndpoint($endpoint, $method, $requestBody)
-{
-	error_log("Trying fallback endpoint for: " . $endpoint);
-	// Check if the endpoint is one we can handle with our direct provider
-	if (
-		strpos($endpoint, 'matieres') !== false ||
-		strpos($endpoint, 'classes') !== false ||
-		strpos($endpoint, 'examens') !== false ||
-		strpos($endpoint, 'professeurs') !== false
-	) {
-		// Redirect to our direct data provider
-		$fallbackUrl = "direct-matieres.php?endpoint=" . urlencode($endpoint);
-		error_log("Using fallback URL: " . $fallbackUrl);
-
-		// Execute a local request to our fallback
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, $fallbackUrl);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-
-		if (in_array($method, ['POST', 'PUT', 'PATCH']) && !empty($requestBody)) {
-			curl_setopt($ch, CURLOPT_POSTFIELDS, $requestBody);
-			curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-		}
-
-		$response = curl_exec($ch);
-		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		curl_close($ch);
-
-		if ($httpCode >= 200 && $httpCode < 300) {
-			// Successfully got response from fallback
-			http_response_code($httpCode);
-			echo $response;
-			exit;
-		}
-	}
-}
-
 // Helper function to send error response
 function sendErrorResponse($message, $code = 500)
 {
-	error_log("Error response: " . $message . " (code: " . $code . ")");
 	http_response_code($code);
 	echo json_encode([
 		'success' => false,
-		'error' => $message,
+		'message' => $message,
+		'timestamp' => date('Y-m-d H:i:s'),
 		'source' => 'api-bridge.php',
-		'debug' => [
-			'endpoint' => $endpoint ?? null,
-			'method' => $method ?? null,
-			'requestBody' => $requestBody ?? null,
-			'targetUrl' => $targetUrl ?? null
-		]
+		'endpoint' => $endpoint ?? 'unknown',
+		'method' => $_SERVER['REQUEST_METHOD'] ?? 'unknown'
 	]);
+	exit;
 }
 
-// PHP 8 compatibility function
-if (!function_exists('str_starts_with')) {
-	function str_starts_with($haystack, $needle)
-	{
-		return (string)$needle !== '' && strncmp($haystack, $needle, strlen($needle)) === 0;
-	}
+// Helper function to check if string starts with
+function str_starts_with($haystack, $needle)
+{
+	return strpos($haystack, $needle) === 0;
 }
 
-if (!function_exists('str_ends_with')) {
-	function str_ends_with($haystack, $needle)
-	{
-		return $needle !== '' && substr($haystack, -strlen($needle)) === (string)$needle;
-	}
+// Helper function to check if string ends with
+function str_ends_with($haystack, $needle)
+{
+	return substr($haystack, -strlen($needle)) === $needle;
 }

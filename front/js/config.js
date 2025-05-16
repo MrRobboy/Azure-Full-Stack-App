@@ -1,5 +1,5 @@
 // Configuration de l'application
-// Version: 4.1 - Azure Edition - Proxy Fix
+// Version: 4.2 - Azure Edition - Proxy Fix
 
 // Détecter l'environnement
 const isAzure = window.location.hostname.includes("azurewebsites.net");
@@ -21,14 +21,14 @@ const defaultConfig = {
 
 	// URL des proxies - avec priorité
 	proxyUrls: [
+		"api-bridge.php", // Proxy principal
 		"matieres-proxy.php", // Proxy spécifique pour les matières
-		"api-bridge.php", // Alternative #1
-		"simple-proxy.php", // Alternative #2
-		"unified-proxy.php" // Original (peut ne pas fonctionner)
+		"simple-proxy.php", // Alternative
+		"unified-proxy.php" // Original
 	],
 
 	// URL du proxy par défaut
-	proxyUrl: "api-bridge.php", // Proxy fonctionnel
+	proxyUrl: "api-bridge.php",
 
 	// Pour les matières spécifiquement
 	matieresProxyUrl: "matieres-proxy.php",
@@ -37,7 +37,7 @@ const defaultConfig = {
 	bypass404: true,
 
 	// Version de configuration
-	version: "4.1"
+	version: "4.2"
 };
 
 // Configuration pour l'environnement
@@ -49,14 +49,31 @@ async function verifyProxyAccess() {
 
 	console.log("Verifying access to proxy...");
 
+	// D'abord vérifier test-proxy.php
+	try {
+		const testResponse = await fetch(
+			`test-proxy.php?_=${Date.now()}`
+		);
+		if (testResponse.ok) {
+			const testData = await testResponse.json();
+			console.log("Test proxy response:", testData);
+		}
+	} catch (error) {
+		console.warn("Test proxy check failed:", error.message);
+	}
+
 	// Essayer chaque proxy dans l'ordre jusqu'à ce que l'un fonctionne
 	for (const proxyUrl of appConfig.proxyUrls) {
 		try {
-			// Ajouter un paramètre unique pour éviter la mise en cache
 			const response = await fetch(
 				`${proxyUrl}?endpoint=status.php&_=${Date.now()}`,
 				{
 					method: "GET",
+					headers: {
+						Accept: "application/json",
+						"Content-Type":
+							"application/json"
+					},
 					timeout: 5000
 				}
 			);
@@ -65,7 +82,6 @@ async function verifyProxyAccess() {
 				console.log(
 					`Proxy ${proxyUrl} is working correctly!`
 				);
-				// Définir ce proxy comme proxy par défaut
 				appConfig.proxyUrl = proxyUrl;
 				return true;
 			}
@@ -89,7 +105,11 @@ if (isAzure) {
 	console.log("API Base URL:", appConfig.apiBaseUrl);
 
 	// Vérifier l'accès au proxy
-	verifyProxyAccess();
+	verifyProxyAccess().then((success) => {
+		if (!success) {
+			console.warn("Using fallback proxy configuration");
+		}
+	});
 }
 
 // Fonction pour obtenir l'URL complète de l'API
