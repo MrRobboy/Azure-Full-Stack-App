@@ -7,28 +7,29 @@
  * with built-in fallbacks for common API endpoints.
  */
 
-// Charger la configuration
+// Load security configuration
+require_once __DIR__ . '/config/security.php';
+
+// Load proxy configuration
 require_once __DIR__ . '/config/proxy.php';
 
-// Configurer le logging
+// Configure logging
 setupLogging();
 
-// Set CORS headers first
+// Set CORS headers
 $corsHeaders = getCorsHeaders();
 foreach ($corsHeaders as $header => $value) {
 	header("$header: $value");
 }
 
 // Set security headers
-foreach (SECURITY_CONFIG['headers'] as $header) {
-	header($header);
-}
+setSecurityHeaders();
 
-// Log de la requête entrante
+// Log incoming request
 error_log("Proxy Request: " . $_SERVER['REQUEST_METHOD'] . " " . $_SERVER['REQUEST_URI']);
 error_log("Query String: " . $_SERVER['QUERY_STRING']);
 
-// Vérification de la limite de taux
+// Check rate limit
 if (!checkRateLimit($_SERVER['REMOTE_ADDR'])) {
 	error_log("Rate limit exceeded for IP: " . $_SERVER['REMOTE_ADDR']);
 	header('HTTP/1.1 429 Too Many Requests');
@@ -41,9 +42,9 @@ if (!checkRateLimit($_SERVER['REMOTE_ADDR'])) {
 	]));
 }
 
-// Vérification de la méthode HTTP
+// Check HTTP method
 $method = $_SERVER['REQUEST_METHOD'];
-if (!in_array($method, SECURITY_CONFIG['input_validation']['allowed_methods'])) {
+if (!in_array($method, INPUT_VALIDATION_CONFIG['allowed_methods'])) {
 	error_log("Method not allowed: " . $method);
 	header('HTTP/1.1 405 Method Not Allowed');
 	die(json_encode([
@@ -55,23 +56,16 @@ if (!in_array($method, SECURITY_CONFIG['input_validation']['allowed_methods'])) 
 	]));
 }
 
-// Gestion des requêtes OPTIONS (preflight CORS)
+// Handle OPTIONS requests
 if ($method === 'OPTIONS') {
 	error_log("Handling OPTIONS request");
 	exit(0);
 }
 
-// Validation de l'endpoint
+// Validate endpoint
 $endpoint = isset($_GET['endpoint']) ? validateInput($_GET['endpoint']) : null;
 if (!$endpoint) {
 	error_log("Invalid or missing endpoint");
-	$corsHeaders = getCorsHeaders();
-	foreach ($corsHeaders as $header => $value) {
-		header("$header: $value");
-	}
-	foreach (SECURITY_CONFIG['headers'] as $header) {
-		header($header);
-	}
 	header('HTTP/1.1 400 Bad Request');
 	die(json_encode([
 		'success' => false,
