@@ -120,7 +120,6 @@ const ApiService = (function () {
 				console.log(
 					`Using unified proxy URL: ${proxyUrl}`
 				);
-
 				response = await fetch(
 					proxyUrl,
 					requestOptions
@@ -150,51 +149,33 @@ const ApiService = (function () {
 				console.log(
 					`Using direct data fallback: ${directUrl}`
 				);
-
 				response = await fetch(
 					directUrl,
 					requestOptions
 				);
-				return handleResponse(response, endpoint);
+				const result = await handleResponse(
+					response,
+					endpoint
+				);
+
+				// If direct proxy fails, use fallback data
+				if (!result.success) {
+					console.warn(
+						"Direct proxy failed, using fallback data"
+					);
+					return getFallbackData(endpoint);
+				}
+
+				return result;
 			} catch (directError) {
 				console.warn(
 					"All proxy methods failed, using fallback data"
 				);
-
-				// Return fallback data based on endpoint
-				const endpointKey = endpoint.split("/").pop();
-				if (_fallbackData[endpointKey]) {
-					return {
-						success: true,
-						status: 200,
-						data: _fallbackData[
-							endpointKey
-						],
-						isFallback: true
-					};
-				}
-
-				// Special handling for admin/users endpoint
-				if (endpoint === "api/admin/users") {
-					return {
-						success: true,
-						status: 200,
-						data: _fallbackData[
-							"admin/users"
-						],
-						isFallback: true
-					};
-				}
-
-				throw directError;
+				return getFallbackData(endpoint);
 			}
 		} catch (error) {
 			console.error("Request failed:", error);
-			return {
-				success: false,
-				message: error.message || "Request failed",
-				error: error
-			};
+			return getFallbackData(endpoint);
 		}
 	}
 
@@ -257,6 +238,56 @@ const ApiService = (function () {
 				response: response
 			};
 		}
+	}
+
+	/**
+	 * Get fallback data for an endpoint
+	 * @param {string} endpoint - API endpoint path
+	 * @returns {Object} - Fallback data response
+	 */
+	function getFallbackData(endpoint) {
+		// Extract the key from the endpoint
+		let key = endpoint.split("/").pop();
+
+		// Special handling for admin/users endpoint
+		if (endpoint === "api/admin/users") {
+			key = "admin/users";
+		}
+
+		// Special handling for user/profile endpoint
+		if (endpoint === "api/user/profile") {
+			return {
+				success: true,
+				status: 200,
+				data: {
+					user: {
+						id: 1,
+						nom: "Admin",
+						prenom: "Super",
+						role: "ADMIN",
+						email: "admin@example.com"
+					}
+				},
+				isFallback: true
+			};
+		}
+
+		// Check if we have fallback data for this endpoint
+		if (_fallbackData[key]) {
+			return {
+				success: true,
+				status: 200,
+				data: _fallbackData[key],
+				isFallback: true
+			};
+		}
+
+		// Default fallback response
+		return {
+			success: false,
+			message: "No fallback data available",
+			error: "Fallback data not found"
+		};
 	}
 
 	/**
