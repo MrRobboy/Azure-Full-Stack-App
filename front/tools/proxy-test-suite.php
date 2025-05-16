@@ -15,27 +15,30 @@
 require_once __DIR__ . '/../config/proxy.php';
 
 // Configuration du test
-$testConfig = [
-	'backend_url' => BACKEND_BASE_URL,
-	'test_endpoints' => [
-		'status' => 'status.php',
-		'login' => 'auth/login',
-		'matieres' => 'matieres',
-		'notes' => 'notes'
-	],
-	'test_methods' => ['GET', 'POST', 'OPTIONS'],
-	'timeout' => 5 // Timeout pour chaque test en secondes
+$backendUrl = BACKEND_BASE_URL;
+$endpoints = [
+	'status.php',
+	'auth/login',
+	'matieres',
+	'notes'
 ];
 
-// Fonction pour formater le résultat
-function formatResult($success, $message, $data = null)
+// Fonction pour formater les résultats
+function formatResult($test, $result)
 {
-	return [
-		'success' => $success,
-		'message' => $message,
-		'data' => $data,
-		'timestamp' => date('Y-m-d H:i:s')
+	$status = $result['success'] ? '✅' : '❌';
+	$output = [
+		'test' => $test,
+		'status' => $status,
+		'success' => $result['success'],
+		'message' => $result['message'],
+		'details' => $result['details'] ?? null
 	];
+
+	// Log dans la console
+	echo "<script>console.log(" . json_encode($output, JSON_PRETTY_PRINT) . ");</script>";
+
+	return $output;
 }
 
 // Fonction pour tester un endpoint
@@ -44,13 +47,16 @@ function testEndpoint($url, $method = 'GET', $data = null)
 	$ch = curl_init();
 	curl_setopt($ch, CURLOPT_URL, $url);
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-	curl_setopt($ch, CURLOPT_TIMEOUT, 5);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, SSL_VERIFY_PEER);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, SSL_VERIFY_HOST);
+	curl_setopt($ch, CURLOPT_TIMEOUT, CURL_TIMEOUT);
+	curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, CURL_CONNECT_TIMEOUT);
 
-	if ($data) {
-		curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+	if ($method === 'POST') {
+		curl_setopt($ch, CURLOPT_POST, true);
+		if ($data) {
+			curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+		}
 	}
 
 	$response = curl_exec($ch);
@@ -59,9 +65,13 @@ function testEndpoint($url, $method = 'GET', $data = null)
 	curl_close($ch);
 
 	return [
-		'http_code' => $httpCode,
-		'response' => $response,
-		'error' => $error
+		'success' => $httpCode >= 200 && $httpCode < 300,
+		'message' => $error ?: "HTTP $httpCode",
+		'details' => [
+			'http_code' => $httpCode,
+			'response' => $response,
+			'error' => $error
+		]
 	];
 }
 
@@ -71,152 +81,271 @@ function testCorsHeaders($url)
 	$ch = curl_init();
 	curl_setopt($ch, CURLOPT_URL, $url);
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'OPTIONS');
 	curl_setopt($ch, CURLOPT_HEADER, true);
 	curl_setopt($ch, CURLOPT_NOBODY, true);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, SSL_VERIFY_PEER);
+	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, SSL_VERIFY_HOST);
 
 	$response = curl_exec($ch);
 	$headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
 	$headers = substr($response, 0, $headerSize);
 	curl_close($ch);
 
-	return $headers;
+	$corsHeaders = [
+		'Access-Control-Allow-Origin' => false,
+		'Access-Control-Allow-Methods' => false,
+		'Access-Control-Allow-Headers' => false
+	];
+
+	foreach (explode("\n", $headers) as $line) {
+		foreach ($corsHeaders as $header => $value) {
+			if (stripos($line, $header) !== false) {
+				$corsHeaders[$header] = true;
+			}
+		}
+	}
+
+	return [
+		'success' => !in_array(false, $corsHeaders),
+		'message' => 'CORS Headers Check',
+		'details' => $corsHeaders
+	];
 }
 
-// Interface HTML pour les tests
+// Fonction pour tester la performance
+function testPerformance($url, $iterations = 5)
+{
+	$times = [];
+	for ($i = 0; $i < $iterations; $i++) {
+		$start = microtime(true);
+		testEndpoint($url);
+		$times[] = microtime(true) - $start;
+	}
+
+	$avg = array_sum($times) / count($times);
+	$max = max($times);
+	$min = min($times);
+
+	return [
+		'success' => $avg < 1.0, // Considérer comme succès si la moyenne est < 1 seconde
+		'message' => 'Performance Test',
+		'details' => [
+			'average_time' => round($avg * 1000, 2) . 'ms',
+			'min_time' => round($min * 1000, 2) . 'ms',
+			'max_time' => round($max * 1000, 2) . 'ms',
+			'iterations' => $iterations
+		]
+	];
+}
+
+// Fonction pour tester la sécurité
+function testSecurity($url)
+{
+	$securityTests = [
+		'SSL' => [
+			'success' => strpos($url, 'https://') === 0,
+			'message' => 'SSL Check',
+			'details' => ['protocol' => parse_url($url, PHP_URL_SCHEME)]
+		],
+		'Headers' => testCorsHeaders($url)
+	];
+
+	$overallSuccess = true;
+	foreach ($securityTests as $test) {
+		if (!$test['success']) {
+			$overallSuccess = false;
+			break;
+		}
+	}
+
+	return [
+		'success' => $overallSuccess,
+		'message' => 'Security Tests',
+		'details' => $securityTests
+	];
+}
+
+// Exécution des tests
+$results = [
+	'connection' => [],
+	'cors' => [],
+	'performance' => [],
+	'security' => []
+];
+
+// Tests de connexion
+foreach ($endpoints as $endpoint) {
+	$url = $backendUrl . '/' . $endpoint;
+	$results['connection'][$endpoint] = formatResult("Connection Test: $endpoint", testEndpoint($url));
+}
+
+// Tests CORS
+foreach ($endpoints as $endpoint) {
+	$url = $backendUrl . '/' . $endpoint;
+	$results['cors'][$endpoint] = formatResult("CORS Test: $endpoint", testCorsHeaders($url));
+}
+
+// Tests de performance
+$results['performance']['status'] = formatResult("Performance Test: status.php", testPerformance($backendUrl . '/status.php'));
+
+// Tests de sécurité
+$results['security']['overall'] = formatResult("Security Test", testSecurity($backendUrl));
+
+// Affichage des résultats
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 
 <head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Proxy Test Suite</title>
 	<style>
 		body {
 			font-family: Arial, sans-serif;
+			line-height: 1.6;
 			margin: 20px;
+			background-color: #f5f5f5;
+		}
+
+		.container {
+			max-width: 1200px;
+			margin: 0 auto;
+			background-color: white;
+			padding: 20px;
+			border-radius: 8px;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		}
+
+		h1 {
+			color: #333;
+			border-bottom: 2px solid #eee;
+			padding-bottom: 10px;
+		}
+
+		h2 {
+			color: #444;
+			margin-top: 20px;
 		}
 
 		.test-section {
-			margin: 20px 0;
+			margin-bottom: 30px;
+			padding: 15px;
+			background-color: #f9f9f9;
+			border-radius: 4px;
+		}
+
+		.test-result {
+			margin: 10px 0;
 			padding: 10px;
-			border: 1px solid #ddd;
+			border-left: 4px solid #ddd;
 		}
 
 		.success {
-			color: green;
+			border-left-color: #4CAF50;
 		}
 
 		.error {
-			color: red;
+			border-left-color: #f44336;
 		}
 
-		.warning {
-			color: orange;
-		}
-
-		pre {
-			background: #f5f5f5;
+		.details {
+			margin-top: 5px;
 			padding: 10px;
-			overflow: auto;
+			background-color: #fff;
+			border-radius: 4px;
+			font-family: monospace;
+			white-space: pre-wrap;
 		}
 
-		table {
-			border-collapse: collapse;
-			width: 100%;
-		}
-
-		th,
-		td {
-			border: 1px solid #ddd;
-			padding: 8px;
-			text-align: left;
-		}
-
-		th {
-			background-color: #f2f2f2;
+		.timestamp {
+			color: #666;
+			font-size: 0.9em;
+			margin-top: 20px;
 		}
 	</style>
 </head>
 
 <body>
-	<h1>Proxy Test Suite</h1>
+	<div class="container">
+		<h1>Proxy Test Suite</h1>
+		<div class="timestamp">Test exécuté le: <?php echo date('Y-m-d H:i:s'); ?></div>
 
-	<?php
-	// Section 1: Test de Connexion
-	echo "<div class='test-section'>";
-	echo "<h2>1. Test de Connexion</h2>";
+		<div class="test-section">
+			<h2>Tests de Connexion</h2>
+			<?php foreach ($results['connection'] as $endpoint => $result): ?>
+				<div class="test-result <?php echo $result['success'] ? 'success' : 'error'; ?>">
+					<strong><?php echo $result['test']; ?></strong>
+					<div><?php echo $result['message']; ?></div>
+					<?php if ($result['details']): ?>
+						<div class="details"><?php echo json_encode($result['details'], JSON_PRETTY_PRINT); ?></div>
+					<?php endif; ?>
+				</div>
+			<?php endforeach; ?>
+		</div>
 
-	foreach ($testConfig['test_endpoints'] as $name => $endpoint) {
-		$url = $testConfig['backend_url'] . '/' . $endpoint;
-		$result = testEndpoint($url);
+		<div class="test-section">
+			<h2>Tests CORS</h2>
+			<?php foreach ($results['cors'] as $endpoint => $result): ?>
+				<div class="test-result <?php echo $result['success'] ? 'success' : 'error'; ?>">
+					<strong><?php echo $result['test']; ?></strong>
+					<div><?php echo $result['message']; ?></div>
+					<?php if ($result['details']): ?>
+						<div class="details"><?php echo json_encode($result['details'], JSON_PRETTY_PRINT); ?></div>
+					<?php endif; ?>
+				</div>
+			<?php endforeach; ?>
+		</div>
 
-		echo "<h3>Test: $name</h3>";
-		echo "<table>";
-		echo "<tr><th>URL</th><td>$url</td></tr>";
-		echo "<tr><th>Status</th><td class='" . ($result['http_code'] == 200 ? 'success' : 'error') . "'>" . $result['http_code'] . "</td></tr>";
-		if ($result['error']) {
-			echo "<tr><th>Error</th><td class='error'>" . $result['error'] . "</td></tr>";
+		<div class="test-section">
+			<h2>Tests de Performance</h2>
+			<?php foreach ($results['performance'] as $test => $result): ?>
+				<div class="test-result <?php echo $result['success'] ? 'success' : 'error'; ?>">
+					<strong><?php echo $result['test']; ?></strong>
+					<div><?php echo $result['message']; ?></div>
+					<?php if ($result['details']): ?>
+						<div class="details"><?php echo json_encode($result['details'], JSON_PRETTY_PRINT); ?></div>
+					<?php endif; ?>
+				</div>
+			<?php endforeach; ?>
+		</div>
+
+		<div class="test-section">
+			<h2>Tests de Sécurité</h2>
+			<?php foreach ($results['security'] as $test => $result): ?>
+				<div class="test-result <?php echo $result['success'] ? 'success' : 'error'; ?>">
+					<strong><?php echo $result['test']; ?></strong>
+					<div><?php echo $result['message']; ?></div>
+					<?php if ($result['details']): ?>
+						<div class="details"><?php echo json_encode($result['details'], JSON_PRETTY_PRINT); ?></div>
+					<?php endif; ?>
+				</div>
+			<?php endforeach; ?>
+		</div>
+	</div>
+
+	<script>
+		// Fonction pour exporter les résultats
+		function exportResults() {
+			const results = <?php echo json_encode($results); ?>;
+			console.log('Test Results:', results);
+
+			// Créer un fichier de log
+			const log = {
+				timestamp: new Date().toISOString(),
+				results: results
+			};
+
+			// Sauvegarder dans le localStorage
+			localStorage.setItem('lastTestResults', JSON.stringify(log));
+
+			// Afficher un message de confirmation
+			alert('Les résultats ont été enregistrés dans la console et le localStorage');
 		}
-		echo "</table>";
-	}
-	echo "</div>";
 
-	// Section 2: Test CORS
-	echo "<div class='test-section'>";
-	echo "<h2>2. Test CORS</h2>";
-
-	foreach (CORS_ALLOWED_ORIGINS as $origin) {
-		$headers = testCorsHeaders($testConfig['backend_url']);
-		echo "<h3>Test CORS pour: $origin</h3>";
-		echo "<pre>$headers</pre>";
-	}
-	echo "</div>";
-
-	// Section 3: Test de Performance
-	echo "<div class='test-section'>";
-	echo "<h2>3. Test de Performance</h2>";
-
-	$startTime = microtime(true);
-	$iterations = 10;
-	$successCount = 0;
-
-	for ($i = 0; $i < $iterations; $i++) {
-		$result = testEndpoint($testConfig['backend_url'] . '/status.php');
-		if ($result['http_code'] == 200) {
-			$successCount++;
-		}
-	}
-
-	$endTime = microtime(true);
-	$totalTime = $endTime - $startTime;
-	$avgTime = $totalTime / $iterations;
-
-	echo "<table>";
-	echo "<tr><th>Total Tests</th><td>$iterations</td></tr>";
-	echo "<tr><th>Succès</th><td>$successCount</td></tr>";
-	echo "<tr><th>Temps Total</th><td>" . number_format($totalTime, 4) . "s</td></tr>";
-	echo "<tr><th>Temps Moyen</th><td>" . number_format($avgTime, 4) . "s</td></tr>";
-	echo "</table>";
-	echo "</div>";
-
-	// Section 4: Test de Sécurité
-	echo "<div class='test-section'>";
-	echo "<h2>4. Test de Sécurité</h2>";
-
-	// Test SSL
-	$sslResult = testEndpoint($testConfig['backend_url'] . '/status.php');
-	echo "<h3>Test SSL</h3>";
-	echo "<table>";
-	echo "<tr><th>SSL Verifié</th><td class='" . (SSL_VERIFY_PEER ? 'success' : 'warning') . "'>" . (SSL_VERIFY_PEER ? 'Oui' : 'Non') . "</td></tr>";
-	echo "<tr><th>Connexion Sécurisée</th><td class='" . ($sslResult['error'] ? 'error' : 'success') . "'>" . ($sslResult['error'] ? 'Non' : 'Oui') . "</td></tr>";
-	echo "</table>";
-
-	// Test des Headers de Sécurité
-	$headers = testCorsHeaders($testConfig['backend_url']);
-	echo "<h3>Headers de Sécurité</h3>";
-	echo "<pre>$headers</pre>";
-	echo "</div>";
-	?>
+		// Exporter les résultats au chargement
+		window.onload = exportResults;
+	</script>
 </body>
 
 </html>
