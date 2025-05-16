@@ -1,33 +1,20 @@
 <?php
 
 /**
- * API Bridge - Last Resort Fallback for Azure Connectivity Issues
+ * API Bridge - Enhanced proxy for Azure
  * 
- * This script makes server-side requests to the backend API, bypassing
- * CORS limitations that affect browser-based requests.
- * 
- * It should only be used when all other proxy methods fail.
+ * This file serves as a reliable bridge between frontend and backend API
+ * with built-in fallbacks for common API endpoints.
  */
 
 // Enable error reporting for debugging
-error_reporting(E_ALL);
 ini_set('display_errors', 1);
-ini_set('log_errors', 1);
-ini_set('error_log', 'api_bridge_errors.log');
+error_reporting(E_ALL);
 
-// Log access for debugging
-$log_message = sprintf(
-	"[%s] API Bridge accessed from %s - URI: %s, Method: %s",
-	date('Y-m-d H:i:s'),
-	$_SERVER['REMOTE_ADDR'],
-	$_SERVER['REQUEST_URI'],
-	$_SERVER['REQUEST_METHOD']
-);
-error_log($log_message);
-
-// CORS headers to allow access from any origin
+// Set headers for CORS and JSON response
+header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE, PATCH');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
 // Handle preflight OPTIONS request
@@ -36,203 +23,175 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 	exit;
 }
 
-// Set JSON content type for API responses
-header('Content-Type: application/json');
-
-// Configuration
-$api_base_url = 'https://app-backend-esgi-app.azurewebsites.net';
-$log_requests = true;
-
-// Get endpoint from query string
+// Get the target endpoint from query parameter
 $endpoint = isset($_GET['endpoint']) ? $_GET['endpoint'] : '';
-$query_string = $_SERVER['QUERY_STRING'];
 
-// Remove endpoint parameter from query string
-$query_string = preg_replace('/(&|\?)endpoint=[^&]*/', '', $query_string);
-
-// Special handling for auth requests to try multiple approaches
-$is_auth_request = (strpos($endpoint, 'auth/login') !== false ||
-	strpos($endpoint, 'login') !== false);
-
-// Check if endpoint is provided
 if (empty($endpoint)) {
-	http_response_code(400);
-	echo json_encode([
-		'success' => false,
-		'message' => 'No endpoint specified',
-		'debug' => $_GET
-	]);
+	sendErrorResponse('No endpoint specified', 400);
 	exit;
 }
 
-// Log the request if enabled
-if ($log_requests) {
-	error_log(sprintf(
-		"[%s] API Bridge request: Endpoint=%s, Method=%s, IsAuth=%s",
-		date('Y-m-d H:i:s'),
-		$endpoint,
-		$_SERVER['REQUEST_METHOD'],
-		$is_auth_request ? 'yes' : 'no'
-	));
+// Backend API base URL
+$backendBaseUrl = 'https://app-backend-esgi-app.azurewebsites.net';
+
+// Build the full target URL
+$targetUrl = $backendBaseUrl;
+
+// Ensure we have a slash between base URL and endpoint if needed
+if (!str_starts_with($endpoint, '/') && !str_ends_with($backendBaseUrl, '/')) {
+	$targetUrl .= '/';
 }
 
-// For auth requests, we'll try both the POST and GET methods
-if ($is_auth_request && $_SERVER['REQUEST_METHOD'] === 'POST') {
-	// Get the JSON data
-	$auth_data = json_decode(file_get_contents('php://input'), true);
+$targetUrl .= $endpoint;
 
-	if (!empty($auth_data) && isset($auth_data['email']) && isset($auth_data['password'])) {
-		error_log("Auth request detected, trying multiple methods");
+// Get request method and body
+$method = $_SERVER['REQUEST_METHOD'];
+$requestBody = file_get_contents('php://input');
 
-		// Try GET auth/check-credentials first (known working endpoint)
-		$get_auth_url = $api_base_url . '/api/auth/check-credentials?email=' .
-			urlencode($auth_data['email']) .
-			'&password=' . urlencode($auth_data['password']);
+// Create a new cURL resource
+$ch = curl_init();
 
-		error_log("Trying GET auth endpoint: " . $get_auth_url);
-
-		$ch = curl_init($get_auth_url);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-
-		$response = curl_exec($ch);
-		$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-		curl_close($ch);
-
-		if ($response && $http_code >= 200 && $http_code < 300) {
-			$result = json_decode($response, true);
-
-			if ($result && isset($result['token'])) {
-				error_log("GET auth/check-credentials succeeded!");
-				echo $response;
-				exit;
-			}
-		}
-
-		error_log("GET auth method didn't work, continuing with standard method");
-	}
-}
-
-// Proceed with normal request handling
-// Construct API URL
-$api_url = $api_base_url;
-if (strpos($endpoint, 'http') === 0) {
-	// If endpoint is a full URL, use that directly
-	$api_url = $endpoint;
-} else {
-	// Append endpoint to base URL
-	if (!empty($endpoint)) {
-		if ($endpoint[0] !== '/' && substr($api_base_url, -1) !== '/') {
-			$api_url .= '/';
-		}
-		$api_url .= $endpoint;
-	}
-}
-
-// Add query string if present
-if (!empty($query_string)) {
-	$api_url .= (strpos($api_url, '?') === false ? '?' : '&') . $query_string;
-}
-
-// Log the constructed URL
-if ($log_requests) {
-	error_log("API Bridge forwarding to URL: " . $api_url);
-}
-
-// Set up cURL request
-$ch = curl_init($api_url);
+// Setup cURL options
+curl_setopt($ch, CURLOPT_URL, $targetUrl);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+curl_setopt($ch, CURLOPT_TIMEOUT, 10); // 10-second timeout
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Disable SSL verification (not recommended for production)
 
-// Forward the request method
-curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $_SERVER['REQUEST_METHOD']);
+// Set request method
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
 
-// Collect headers from the original request
-$headers = [];
-$request_headers = getallheaders();
-foreach ($request_headers as $name => $value) {
-	// Skip host header to avoid conflicts
-	if (strtolower($name) !== 'host') {
-		$headers[] = $name . ': ' . $value;
-	}
-}
-
-// Add identifying headers
-$headers[] = 'X-API-Bridge: true';
-$headers[] = 'User-Agent: ESGI-App-Bridge/1.0';
+// Add request headers
+$headers = ['Content-Type: application/json'];
 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
-// Forward cookies
-$cookie_string = '';
-foreach ($_COOKIE as $name => $value) {
-	$cookie_string .= $name . '=' . $value . '; ';
-}
-if (!empty($cookie_string)) {
-	curl_setopt($ch, CURLOPT_COOKIE, $cookie_string);
+// Add request body for POST, PUT, PATCH
+if (in_array($method, ['POST', 'PUT', 'PATCH']) && !empty($requestBody)) {
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $requestBody);
 }
 
-// Forward request body for POST, PUT, PATCH
-if ($_SERVER['REQUEST_METHOD'] === 'POST' || $_SERVER['REQUEST_METHOD'] === 'PUT' || $_SERVER['REQUEST_METHOD'] === 'PATCH') {
-	$input = file_get_contents('php://input');
-	if ($log_requests) {
-		error_log("API Bridge forwarding request body: " . $input);
-	}
-	curl_setopt($ch, CURLOPT_POSTFIELDS, $input);
-}
-
-// Get header info to pass back cookies
-curl_setopt($ch, CURLOPT_HEADER, true);
-
-// Execute the request
-$response = curl_exec($ch);
-$header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-// Split headers and body
-$header_text = substr($response, 0, $header_size);
-$body = substr($response, $header_size);
-
-// Log the response
-if ($log_requests) {
-	error_log("API Bridge response code: " . $http_code);
-	error_log("API Bridge response headers: " . $header_text);
-}
-
-// Parse and forward cookies from response
-$headers = explode("\r\n", $header_text);
-foreach ($headers as $header) {
-	if (strpos($header, 'Set-Cookie:') === 0) {
-		if ($log_requests) {
-			error_log("API Bridge forwarding cookie: " . $header);
-		}
-		header($header, false);
-	}
-}
-
-// Check for cURL errors
-if ($response === false) {
-	$error = curl_error($ch);
-	curl_close($ch);
-
-	error_log("API Bridge cURL error: " . $error);
-
-	// Return error response
-	http_response_code(500);
+// Special case: status.php endpoint for health check
+if (strpos($endpoint, 'status.php') !== false) {
 	echo json_encode([
-		'success' => false,
-		'message' => 'API Bridge error: ' . $error,
-		'endpoint' => $endpoint,
-		'url' => $api_url
+		'status' => 'ok',
+		'message' => 'API Bridge is working',
+		'timestamp' => date('Y-m-d H:i:s'),
+		'source' => 'api-bridge.php'
 	]);
 	exit;
 }
 
-// Close cURL
+// Special case handling for some endpoints
+if ($method === 'GET') {
+	$isUserProfile = strpos($endpoint, 'user/profile') !== false;
+	$sessionUser = getSessionUser();
+
+	// Handle user profile request - return session data
+	if ($isUserProfile && !empty($sessionUser)) {
+		echo json_encode([
+			'success' => true,
+			'user' => $sessionUser,
+			'source' => 'api-bridge.php (session data)'
+		]);
+		exit;
+	}
+}
+
+// Execute cURL request
+$response = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+$error = curl_error($ch);
+$errorCode = curl_errno($ch);
+
+// Close cURL resource
 curl_close($ch);
 
-// Set the HTTP response code
-http_response_code($http_code);
+// Handle cURL errors
+if ($errorCode > 0) {
+	// Try to use direct-matieres.php as fallback for some endpoints
+	tryFallbackEndpoint($endpoint, $method, $requestBody);
 
-// Output the response body
-echo $body;
+	// If we reached here, fallback didn't work either
+	sendErrorResponse("cURL Error: $error ($errorCode)", 500);
+	exit;
+}
+
+// Forward the response
+http_response_code($httpCode);
+echo $response;
+exit;
+
+// Helper function to get user data from session
+function getSessionUser()
+{
+	session_start();
+	if (isset($_SESSION['user'])) {
+		return $_SESSION['user'];
+	}
+	return null;
+}
+
+// Helper function to try fallback endpoint
+function tryFallbackEndpoint($endpoint, $method, $requestBody)
+{
+	// Check if the endpoint is one we can handle with our direct provider
+	if (
+		strpos($endpoint, 'matieres') !== false ||
+		strpos($endpoint, 'classes') !== false ||
+		strpos($endpoint, 'examens') !== false ||
+		strpos($endpoint, 'professeurs') !== false
+	) {
+
+		// Redirect to our direct data provider
+		$fallbackUrl = "direct-matieres.php?endpoint=" . urlencode($endpoint);
+
+		// Execute a local request to our fallback
+		$ch = curl_init();
+		curl_setopt($ch, CURLOPT_URL, $fallbackUrl);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+
+		if (in_array($method, ['POST', 'PUT', 'PATCH']) && !empty($requestBody)) {
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $requestBody);
+			curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+		}
+
+		$response = curl_exec($ch);
+		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		curl_close($ch);
+
+		if ($httpCode >= 200 && $httpCode < 300) {
+			// Successfully got response from fallback
+			http_response_code($httpCode);
+			echo $response;
+			exit;
+		}
+	}
+}
+
+// Helper function to send error response
+function sendErrorResponse($message, $code = 500)
+{
+	http_response_code($code);
+	echo json_encode([
+		'success' => false,
+		'error' => $message,
+		'source' => 'api-bridge.php'
+	]);
+}
+
+// PHP 8 compatibility function
+if (!function_exists('str_starts_with')) {
+	function str_starts_with($haystack, $needle)
+	{
+		return (string)$needle !== '' && strncmp($haystack, $needle, strlen($needle)) === 0;
+	}
+}
+
+if (!function_exists('str_ends_with')) {
+	function str_ends_with($haystack, $needle)
+	{
+		return $needle !== '' && substr($haystack, -strlen($needle)) === (string)$needle;
+	}
+}

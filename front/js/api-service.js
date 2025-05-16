@@ -9,6 +9,7 @@ const ApiService = (function () {
 	const _corsProxy = "api-bridge.php"; // Updated proxy that works best
 	const _matieresProxy = "matieres-proxy.php"; // Dedicated matières proxy
 	const _directLoginPath = "unified-login.php";
+	const _directDataProxy = "direct-matieres.php"; // Direct data fallback
 
 	// Detect environment
 	const _isAzure = window.location.hostname.includes("azurewebsites.net");
@@ -46,29 +47,91 @@ const ApiService = (function () {
 		}
 
 		try {
-			// Special handling for matieres endpoint
+			// Try each proxy method in sequence until one works
+			let response, result;
+
+			// Method 1: Special handling for matieres endpoint
 			if (endpoint.includes("matieres")) {
-				const matieresProxyUrl = `${_matieresProxy}?endpoint=${encodeURIComponent(
+				try {
+					const matieresProxyUrl = `${_matieresProxy}?endpoint=${encodeURIComponent(
+						endpoint
+					)}`;
+					console.log(
+						`Using special matieres proxy URL: ${matieresProxyUrl}`
+					);
+					response = await fetch(
+						matieresProxyUrl,
+						requestOptions
+					);
+
+					// Only consider as success if status is 200
+					if (response.ok) {
+						return handleResponse(
+							response,
+							endpoint
+						);
+					}
+					console.warn(
+						"Matieres proxy failed, trying standard proxy"
+					);
+				} catch (matieresError) {
+					console.warn(
+						"Matieres proxy error:",
+						matieresError.message
+					);
+				}
+			}
+
+			// Method 2: Try using our standard CORS proxy
+			try {
+				const proxyUrl = `${_corsProxy}?endpoint=${encodeURIComponent(
+					endpoint
+				)}`;
+				console.log(`Using proxy URL: ${proxyUrl}`);
+
+				response = await fetch(
+					proxyUrl,
+					requestOptions
+				);
+
+				// Only consider as success if status is 200
+				if (response.ok) {
+					return handleResponse(
+						response,
+						endpoint
+					);
+				}
+				console.warn(
+					"Standard proxy failed, trying direct data fallback"
+				);
+			} catch (proxyError) {
+				console.warn(
+					"Standard proxy error:",
+					proxyError.message
+				);
+			}
+
+			// Method 3: Last resort - try direct data fallback
+			try {
+				const directUrl = `${_directDataProxy}?endpoint=${encodeURIComponent(
 					endpoint
 				)}`;
 				console.log(
-					`Using special matieres proxy URL: ${matieresProxyUrl}`
+					`Using direct data fallback: ${directUrl}`
 				);
-				const response = await fetch(
-					matieresProxyUrl,
+
+				response = await fetch(
+					directUrl,
 					requestOptions
 				);
 				return handleResponse(response, endpoint);
+			} catch (directError) {
+				console.error(
+					"All proxy methods failed:",
+					directError.message
+				);
+				throw directError; // Re-throw to be caught in outer catch
 			}
-
-			// Use our CORS proxy for all other endpoints
-			const proxyUrl = `${_corsProxy}?endpoint=${encodeURIComponent(
-				endpoint
-			)}`;
-			console.log(`Using proxy URL: ${proxyUrl}`);
-
-			const response = await fetch(proxyUrl, requestOptions);
-			return handleResponse(response, endpoint);
 		} catch (error) {
 			console.error(
 				`API Request Error (${endpoint}):`,
