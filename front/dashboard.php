@@ -310,7 +310,14 @@ ob_start();
 
             if (result.success && result.data) {
                 const count = Array.isArray(result.data) ? result.data.length : result.data;
-                if (element) element.textContent = count.toString();
+                if (element) {
+                    element.textContent = count.toString();
+                    if (result.isFallback) {
+                        element.classList.add('text-muted');
+                        element.title = 'Données de secours (API non disponible)';
+                        NotificationSystem.warning('Utilisation des données de secours pour certains compteurs');
+                    }
+                }
             } else {
                 throw new Error('Invalid response format');
             }
@@ -367,6 +374,12 @@ ob_start();
             } else {
                 console.error('Invalid user data format:', userData);
                 NotificationSystem.error('Données utilisateur invalides');
+
+                // Use session data as fallback
+                userData = {
+                    user: <?php echo json_encode($user); ?>
+                };
+                updateUserInfo(userData);
             }
 
             // Hide loading indicator
