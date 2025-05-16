@@ -193,13 +193,26 @@ ob_start();
                 return;
             }
 
-            // Direct navigation - we're skipping the page existence check 
-            // as it may be causing navigation issues
+            // Check if user has admin role
+            const userResult = await ApiService.getCurrentUser();
+            if (!userResult.success || userResult.data.user.role !== 'admin') {
+                NotificationSystem.error('Accès non autorisé. Vous devez être administrateur.');
+                return;
+            }
+
+            // Check if the target page exists
+            const response = await fetch(`gestion_${pageName}.php`, {
+                method: 'HEAD'
+            });
+            if (!response.ok) {
+                throw new Error('Page non trouvée');
+            }
+
+            // Navigate to the page
             window.location.href = `gestion_${pageName}.php`;
         } catch (error) {
             console.error('Navigation error:', error);
-            // Use fallback on error
-            NotificationSystem.warning('Utilisation de la page de secours...');
+            NotificationSystem.error('Erreur lors de la navigation. Utilisation de la page de secours...');
             window.location.href = `gestion_fallback.php?page=${pageName}`;
         }
     }
@@ -246,20 +259,14 @@ ob_start();
 
             // Individual API calls for each entity type to get precise counts
             // Each call is independent to avoid one failure affecting others
-            fetchCountFor('subjects', 'matieres', matieresCount, 4);
-            fetchCountFor('classes', 'classes', classesCount, 7);
-            fetchCountFor('exams', 'examens', examensCount, 12);
-            fetchCountFor('teachers', 'professeurs', profsCount, 10);
-            fetchCountFor(null, null, usersCount, 15, 'api/admin/users'); // Special case
+            await fetchCountFor('subjects', 'matieres', matieresCount);
+            await fetchCountFor('classes', 'classes', classesCount);
+            await fetchCountFor('exams', 'examens', examensCount);
+            await fetchCountFor('teachers', 'professeurs', profsCount);
+            await fetchCountFor(null, null, usersCount, null, 'api/admin/users'); // Special case
         } catch (error) {
             console.error('Error initializing counters:', error);
-
-            // Set fallback values on error
-            safeSetContent('matieresCount', '4');
-            safeSetContent('classesCount', '7');
-            safeSetContent('examensCount', '12');
-            safeSetContent('profsCount', '10');
-            safeSetContent('usersCount', '15');
+            NotificationSystem.error('Erreur lors du chargement des compteurs');
         }
     }
 
@@ -270,7 +277,7 @@ ob_start();
         }
     }
 
-    // Safely set content to an element
+    // Function to safely set content with error handling
     function safeSetContent(elementId, content) {
         const element = document.getElementById(elementId);
         if (element) {
@@ -278,46 +285,26 @@ ob_start();
         }
     }
 
-    // Fetch count for a specific entity type
-    async function fetchCountFor(apiServiceMethod, dataKey, element, fallbackValue, customEndpoint = null) {
+    // Function to fetch count for a specific entity
+    async function fetchCountFor(apiServiceMethod, endpoint, element, fallbackValue = '0') {
         try {
-            let response;
-
-            if (customEndpoint) {
-                // Use direct endpoint
-                response = await ApiService.request(customEndpoint, 'GET');
-            } else if (apiServiceMethod && ApiService[apiServiceMethod]) {
-                // Use API service method
-                response = await ApiService[apiServiceMethod].getAll();
+            let result;
+            if (apiServiceMethod) {
+                result = await ApiService[apiServiceMethod]();
             } else {
-                // No valid method, use fallback
-                if (element) element.textContent = fallbackValue.toString();
-                return;
+                const response = await fetch(getApiEndpoint(endpoint));
+                result = await response.json();
             }
 
-            // Process response
-            if (response.success && response.data) {
-                if (dataKey && Array.isArray(response.data[dataKey])) {
-                    // We got a valid array response
-                    element.textContent = response.data[dataKey].length.toString();
-                } else if (response.data.count !== undefined) {
-                    // We got a count property
-                    element.textContent = response.data.count.toString();
-                } else if (Array.isArray(response.data)) {
-                    // Direct array
-                    element.textContent = response.data.length.toString();
-                } else {
-                    // Fallback to fallbackValue
-                    element.textContent = fallbackValue.toString();
-                }
+            if (result.success && result.data) {
+                const count = Array.isArray(result.data) ? result.data.length : result.data;
+                if (element) element.textContent = count.toString();
             } else {
-                // API call failed, use fallback
-                element.textContent = fallbackValue.toString();
+                throw new Error('Invalid response format');
             }
         } catch (error) {
-            console.error(`Error fetching count for ${apiServiceMethod || customEndpoint}:`, error);
-            // Set fallback on error
-            if (element) element.textContent = fallbackValue.toString();
+            console.error(`Error fetching count for ${apiServiceMethod || endpoint}:`, error);
+            if (element) element.textContent = fallbackValue;
         }
     }
 
