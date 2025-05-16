@@ -67,3 +67,35 @@
 - Implémenter une fonction de décompression pour les différents formats
 - Filtrer les informations sensibles des réponses de statut
 - Améliorer la gestion des erreurs d'authentification avec des messages plus clairs
+
+## [2.0.2] - 2025-05-16
+
+### Ajouté
+
+- Création d'un endpoint d'authentification spécialisé (`direct-auth.php`) pour résoudre les problèmes d'authentification
+- Ajout d'un nouveau bouton de test pour l'authentification directe sur la page de test
+
+### Améliorations
+
+- Détection et gestion améliorées des réponses HTML inattendues
+- Vérification renforcée de la validité des réponses JSON
+- Messages d'erreur plus détaillés pour faciliter le débogage
+- Journalisation enrichie des réponses d'authentification
+
+### Corrections
+
+- Résolution du problème de réponse HTML reçue lors de l'authentification
+- Amélioration de la gestion des erreurs avec messages informatifs
+- Traitement spécial pour les réponses d'authentification non-JSON
+
+### Technique
+
+- Validation stricte des formats de réponse attendus
+- Filtrage des informations sensibles dans les logs d'authentification
+- Journalisation détaillée des réponses pour faciliter le débogage
+- Gestion optimisée des cookies de session pour l'authentification
+
+### Notes d'implémentation
+
+- L'authentification directe peut être utilisée comme alternative au proxy standard pour les problèmes d'auth
+- Les développeurs peuvent choisir entre le proxy générique et l'endpoint spécialisé selon le contexte

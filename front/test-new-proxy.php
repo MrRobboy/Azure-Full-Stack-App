@@ -79,6 +79,7 @@ session_start();
 		<button onclick="testMatieres()">Tester les matières</button>
 		<button onclick="testAuth()">Tester l'authentification</button>
 		<button onclick="testCORS()">Tester les en-têtes CORS</button>
+		<button onclick="testDirectAuth()">Tester l'auth directe</button>
 	</div>
 
 	<div id="result" class="card">
@@ -193,6 +194,47 @@ session_start();
 				});
 			} catch (error) {
 				displayResult('Erreur lors du test CORS: ' + error.message, true);
+			}
+		}
+
+		async function testDirectAuth() {
+			displayResult('Test de l\'authentification directe en cours...');
+			const credentials = {
+				email: 'admin@example.com',
+				password: 'admin123'
+			};
+
+			try {
+				const response = await fetch('direct-auth.php', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					credentials: 'include',
+					body: JSON.stringify(credentials)
+				});
+
+				const contentType = response.headers.get('content-type') || '';
+
+				if (contentType.includes('application/json')) {
+					const data = await response.json();
+					displayResult({
+						status: response.status,
+						data: data
+					});
+				} else {
+					const text = await response.text();
+					displayResult({
+						status: response.status,
+						error: 'Réponse non-JSON',
+						data: text.substring(0, 500) + '...'
+					}, true);
+				}
+			} catch (error) {
+				displayResult({
+					status: 0,
+					error: error.message
+				}, true);
 			}
 		}
 	</script>

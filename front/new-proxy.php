@@ -148,6 +148,50 @@ foreach ($headers as $header) {
 // Fermeture de cURL
 curl_close($ch);
 
+// Vérifier si la réponse doit être du JSON
+$shouldBeJson = strpos($apiUrl, 'api-auth-login.php') !== false ||
+	strpos($apiUrl, 'api-notes.php') !== false ||
+	strpos($contentType, 'application/json') !== false;
+
+// Si nous attendons du JSON mais recevons du HTML, c'est probablement une erreur
+if ($shouldBeJson && strpos($body, '<html') !== false) {
+	error_log("Erreur: Réponse HTML reçue alors que JSON attendu");
+	error_log("Corps de réponse HTML: " . substr($body, 0, 500) . "...");
+
+	// Créer une réponse JSON d'erreur à la place
+	http_response_code(500);
+	echo json_encode([
+		'success' => false,
+		'error' => [
+			'code' => 'INVALID_RESPONSE_FORMAT',
+			'message' => 'Le serveur a renvoyé une page HTML au lieu de JSON. Cela peut indiquer une erreur de configuration ou que vous avez été redirigé vers une page de connexion.',
+			'debug_info' => 'Vérifiez les logs du proxy pour plus de détails.'
+		]
+	]);
+	exit;
+}
+
+// Pour les réponses d'authentification, assurons-nous qu'elles sont bien du JSON
+if (strpos($apiUrl, 'api-auth-login.php') !== false && $httpCode === 200) {
+	// Vérifier si le corps est du JSON valide
+	$jsonData = json_decode($body);
+	if (json_last_error() !== JSON_ERROR_NONE) {
+		error_log("Erreur: Réponse d'authentification non-JSON: " . json_last_error_msg());
+		error_log("Corps de réponse non-JSON: " . substr($body, 0, 500) . "...");
+
+		http_response_code(500);
+		echo json_encode([
+			'success' => false,
+			'error' => [
+				'code' => 'INVALID_AUTH_RESPONSE',
+				'message' => 'La réponse d\'authentification n\'est pas au format JSON valide: ' . json_last_error_msg(),
+				'debug_info' => 'Vérifiez les logs du proxy pour plus de détails.'
+			]
+		]);
+		exit;
+	}
+}
+
 // Filtrer les informations sensibles si c'est une réponse de statut
 if (strpos($endpoint, 'status') !== false && strpos($contentType, 'application/json') !== false) {
 	$bodyData = json_decode($body, true);
