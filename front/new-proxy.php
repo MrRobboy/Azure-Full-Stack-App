@@ -80,7 +80,14 @@ curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $_SERVER['REQUEST_METHOD']);
 
 // Transmission des en-têtes de la requête originale
 $headers = buildRequestHeaders();
+
+// Ajout explicite du support de compression
+$headers[] = 'Accept-Encoding: gzip, deflate, br, zstd';
+
 curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+// Indiquer à cURL de décoder automatiquement gzip et deflate
+curl_setopt($ch, CURLOPT_ENCODING, '');
 
 // Transmission des cookies
 $cookieString = buildCookieString();
@@ -116,12 +123,17 @@ if ($response === false) {
 // Récupération de la taille de l'en-tête et du code HTTP
 $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 
 // Séparation des en-têtes et du corps
 $headerText = substr($response, 0, $headerSize);
 $body = substr($response, $headerSize);
 
 error_log("Response code: " . $httpCode);
+error_log("Content type: " . $contentType);
+
+// Enregistrer les entêtes reçus dans les logs pour débogage
+error_log("Response headers: " . $headerText);
 
 // Transmission des cookies de la réponse
 $headers = explode("\r\n", $headerText);
@@ -135,6 +147,30 @@ foreach ($headers as $header) {
 
 // Fermeture de cURL
 curl_close($ch);
+
+// Filtrer les informations sensibles si c'est une réponse de statut
+if (strpos($endpoint, 'status') !== false && strpos($contentType, 'application/json') !== false) {
+	$bodyData = json_decode($body, true);
+	if (is_array($bodyData) && isset($bodyData['server_info'])) {
+		// Masquer les informations sensibles du serveur
+		$bodyData['server_info'] = 'HIDDEN FOR SECURITY';
+
+		// Supprimer d'autres informations potentiellement sensibles
+		if (isset($bodyData['php_version'])) {
+			$bodyData['php_version'] = 'HIDDEN FOR SECURITY';
+		}
+
+		if (isset($bodyData['session']) && isset($bodyData['session']['id'])) {
+			$bodyData['session']['id'] = '****';
+		}
+
+		if (isset($bodyData['database']) && isset($bodyData['database']['host'])) {
+			$bodyData['database']['host'] = 'HIDDEN FOR SECURITY';
+		}
+
+		$body = json_encode($bodyData);
+	}
+}
 
 // Définition du code de réponse HTTP
 http_response_code($httpCode);

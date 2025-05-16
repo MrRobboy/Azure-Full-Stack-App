@@ -31,17 +31,20 @@ Ce document détaille le fonctionnement et l'utilisation du nouveau proxy créé
       - Transfert fidèle des en-têtes HTTP
       - Transmission du corps des requêtes (GET, POST, PUT, etc.)
       - Préservation des cookies entre le client et le backend
+      - **Nouveau**: Gestion automatique de la décompression (gzip, deflate, br, zstd)
 
 3. **Sécurité**:
 
       - En-têtes de sécurité essentiels
       - Validation basique des entrées
       - Journalisation des événements importants
+      - **Nouveau**: Masquage des informations sensibles dans les réponses de statut
 
 4. **Robustesse**:
       - Gestion des erreurs avec messages informatifs
       - Création automatique des répertoires de logs
       - Timeouts pour éviter les requêtes bloquées
+      - Journalisation détaillée des entêtes pour le débogage
 
 ## Utilisation
 
@@ -98,7 +101,7 @@ const config = {
 Une page de test est disponible à l'adresse `/test-new-proxy.php`. Elle permet de tester:
 
 - La connectivité de base (statut)
-- L'accès aux données (matières)
+- L'accès aux données (matières) - **Note**: Nécessite une authentification préalable
 - L'authentification (login)
 - Les en-têtes CORS
 
@@ -111,6 +114,8 @@ Informations journalisées:
 - URL des requêtes
 - Méthodes HTTP
 - Codes de statut
+- Types de contenu
+- En-têtes de réponse complets
 - Erreurs cURL
 - Problèmes d'authentification
 
@@ -121,12 +126,34 @@ Informations journalisées:
 - Plus simple et plus léger, sans sacrifier les fonctionnalités essentielles
 - Focus sur les composants critiques uniquement
 - Amélioration de la gestion des erreurs
+- Décompression automatique des réponses
 
 ### Par rapport à simple-proxy.php
 
 - Meilleure gestion des origines CORS
 - Support plus robuste des différentes méthodes HTTP
 - Structure de code plus modulaire
+- Masquage des informations sensibles
+
+## Gestion de la compression
+
+Le proxy prend désormais en charge automatiquement la décompression des réponses du serveur dans les formats suivants :
+
+- gzip
+- deflate
+- brotli (br)
+- zstd
+
+Cette fonctionnalité est essentielle pour traiter correctement les réponses d'API, notamment pour l'authentification.
+
+## Sécurité améliorée
+
+Les informations sensibles sont automatiquement masquées dans les réponses de statut :
+
+- Versions de PHP
+- Informations sur le serveur web
+- Identifiants de session
+- Informations de base de données
 
 ## Dépannage
 
@@ -140,6 +167,7 @@ Informations journalisées:
 
       - Assurez-vous d'utiliser `credentials: 'include'` dans vos requêtes fetch
       - Vérifiez que les cookies sont correctement transmis
+      - Vérifiez que vous utilisez des identifiants valides
 
 3. **Erreurs cURL**:
 
@@ -147,8 +175,13 @@ Informations journalisées:
       - Confirmez que l'URL du backend est correcte et accessible
 
 4. **Problèmes CORS persistants**:
+
       - Vérifiez les logs pour identifier les en-têtes manquants
       - Assurez-vous que le navigateur accepte les cookies tiers si nécessaire
+
+5. **Erreur 401 pour les matières**:
+      - Cette erreur est normale si vous n'êtes pas authentifié
+      - Connectez-vous d'abord via le test d'authentification, puis réessayez
 
 ## Conclusion
 
