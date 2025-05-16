@@ -210,6 +210,20 @@ ob_start();
 				</span>
 			</button>
 		</form>
+		<div class="links">
+			<a href="login.php">Connexion standard</a>
+			<a href="index.php">Accueil</a>
+		</div>
+
+		<!-- Options de dépannage -->
+		<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 0.9em;">
+			<h4>Options de dépannage</h4>
+			<ul>
+				<li><a href="simple-login.php">Connexion par méthode GET</a> (contournement des limitations POST)</li>
+				<li><a href="post-test.php" target="_blank">Test POST</a> (diagnostic des méthodes HTTP)</li>
+				<li><a href="test-endpoints.php" target="_blank">Test des endpoints API</a> (identification des URLs valides)</li>
+			</ul>
+		</div>
 	</div>
 </div>
 

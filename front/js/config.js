@@ -168,6 +168,105 @@ async function testBackendConnection() {
 async function handlePostRequest(endpoint, data, options = {}) {
 	console.log(`Handling POST request to ${endpoint}`);
 
+	// Si c'est une tentative d'authentification, essayer plusieurs chemins possibles
+	if (endpoint.includes("auth/login")) {
+		console.log(
+			"Authentification détectée, essai avec plusieurs chemins d'API"
+		);
+
+		// Liste des endpoints d'authentification potentiels à essayer
+		const authEndpoints = [
+			"api/auth/login",
+			"api/login",
+			"auth/login",
+			"login",
+			"api/user/login",
+			"api/v1/auth/login",
+			"api/authenticate"
+		];
+
+		// Essayer direct-login.php en premier (solution la plus fiable)
+		try {
+			console.log("Essai avec direct-login.php...");
+			const directLoginResponse = await fetch(
+				"direct-login.php",
+				{
+					method: "POST",
+					headers: {
+						"Content-Type":
+							"application/json"
+					},
+					body: JSON.stringify(data)
+				}
+			);
+
+			if (directLoginResponse.ok) {
+				console.log("direct-login.php a fonctionné!");
+				return directLoginResponse;
+			}
+		} catch (e) {
+			console.warn("Échec avec direct-login.php:", e);
+		}
+
+		// Essayer avec simple-login.php
+		try {
+			console.log("Essai avec simple-login.php...");
+			const params = new URLSearchParams({
+				email: data.email || "",
+				password: data.password || "",
+				json: "true"
+			});
+
+			const simpleLoginResponse = await fetch(
+				`simple-login.php?${params.toString()}`
+			);
+			if (simpleLoginResponse.ok) {
+				console.log("simple-login.php a fonctionné!");
+				return simpleLoginResponse;
+			}
+		} catch (e) {
+			console.warn("Échec avec simple-login.php:", e);
+		}
+
+		// Essayer les différents endpoints directement
+		for (const authEndpoint of authEndpoints) {
+			try {
+				console.log(
+					`Essai direct avec ${authEndpoint}...`
+				);
+				const directResponse = await fetch(
+					`${appConfig.backendBaseUrl}/${authEndpoint}`,
+					{
+						method: "POST",
+						headers: {
+							"Content-Type":
+								"application/json",
+							"X-MS-REQUEST-ID": `${Date.now()}-${Math.random()
+								.toString(36)
+								.substr(2, 9)}`,
+							"X-Original-URL": `/${authEndpoint}`
+						},
+						body: JSON.stringify(data)
+					}
+				);
+
+				if (directResponse.ok) {
+					console.log(
+						`Endpoint direct ${authEndpoint} a fonctionné!`
+					);
+					return directResponse;
+				}
+			} catch (e) {
+				console.warn(`Échec avec ${authEndpoint}:`, e);
+			}
+		}
+
+		// Si toutes les méthodes ont échoué, poursuivre avec le comportement normal
+		console.warn(
+			"Toutes les méthodes d'authentification ont échoué, retour à la méthode standard"
+		);
+	}
+
 	// Si l'URL du proxy est 404, essayer d'en trouver un nouveau avant de continuer
 	try {
 		// Test préalable du proxy pour éviter les redirections 404

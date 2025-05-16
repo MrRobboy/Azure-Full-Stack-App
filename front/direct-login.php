@@ -221,6 +221,34 @@ function try_multiple_request_methods($url, $data)
 $login_url = $api_base_url . $login_endpoint;
 $result = try_multiple_request_methods($login_url, $json_data);
 
+// Si toutes les méthodes ont échoué avec l'URL principale, essayer des chemins alternatifs
+if (!$result['success']) {
+	error_log("Toutes les méthodes ont échoué avec l'URL principale, essai avec des chemins alternatifs");
+
+	// Essai avec des chemins alternatifs pour l'endpoint d'authentification
+	$alternative_endpoints = [
+		'/api/login',
+		'/auth/login',
+		'/login',
+		'/user/login',
+		'/api/user/login',
+		'/api/v1/auth/login',
+		'/api/authenticate'
+	];
+
+	foreach ($alternative_endpoints as $alt_endpoint) {
+		error_log("Essai avec l'endpoint alternatif: " . $alt_endpoint);
+		$alt_url = $api_base_url . $alt_endpoint;
+		$alt_result = try_multiple_request_methods($alt_url, $json_data);
+
+		if ($alt_result['success']) {
+			error_log("Endpoint alternatif fonctionnel trouvé: " . $alt_endpoint);
+			$result = $alt_result;
+			break;
+		}
+	}
+}
+
 // Traiter le résultat
 if ($result['success']) {
 	$response_data = $result['response'];
