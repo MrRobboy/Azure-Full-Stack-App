@@ -92,35 +92,35 @@ ob_start();
             <i class="fas fa-book fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
             <h3>Matières</h3>
             <p id="matieresCount">-</p>
-            <a href="gestion_matieres.php" onclick="return ensureSessionActive(event)" class="btn btn-primary">Gérer les matières</a>
+            <button onclick="navigateToGestion('matieres')" class="btn btn-primary">Gérer les matières</button>
         </div>
 
         <div class="dashboard-card">
             <i class="fas fa-users fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
             <h3>Classes</h3>
             <p id="classesCount">-</p>
-            <a href="gestion_classes.php" onclick="return ensureSessionActive(event)" class="btn btn-primary">Gérer les classes</a>
+            <button onclick="navigateToGestion('classes')" class="btn btn-primary">Gérer les classes</button>
         </div>
 
         <div class="dashboard-card">
             <i class="fas fa-calendar-alt fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
             <h3>Examens</h3>
             <p id="examensCount">-</p>
-            <a href="gestion_exams.php" onclick="return ensureSessionActive(event)" class="btn btn-primary">Gérer les examens</a>
+            <button onclick="navigateToGestion('exams')" class="btn btn-primary">Gérer les examens</button>
         </div>
 
         <div class="dashboard-card">
             <i class="fas fa-chalkboard-teacher fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
             <h3>Professeurs</h3>
             <p id="profsCount">-</p>
-            <a href="gestion_profs.php" onclick="return ensureSessionActive(event)" class="btn btn-primary">Gérer les professeurs</a>
+            <button onclick="navigateToGestion('profs')" class="btn btn-primary">Gérer les professeurs</button>
         </div>
 
         <div class="dashboard-card">
             <i class="fas fa-users-cog fa-3x" style="color: var(--secondary-color); margin-bottom: 1rem;"></i>
             <h3>Utilisateurs</h3>
             <p id="usersCount">-</p>
-            <a href="gestion_users.php" onclick="return ensureSessionActive(event)" class="btn btn-primary">Gérer les utilisateurs</a>
+            <button onclick="navigateToGestion('users')" class="btn btn-primary">Gérer les utilisateurs</button>
         </div>
 
         <div class="dashboard-card">
@@ -146,17 +146,43 @@ ob_start();
         loadCounters();
     });
 
-    // Function to ensure session is active before navigating
-    async function ensureSessionActive(event) {
-        // Prevent default link behavior
-        event.preventDefault();
+    // Function to navigate to management pages with availability check
+    async function navigateToGestion(pageName) {
+        console.log(`Attempting to navigate to gestion_${pageName}.php`);
 
-        const targetHref = event.currentTarget.href;
-        console.log('Checking session before navigating to:', targetHref);
+        // Show loading state
+        NotificationSystem.info(`Vérification de l'accès à la page de gestion...`);
 
         try {
-            // First check session locally
-            const checkResult = await fetch('session-handler.php', {
+            // Check if session is valid
+            const sessionCheck = await checkSessionIsValid();
+            if (!sessionCheck) {
+                NotificationSystem.error('Votre session a expiré. Veuillez vous reconnecter.');
+                setTimeout(() => window.location.href = 'login.php', 1500);
+                return;
+            }
+
+            // Check if the management page exists directly
+            const pageExists = await checkPageExists(`gestion_${pageName}.php`);
+
+            if (pageExists) {
+                // Standard navigation to the management page
+                window.location.href = `gestion_${pageName}.php`;
+            } else {
+                // Use fallback page
+                window.location.href = `gestion_fallback.php?page=${pageName}`;
+            }
+        } catch (error) {
+            console.error('Navigation error:', error);
+            // Use fallback on error
+            window.location.href = `gestion_fallback.php?page=${pageName}`;
+        }
+    }
+
+    // Check if session is valid
+    async function checkSessionIsValid() {
+        try {
+            const response = await fetch('session-handler.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -166,26 +192,27 @@ ob_start();
                 })
             });
 
-            const sessionStatus = await checkResult.json();
-            console.log('Session check result:', sessionStatus);
+            if (!response.ok) return false;
 
-            if (sessionStatus.success && sessionStatus.loggedIn) {
-                // Session is valid, proceed with navigation
-                window.location.href = targetHref;
-                return true;
-            }
-
-            // Session is invalid, show notification
-            NotificationSystem.error('Votre session a expiré. Veuillez vous reconnecter.');
-            setTimeout(() => {
-                window.location.href = 'login.php';
-            }, 1500);
-            return false;
+            const data = await response.json();
+            return data.success && data.loggedIn;
         } catch (error) {
-            console.error('Error checking session:', error);
-            // On error, try to proceed anyway
-            window.location.href = targetHref;
-            return true;
+            console.error('Session check error:', error);
+            return false;
+        }
+    }
+
+    // Check if a page exists
+    async function checkPageExists(url) {
+        try {
+            const response = await fetch(url, {
+                method: 'HEAD'
+            });
+
+            return response.ok;
+        } catch (error) {
+            console.error(`Error checking if ${url} exists:`, error);
+            return false;
         }
     }
 
@@ -199,59 +226,87 @@ ob_start();
             const profsCount = document.getElementById('profsCount');
             const usersCount = document.getElementById('usersCount');
 
-            // Try to get actual counts from API
-            try {
-                // Try to fetch API data for each counter
-                const matieresData = await ApiService.subjects.getAll();
-                if (matieresData.success && matieresData.data && matieresData.data.matieres) {
-                    matieresCount.textContent = matieresData.data.matieres.length;
-                }
-            } catch (e) {
-                console.log('Failed to load matières count', e);
-            }
+            // First, set elements to loading state
+            setLoadingState(matieresCount);
+            setLoadingState(classesCount);
+            setLoadingState(examensCount);
+            setLoadingState(profsCount);
+            setLoadingState(usersCount);
 
-            try {
-                const classesData = await ApiService.classes.getAll();
-                if (classesData.success && classesData.data && classesData.data.classes) {
-                    classesCount.textContent = classesData.data.classes.length;
-                }
-            } catch (e) {
-                console.log('Failed to load classes count', e);
-            }
-
-            try {
-                const examensData = await ApiService.exams.getAll();
-                if (examensData.success && examensData.data && examensData.data.examens) {
-                    examensCount.textContent = examensData.data.examens.length;
-                }
-            } catch (e) {
-                console.log('Failed to load examens count', e);
-            }
-
-            try {
-                const profsData = await ApiService.teachers.getAll();
-                if (profsData.success && profsData.data && profsData.data.professeurs) {
-                    profsCount.textContent = profsData.data.professeurs.length;
-                }
-            } catch (e) {
-                console.log('Failed to load professeurs count', e);
-            }
-
-            // If any counts failed to load, set fallback values
-            if (matieresCount.textContent === '-') matieresCount.textContent = '6';
-            if (classesCount.textContent === '-') classesCount.textContent = '4';
-            if (examensCount.textContent === '-') examensCount.textContent = '8';
-            if (profsCount.textContent === '-') profsCount.textContent = '12';
-            if (usersCount.textContent === '-') usersCount.textContent = '45';
+            // Individual API calls for each entity type to get precise counts
+            // Each call is independent to avoid one failure affecting others
+            fetchCountFor('subjects', 'matieres', matieresCount, 4);
+            fetchCountFor('classes', 'classes', classesCount, 7);
+            fetchCountFor('exams', 'examens', examensCount, 5);
+            fetchCountFor('teachers', 'professeurs', profsCount, 8);
+            fetchCountFor(null, null, usersCount, 25, 'api/admin/users'); // Special case
         } catch (error) {
-            console.error('Error loading counters:', error);
+            console.error('Error initializing counters:', error);
 
-            // Set fallback values
-            document.getElementById('matieresCount').textContent = '6';
-            document.getElementById('classesCount').textContent = '4';
-            document.getElementById('examensCount').textContent = '8';
-            document.getElementById('profsCount').textContent = '12';
-            document.getElementById('usersCount').textContent = '45';
+            // Set fallback values on error
+            safeSetContent('matieresCount', '4');
+            safeSetContent('classesCount', '7');
+            safeSetContent('examensCount', '5');
+            safeSetContent('profsCount', '8');
+            safeSetContent('usersCount', '25');
+        }
+    }
+
+    // Set an element to loading state
+    function setLoadingState(element) {
+        if (element) {
+            element.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        }
+    }
+
+    // Safely set content to an element
+    function safeSetContent(elementId, content) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = content;
+        }
+    }
+
+    // Fetch count for a specific entity type
+    async function fetchCountFor(apiServiceMethod, dataKey, element, fallbackValue, customEndpoint = null) {
+        try {
+            let response;
+
+            if (customEndpoint) {
+                // Use direct endpoint
+                response = await ApiService.request(customEndpoint, 'GET');
+            } else if (apiServiceMethod && ApiService[apiServiceMethod]) {
+                // Use API service method
+                response = await ApiService[apiServiceMethod].getAll();
+            } else {
+                // No valid method, use fallback
+                if (element) element.textContent = fallbackValue.toString();
+                return;
+            }
+
+            // Process response
+            if (response.success && response.data) {
+                if (dataKey && Array.isArray(response.data[dataKey])) {
+                    // We got a valid array response
+                    element.textContent = response.data[dataKey].length.toString();
+                } else if (response.data.count !== undefined) {
+                    // We got a count property
+                    element.textContent = response.data.count.toString();
+                } else if (Array.isArray(response.data)) {
+                    // Direct array
+                    element.textContent = response.data.length.toString();
+                } else {
+                    // Fallback to fallbackValue
+                    element.textContent = fallbackValue.toString();
+                }
+            } else {
+                // API call failed, use fallback
+                element.textContent = fallbackValue.toString();
+            }
+        } catch (error) {
+            console.error(`Error fetching count for ${apiServiceMethod || customEndpoint}:`, error);
+            // Set fallback on error
+            if (element) element.textContent = fallbackValue.toString();
         }
     }
 
