@@ -1,104 +1,327 @@
 // Configuration de l'application
-const appConfig = {
+// Version: 2.0 - Azure Edition avec contournement 404
+
+// Détecter l'environnement
+const isAzure = window.location.hostname.includes("azurewebsites.net");
+const isDevelopment =
+	!isAzure &&
+	(window.location.hostname === "localhost" ||
+		window.location.hostname === "127.0.0.1");
+
+// Configuration par défaut
+const defaultConfig = {
+	// URL de base de l'API backend
 	apiBaseUrl: "https://app-backend-esgi-app.azurewebsites.net/api",
+
+	// URL de base du backend
 	backendBaseUrl: "https://app-backend-esgi-app.azurewebsites.net",
-	useProxy: true, // Always use proxy since direct communication has CORS issues
-	proxyUrl: "simple-proxy.php", // Default path for local development
-	version: "1.9"
+
+	// Utiliser le proxy ou non
+	useProxy: isAzure, // Activer par défaut sur Azure
+
+	// URL du proxy (sera testé et mis à jour automatiquement sur Azure)
+	proxyUrl: "simple-proxy.php",
+
+	// Stratégie de contournement pour les erreurs 404
+	bypass404: true,
+
+	// Version de configuration
+	version: "2.0"
 };
 
-// Detect if we're on Azure and adjust paths
-const isAzure =
-	typeof window !== "undefined" &&
-	window.location &&
-	(window.location.hostname.includes("azurewebsites.net") ||
-		window.location.hostname ===
-			"app-frontend-esgi-app.azurewebsites.net");
+// Configuration pour l'environnement
+let appConfig = { ...defaultConfig };
 
+// Sur Azure, tester les différents chemins proxy possibles
 if (isAzure) {
-	// On Azure, try different paths to find the proxy
-	// First, try relative path (normal case)
-	appConfig.proxyUrl = "simple-proxy.php";
-
-	// If we're in a web app's virtual directory, we need the full path
-	// We need to handle both root and virtual directory scenarios
 	console.log("Running on Azure, testing various proxy paths");
-} else {
-	console.log("Running locally, using relative paths");
 
-	// Check if we're on localhost with a specific port, adjust accordingly
-	const port = window.location.port;
-	if (port) {
-		appConfig.proxyUrl =
-			window.location.protocol +
-			"//" +
-			window.location.hostname +
-			":" +
-			port +
-			"/simple-proxy.php";
+	// Liste des chemins proxy à tester, par ordre de préférence
+	const possibleProxyPaths = [
+		"simple-proxy.php", // Racine
+		"local-proxy-fix.php", // Version fixe (recommandée)
+		"/api/simple-proxy.php", // Sous-dossier API
+		"/proxy/simple-proxy.php", // Sous-dossier Proxy
+		"/simple-proxy.php", // Chemin absolu
+		"/api/local-proxy-fix.php", // Version fixe dans API
+		"/proxy/local-proxy-fix.php" // Version fixe dans Proxy
+	];
+
+	// Fonction pour initialiser avec chemin de proxy en cours
+	function initConfig() {
+		console.log("App config:", appConfig);
+		console.log("Is Azure environment:", isAzure);
+		console.log("Proxy URL:", appConfig.proxyUrl);
+		console.log("API Base URL:", appConfig.apiBaseUrl);
+
+		// Vérifier si le proxy est disponible
+		if (appConfig.useProxy) {
+			verifyProxyAccess();
+		}
 	}
-}
 
-// Force proxy to always be true
-appConfig.useProxy = true;
-
-// Log configuration for debugging
-console.log("App config:", appConfig);
-console.log("Is Azure environment:", isAzure);
-console.log("Proxy URL:", appConfig.proxyUrl);
-console.log("API Base URL:", appConfig.apiBaseUrl);
-
-// Try multiple proxy paths to find the working one
-async function findWorkingProxyPath() {
-	if (isAzure) {
-		// Array of possible proxy paths on Azure
-		const possibleProxyPaths = [
-			"simple-proxy.php", // Same directory
-			"/simple-proxy.php", // Root
-			"../simple-proxy.php", // One level up
-			"../../simple-proxy.php", // Two levels up
-			window.location.pathname.substring(
-				0,
-				window.location.pathname.lastIndexOf("/")
-			) + "/simple-proxy.php" // Current directory
-		];
-
-		console.log("Testing possible proxy paths...");
+	// Fonction pour vérifier l'accessibilité du proxy
+	async function verifyProxyAccess() {
+		console.log("Testing proxy paths...");
 
 		for (const path of possibleProxyPaths) {
+			console.log("Testing proxy path:", path);
 			try {
-				console.log("Testing proxy path:", path);
+				// Utiliser un signal pour limiter la durée d'attente
+				const controller = new AbortController();
+				const timeoutId = setTimeout(
+					() => controller.abort(),
+					5000
+				);
+
+				// Ajouter un paramètre unique pour éviter la mise en cache
 				const response = await fetch(
-					`${path}?endpoint=status.php`,
+					`${path}?endpoint=status.php&_=${Date.now()}`,
 					{
 						method: "GET",
-						headers: {
-							Accept: "application/json"
-						}
+						signal: controller.signal
 					}
 				);
 
+				clearTimeout(timeoutId);
+
 				if (response.ok) {
+					console.log(
+						`Proxy path ${path} is working!`
+					);
+					// Mettre à jour la configuration avec ce chemin
+					appConfig.proxyUrl = path;
 					console.log(
 						"Found working proxy path:",
 						path
 					);
-					appConfig.proxyUrl = path;
-					return true;
+					break;
 				}
 			} catch (error) {
-				console.log(
-					`Path ${path} failed:`,
+				console.warn(
+					`Failed to access proxy at ${path}:`,
 					error.message
 				);
 			}
 		}
-
-		console.error("No working proxy path found!");
-		return false;
 	}
-	return true;
+
+	// Appeler la fonction d'initialisation
+	initConfig();
 }
+
+// Fonction pour tester la connectivité au backend
+async function testBackendConnection() {
+	console.log("Trying to find a working backend URL...");
+
+	// D'abord, essayer avec le proxy
+	if (appConfig.useProxy) {
+		try {
+			// Test avec le proxy
+			const url = `${
+				appConfig.proxyUrl
+			}?endpoint=status.php&_=${Date.now()}`;
+			const response = await fetch(url);
+
+			if (response.ok) {
+				console.log(
+					"Proxy is working with current backend URL configuration."
+				);
+				return true;
+			}
+		} catch (error) {
+			console.warn("Proxy test failed:", error.message);
+		}
+	}
+
+	// Ensuite, essayer directement (si CORS est configuré)
+	try {
+		const response = await fetch(`${appConfig.apiBaseUrl}/status`);
+
+		if (response.ok) {
+			console.log("Direct backend connection is working.");
+			// Désactiver le proxy puisque la connexion directe fonctionne
+			appConfig.useProxy = false;
+			return true;
+		}
+	} catch (error) {
+		console.warn(
+			"Direct backend connection failed:",
+			error.message
+		);
+	}
+
+	return false;
+}
+
+// Fonction pour gérer les erreurs 404 sur les requêtes proxy
+async function handlePostRequest(endpoint, data, options = {}) {
+	if (!appConfig.useProxy) {
+		// Connexion directe au backend
+		const url = `${appConfig.apiBaseUrl}/${endpoint}`;
+		return fetch(url, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify(data),
+			...options
+		});
+	}
+
+	// Essayer avec le proxy normal
+	try {
+		const proxyUrl = `${
+			appConfig.proxyUrl
+		}?endpoint=${encodeURIComponent(endpoint)}`;
+		const response = await fetch(proxyUrl, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify(data),
+			...options
+		});
+
+		// Si ça fonctionne, excellent
+		if (response.ok) {
+			return response;
+		}
+
+		// Si c'est un 404 et que bypass404 est activé
+		if (response.status === 404 && appConfig.bypass404) {
+			console.warn(
+				"Proxy returned 404, trying alternative method"
+			);
+			// Utiliser un iframe en fallback (contournement pour nginx/Azure)
+			return await iframePostFallback(endpoint, data);
+		}
+
+		return response;
+	} catch (error) {
+		console.error("Error with proxy post:", error);
+
+		// Si bypass404 est activé, essayer la méthode de contournement
+		if (appConfig.bypass404) {
+			console.warn(
+				"Error with proxy, trying alternative method"
+			);
+			return await iframePostFallback(endpoint, data);
+		}
+
+		throw error;
+	}
+}
+
+// Fonction de contournement utilisant un iframe pour POST (évite les problèmes de CORS/404)
+async function iframePostFallback(endpoint, data) {
+	return new Promise((resolve, reject) => {
+		const uniqueId = `iframe_fallback_${Date.now()}_${Math.random()
+			.toString(36)
+			.substr(2, 9)}`;
+
+		// Créer un iframe caché
+		const iframe = document.createElement("iframe");
+		iframe.name = uniqueId;
+		iframe.style.display = "none";
+		document.body.appendChild(iframe);
+
+		// Créer un formulaire qui cible l'iframe
+		const form = document.createElement("form");
+		form.action = `${appConfig.backendBaseUrl}/${endpoint}`;
+		form.method = "POST";
+		form.target = uniqueId;
+		form.enctype = "application/json";
+
+		// Ajouter les données au formulaire
+		const input = document.createElement("input");
+		input.type = "hidden";
+		input.name = "data";
+		input.value = JSON.stringify(data);
+		form.appendChild(input);
+
+		// Ajouter une fonction de callback
+		window[uniqueId] = function (responseData) {
+			resolve(responseData);
+			cleanup();
+		};
+
+		// Fonction pour nettoyer les éléments DOM
+		function cleanup() {
+			document.body.removeChild(iframe);
+			document.body.removeChild(form);
+			delete window[uniqueId];
+		}
+
+		// Ajouter event listeners
+		iframe.onerror = function (error) {
+			reject(error);
+			cleanup();
+		};
+
+		// Soumettre le formulaire
+		document.body.appendChild(form);
+		form.submit();
+
+		// Définir un timeout
+		setTimeout(() => {
+			reject(new Error("Iframe fallback timed out"));
+			cleanup();
+		}, 30000);
+	});
+}
+
+// Vérifier si le proxy est fonctionnel
+(async function () {
+	try {
+		const proxyTest = await fetch(
+			`${
+				appConfig.proxyUrl
+			}?endpoint=status.php&_=${Date.now()}`
+		);
+		if (proxyTest.ok) {
+			console.log("Proxy is working correctly");
+		} else {
+			console.warn(
+				`Proxy test failed with status: ${proxyTest.status}`
+			);
+
+			// Si le proxy ne fonctionne pas correctement, essayer de trouver une alternative
+			const alternatives = [
+				"local-proxy-fix.php",
+				"/api/simple-proxy.php",
+				"/proxy/simple-proxy.php",
+				"/simple-proxy.php"
+			];
+
+			for (const alt of alternatives) {
+				try {
+					const testResponse = await fetch(
+						`${alt}?endpoint=status.php&_=${Date.now()}`
+					);
+					if (testResponse.ok) {
+						console.log(
+							`Alternative proxy found: ${alt}`
+						);
+						appConfig.proxyUrl = alt;
+						break;
+					}
+				} catch (e) {
+					console.warn(
+						`Alternative ${alt} failed:`,
+						e.message
+					);
+				}
+			}
+		}
+	} catch (error) {
+		console.error("Error testing proxy:", error);
+	} finally {
+		console.log("Configuration finale:");
+		console.log("Proxy URL:", appConfig.proxyUrl);
+		console.log("API Base URL:", appConfig.apiBaseUrl);
+	}
+})();
 
 // List of possible backend URLs to try
 const possibleBackendUrls = [

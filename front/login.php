@@ -229,6 +229,7 @@ ob_start();
 			'simple-proxy.php',
 			'api-bridge.php',
 			'local-proxy.php',
+			'local-proxy-fix.php',
 			'/simple-proxy.php',
 			'/api/simple-proxy.php',
 			'/proxy/simple-proxy.php'
@@ -288,7 +289,7 @@ ob_start();
 	console.log('Full hostname:', window.location.hostname);
 	console.log('Full window.location:', window.location.href);
 	console.log('Current pathname:', window.location.pathname);
-	console.log('API base URL from config:', appConfig.backendBaseUrl);
+	console.log('API base URL from config:', appConfig.apiBaseUrl);
 
 	// Fonction pour tester un chemin de proxy
 	async function testProxyPath(path) {
@@ -349,12 +350,14 @@ ob_start();
 			"simple-proxy.php",
 			"api-bridge.php",
 			"local-proxy.php",
+			"local-proxy-fix.php",
 			"proxy/simple-proxy.php",
 			"api/simple-proxy.php",
 			// Chemins absolus
 			"/simple-proxy.php",
 			"/api-bridge.php",
 			"/local-proxy.php",
+			"/local-proxy-fix.php",
 			"/proxy/simple-proxy.php",
 			"/api/simple-proxy.php",
 			// Chemins basés sur le chemin actuel
@@ -466,76 +469,73 @@ ob_start();
 			console.log('Utilisation du proxy pour la connexion: ' + proxyPath);
 			NotificationSystem.info("Connexion via proxy...");
 
-			// Construire l'URL d'API en utilisant le proxy
-			const loginUrl = `${proxyPath}?endpoint=${encodeURIComponent(loginEndpoint)}`;
-			console.log('URL de connexion via proxy:', loginUrl);
-
-			// Options de requête
-			const fetchOptions = {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					email,
-					password
-				}),
-				credentials: 'include'
+			// Données de connexion
+			const loginData = {
+				email,
+				password
 			};
 
-			// Faire la requête via le proxy
+			// NOUVELLE MÉTHODE: Utiliser la fonction handlePostRequest de config.js
 			let response;
 			try {
-				console.log('Envoi de la requête via proxy...');
+				// Utiliser la fonction améliorée de contournement de 404
+				if (typeof handlePostRequest === 'function') {
+					console.log('Utilisation de handlePostRequest pour la connexion');
+					response = await handlePostRequest(loginEndpoint, loginData);
+				} else {
+					// Fallback si la fonction n'est pas disponible
+					console.log('Utilisation de la méthode standard pour la connexion');
 
-				response = await fetch(loginUrl, fetchOptions);
-				console.log('Réponse du proxy reçue:', response);
+					// Construire l'URL d'API en utilisant le proxy
+					const loginUrl = `${proxyPath}?endpoint=${encodeURIComponent(loginEndpoint)}`;
+					console.log('URL de connexion via proxy:', loginUrl);
+
+					// Options de requête
+					const fetchOptions = {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify(loginData),
+						credentials: 'include'
+					};
+
+					response = await fetch(loginUrl, fetchOptions);
+				}
+
+				console.log('Réponse reçue:', response);
 
 				if (!response.ok) {
-					// Si le proxy principal échoue, essayer l'API bridge comme solution de secours
-					throw new Error('Échec de la requête via proxy: ' + response.status);
+					throw new Error('Échec de la requête: ' + response.status);
 				}
 			} catch (proxyErr) {
-				console.error("Erreur de connexion via proxy:", proxyErr);
+				console.error("Erreur de connexion:", proxyErr);
 
-				// Essayer avec l'api-bridge comme solution de dernier recours
+				// Essayer avec direct-login comme solution de dernier recours
 				try {
-					console.log('Tentative avec api-bridge...');
-					NotificationSystem.info("Tentative avec api-bridge...");
+					console.log('Tentative avec direct-login.php...');
+					NotificationSystem.info("Tentative avec solution de secours...");
 
-					// Utiliser le api-bridge qui fait une requête côté serveur
-					const bridgeUrl = 'api-bridge.php?endpoint=' + encodeURIComponent(loginEndpoint);
-					console.log('URL bridge:', bridgeUrl);
+					// direct-login.php fait la requête côté serveur avec PHP
+					response = await fetch('direct-login.php', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify(loginData)
+					});
 
-					response = await fetch(bridgeUrl, fetchOptions);
-					console.log('Réponse api-bridge reçue:', response);
+					console.log('Réponse direct-login reçue:', response);
 
 					if (!response.ok) {
-						throw new Error('Échec de la requête api-bridge: ' + response.status);
+						throw new Error('Toutes les tentatives ont échoué');
 					}
-				} catch (bridgeErr) {
-					console.error("Erreur avec api-bridge:", bridgeErr);
-
-					// Solution de dernier recours - utiliser direct-login.php
-					try {
-						console.log('Tentative avec direct-login.php...');
-						NotificationSystem.info("Tentative avec solution de secours...");
-
-						// direct-login.php fait la requête côté serveur avec PHP
-						response = await fetch('direct-login.php', fetchOptions);
-						console.log('Réponse direct-login reçue:', response);
-
-						if (!response.ok) {
-							throw new Error('Toutes les tentatives ont échoué');
-						}
-					} catch (directErr) {
-						console.error("Toutes les tentatives ont échoué:", directErr);
-						throw new Error("Impossible de communiquer avec le backend: " + directErr.message);
-					}
+				} catch (directErr) {
+					console.error("Toutes les tentatives ont échoué:", directErr);
+					throw new Error("Impossible de communiquer avec le backend: " + directErr.message);
 				}
 			}
 
-			console.log('Réponse reçue:', response);
 			const responseText = await response.text();
 			console.log('Contenu de la réponse:', responseText);
 
