@@ -16,7 +16,7 @@ require_once __DIR__ . '/config/proxy.php';
 // Configure logging
 setupLogging();
 
-// Set CORS headers
+// Set CORS headers first
 $corsHeaders = getCorsHeaders();
 foreach ($corsHeaders as $header => $value) {
 	header("$header: $value");
@@ -28,6 +28,12 @@ setSecurityHeaders();
 // Log incoming request
 error_log("Proxy Request: " . $_SERVER['REQUEST_METHOD'] . " " . $_SERVER['REQUEST_URI']);
 error_log("Query String: " . $_SERVER['QUERY_STRING']);
+
+// Handle OPTIONS requests first
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+	error_log("Handling OPTIONS request");
+	exit(0);
+}
 
 // Check rate limit
 if (!checkRateLimit($_SERVER['REMOTE_ADDR'])) {
@@ -54,12 +60,6 @@ if (!in_array($method, INPUT_VALIDATION_CONFIG['allowed_methods'])) {
 			'message' => 'Méthode non autorisée'
 		]
 	]));
-}
-
-// Handle OPTIONS requests
-if ($method === 'OPTIONS') {
-	error_log("Handling OPTIONS request");
-	exit(0);
 }
 
 // Validate endpoint
@@ -96,7 +96,7 @@ if (isset($endpointMap[$endpoint])) {
 	$endpoint .= '.php';
 }
 
-$targetUrl = $baseUrl . '/' . $endpoint;
+$targetUrl = $baseUrl . '/api/' . $endpoint;
 
 error_log("Target URL: " . $targetUrl);
 
@@ -109,8 +109,8 @@ curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, SSL_VERIFY_HOST);
 curl_setopt($ch, CURLOPT_TIMEOUT, CURL_TIMEOUT);
 curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, CURL_CONNECT_TIMEOUT);
 curl_setopt($ch, CURLOPT_VERBOSE, true);
-curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Suivre les redirections
-curl_setopt($ch, CURLOPT_MAXREDIRS, 5); // Maximum de redirections
+curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
 
 // Configuration des headers
 $headers = DEFAULT_HEADERS;
@@ -145,13 +145,6 @@ error_log("CURL Info: " . print_r($info, true));
 // Gestion des erreurs
 if ($error) {
 	error_log("Proxy Error: $error - URL: $targetUrl");
-	$corsHeaders = getCorsHeaders();
-	foreach ($corsHeaders as $header => $value) {
-		header("$header: $value");
-	}
-	foreach (SECURITY_CONFIG['headers'] as $header) {
-		header($header);
-	}
 	header('HTTP/1.1 502 Bad Gateway');
 	die(json_encode([
 		'success' => false,
