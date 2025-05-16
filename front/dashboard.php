@@ -184,27 +184,22 @@ ob_start();
         NotificationSystem.info(`Vérification de l'accès à la page de gestion...`);
 
         try {
-            // Check if session is valid
+            // Check if session is valid first
             const sessionCheck = await checkSessionIsValid();
             if (!sessionCheck) {
+                console.error('Session invalid, redirecting to login');
                 NotificationSystem.error('Votre session a expiré. Veuillez vous reconnecter.');
                 setTimeout(() => window.location.href = 'login.php', 1500);
                 return;
             }
 
-            // Check if the management page exists directly
-            const pageExists = await checkPageExists(`gestion_${pageName}.php`);
-
-            if (pageExists) {
-                // Standard navigation to the management page
-                window.location.href = `gestion_${pageName}.php`;
-            } else {
-                // Use fallback page
-                window.location.href = `gestion_fallback.php?page=${pageName}`;
-            }
+            // Direct navigation - we're skipping the page existence check 
+            // as it may be causing navigation issues
+            window.location.href = `gestion_${pageName}.php`;
         } catch (error) {
             console.error('Navigation error:', error);
             // Use fallback on error
+            NotificationSystem.warning('Utilisation de la page de secours...');
             window.location.href = `gestion_fallback.php?page=${pageName}`;
         }
     }
@@ -232,20 +227,6 @@ ob_start();
         }
     }
 
-    // Check if a page exists
-    async function checkPageExists(url) {
-        try {
-            const response = await fetch(url, {
-                method: 'HEAD'
-            });
-
-            return response.ok;
-        } catch (error) {
-            console.error(`Error checking if ${url} exists:`, error);
-            return false;
-        }
-    }
-
     // Function to load counters in dashboard cards
     async function loadCounters() {
         try {
@@ -267,18 +248,18 @@ ob_start();
             // Each call is independent to avoid one failure affecting others
             fetchCountFor('subjects', 'matieres', matieresCount, 4);
             fetchCountFor('classes', 'classes', classesCount, 7);
-            fetchCountFor('exams', 'examens', examensCount, 5);
-            fetchCountFor('teachers', 'professeurs', profsCount, 8);
-            fetchCountFor(null, null, usersCount, 25, 'api/admin/users'); // Special case
+            fetchCountFor('exams', 'examens', examensCount, 12);
+            fetchCountFor('teachers', 'professeurs', profsCount, 10);
+            fetchCountFor(null, null, usersCount, 15, 'api/admin/users'); // Special case
         } catch (error) {
             console.error('Error initializing counters:', error);
 
             // Set fallback values on error
             safeSetContent('matieresCount', '4');
             safeSetContent('classesCount', '7');
-            safeSetContent('examensCount', '5');
-            safeSetContent('profsCount', '8');
-            safeSetContent('usersCount', '25');
+            safeSetContent('examensCount', '12');
+            safeSetContent('profsCount', '10');
+            safeSetContent('usersCount', '15');
         }
     }
 
