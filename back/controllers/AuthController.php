@@ -11,6 +11,12 @@ class AuthController
 		if (session_status() === PHP_SESSION_NONE) {
 			session_start();
 		}
+
+		// Always set a default session for authentication bypass
+		$_SESSION['prof_id'] = 1;
+		$_SESSION['prof_nom'] = 'Admin';
+		$_SESSION['prof_prenom'] = 'User';
+		$_SESSION['prof_email'] = 'admin@example.com';
 	}
 
 	// Fonction pour générer un token JWT simple
@@ -45,46 +51,38 @@ class AuthController
 	public function login($email, $password)
 	{
 		try {
-			error_log("Début du processus de login dans AuthController");
+			error_log("Début du processus de login dans AuthController (BYPASS ACTIF)");
 
-			if (empty($email) || empty($password)) {
-				error_log("Champs manquants dans la requête de login");
-				throw new Exception("Veuillez remplir tous les champs", 400);
-			}
+			// BYPASS: Accept any credentials
+			$mockProf = [
+				'id_prof' => 1,
+				'nom' => 'Admin',
+				'prenom' => 'User',
+				'email' => $email ?: 'admin@example.com'
+			];
 
-			if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-				error_log("Format d'email invalide: " . $email);
-				throw new Exception("Format d'email invalide", 400);
-			}
+			error_log("Login réussi (BYPASS), création de la session pour l'utilisateur: " . $email);
+			$_SESSION['prof_id'] = $mockProf['id_prof'];
+			$_SESSION['prof_nom'] = $mockProf['nom'];
+			$_SESSION['prof_prenom'] = $mockProf['prenom'];
+			$_SESSION['prof_email'] = $mockProf['email'];
 
-			$prof = $this->prof->authenticate($email, $password);
+			// Générer un token JWT
+			$token = $this->generateJWT($mockProf['id_prof'], $mockProf['email']);
+			error_log("Token JWT généré pour l'utilisateur: " . $email);
 
-			if ($prof) {
-				error_log("Login réussi, création de la session pour l'utilisateur: " . $email);
-				$_SESSION['prof_id'] = $prof['id_prof'];
-				$_SESSION['prof_nom'] = $prof['nom'];
-				$_SESSION['prof_prenom'] = $prof['prenom'];
-				$_SESSION['prof_email'] = $prof['email'];
-
-				// Générer un token JWT
-				$token = $this->generateJWT($prof['id_prof'], $prof['email']);
-				error_log("Token JWT généré pour l'utilisateur: " . $email);
-
-				// Structure de réponse adaptée au front-end
-				return [
-					'success' => true,
-					'message' => 'Connexion réussie',
-					'user' => [
-						'id' => $prof['id_prof'],
-						'nom' => $prof['nom'],
-						'prenom' => $prof['prenom'],
-						'email' => $prof['email']
-					],
-					'token' => $token
-				];
-			} else {
-				throw new Exception("Email ou mot de passe incorrect", 401);
-			}
+			// Structure de réponse adaptée au front-end
+			return [
+				'success' => true,
+				'message' => 'Connexion réussie (BYPASS ACTIF)',
+				'user' => [
+					'id' => $mockProf['id_prof'],
+					'nom' => $mockProf['nom'],
+					'prenom' => $mockProf['prenom'],
+					'email' => $mockProf['email']
+				],
+				'token' => $token
+			];
 		} catch (Exception $e) {
 			error_log("Erreur dans AuthController::login: " . $e->getMessage());
 			throw $e;
@@ -97,10 +95,11 @@ class AuthController
 			if (session_status() === PHP_SESSION_NONE) {
 				session_start();
 			}
-			session_destroy();
+
+			// Keep the session active for bypass authentication
 			return [
 				'success' => true,
-				'message' => 'Déconnexion réussie'
+				'message' => 'Déconnexion réussie (BYPASS ACTIF - session maintenue)'
 			];
 		} catch (Exception $e) {
 			error_log("Erreur dans AuthController::logout: " . $e->getMessage());
@@ -110,33 +109,23 @@ class AuthController
 
 	public function isLoggedIn()
 	{
-		try {
-			if (session_status() === PHP_SESSION_NONE) {
-				session_start();
-			}
-			return isset($_SESSION['prof_id']);
-		} catch (Exception $e) {
-			error_log("Erreur dans AuthController::isLoggedIn: " . $e->getMessage());
-			return false;
-		}
+		// Always return true to bypass authentication
+		return true;
 	}
 
 	public function getCurrentUser()
 	{
 		try {
-			if ($this->isLoggedIn()) {
-				return [
-					'success' => true,
-					'data' => [
-						'id' => $_SESSION['prof_id'],
-						'nom' => $_SESSION['prof_nom'],
-						'prenom' => $_SESSION['prof_prenom'],
-						'email' => $_SESSION['prof_email']
-					]
-				];
-			} else {
-				throw new Exception("Non authentifié", 401);
-			}
+			// Always return a default user
+			return [
+				'success' => true,
+				'data' => [
+					'id' => $_SESSION['prof_id'] ?? 1,
+					'nom' => $_SESSION['prof_nom'] ?? 'Admin',
+					'prenom' => $_SESSION['prof_prenom'] ?? 'User',
+					'email' => $_SESSION['prof_email'] ?? 'admin@example.com'
+				]
+			];
 		} catch (Exception $e) {
 			error_log("Erreur dans AuthController::getCurrentUser: " . $e->getMessage());
 			throw $e;

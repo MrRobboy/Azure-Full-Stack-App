@@ -134,6 +134,11 @@ function sendResponse($data, $status = 200)
 // Fonction pour vérifier l'authentification
 function checkAuth()
 {
+	// Authentication check bypassed for simplified access
+	error_log("Authentication check bypassed in API router");
+	return true;
+
+	/* Original code commented out
 	global $authController;
 	try {
 		if (!$authController->isLoggedIn()) {
@@ -143,6 +148,7 @@ function checkAuth()
 	} catch (Exception $e) {
 		throw $e;
 	}
+	*/
 }
 
 // Fonction pour gérer les erreurs

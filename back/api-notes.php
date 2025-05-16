@@ -61,6 +61,10 @@ try {
 
 // Check authentication
 try {
+	// Authentication check removed for simplified access
+	error_log("Authentication check bypassed for simplified access");
+
+	/* Original code commented out
 	if (!$authController->isLoggedIn()) {
 		http_response_code(401);
 		echo json_encode([
@@ -69,6 +73,7 @@ try {
 		]);
 		exit;
 	}
+	*/
 } catch (Exception $e) {
 	error_log("Auth error: " . $e->getMessage());
 	http_response_code(401);

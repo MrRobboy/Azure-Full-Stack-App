@@ -1,6 +1,9 @@
 <?php
-// Application Router
-// This script serves as the main entry point for all API requests
+// Include authentication bypass
+require_once __DIR__ . '/azure-init.php';
+
+// Main API Router for Azure Full-Stack App
+// This file routes all requests to the appropriate controllers
 
 // Disable error display but keep error logging
 error_reporting(E_ALL);
