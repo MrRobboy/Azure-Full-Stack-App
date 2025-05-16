@@ -1,31 +1,54 @@
-# Guide des endpoints d'API
+# Guide des endpoints d'API avec le Proxy Amélioré
 
-Ce document décrit les différents endpoints d'API disponibles dans l'application et comment les utiliser correctement avec les JWT générés.
+Ce document décrit les différents endpoints d'API disponibles avec le nouveau proxy amélioré.
 
-## Architecture de l'API
+## Architecture améliorée
 
-Le backend Azure utilise une architecture REST avec des chemins d'API structurés. Cependant, notre frontend a besoin d'adaptateurs pour traduire entre les formats attendus et les formats réels du backend.
+Le nouveau proxy unifié `enhanced-proxy.php` simplifie l'accès à tous les types d'endpoints:
 
-## Endpoints Backend vs Frontend
+- Endpoints traditionnels au format `fichier.php`
+- Endpoints REST au format `api/ressource`
+- Support des IDs dans les deux formats: `api/ressource/id` ou `api/ressource?id=X`
 
-| Ressource    | Endpoint Frontend         | Endpoint Backend Réel | Adaptateur              |
-| ------------ | ------------------------- | --------------------- | ----------------------- |
-| Notes        | `api-notes.php`           | `api/notes`           | Proxy direct            |
-| Utilisateurs | `users-api-adapter.php`   | `api/users`           | `users-api-adapter.php` |
-| Auth         | `improved-jwt-bridge.php` | `api-auth-login.php`  | JWT Bridge              |
+## Endpoints disponibles
+
+| Ressource    | Endpoint                                         | Type d'accès |
+| ------------ | ------------------------------------------------ | ------------ |
+| Statut       | `enhanced-proxy.php?endpoint=status.php`         | Public       |
+| Auth         | `enhanced-proxy.php?endpoint=api-auth-login.php` | Public       |
+| Notes        | `enhanced-proxy.php?endpoint=api/notes`          | Protégé      |
+| Utilisateurs | `enhanced-proxy.php?endpoint=api/users`          | Protégé      |
+| Classes      | `enhanced-proxy.php?endpoint=api/classes`        | Protégé      |
+| Professeurs  | `enhanced-proxy.php?endpoint=api/profs`          | Protégé      |
+| Matières     | `enhanced-proxy.php?endpoint=api/matieres`       | Protégé      |
+| Examens      | `enhanced-proxy.php?endpoint=api/examens`        | Protégé      |
+| Privilèges   | `enhanced-proxy.php?endpoint=api/privileges`     | Protégé      |
+
+## Accès à des ressources spécifiques par ID
+
+Il existe deux façons d'accéder à une ressource spécifique:
+
+1. **Format REST** (recommandé):
+
+      ```
+      enhanced-proxy.php?endpoint=api/users/5
+      ```
+
+2. **Format query string**:
+      ```
+      enhanced-proxy.php?endpoint=api/users&id=5
+      ```
 
 ## Utilisation avec le JWT
 
-Pour accéder aux ressources protégées, vous devez inclure le token JWT dans l'en-tête `Authorization` au format `Bearer <token>`.
-
-### Exemple JavaScript
+Pour accéder aux ressources protégées, incluez le token JWT dans l'en-tête `Authorization`:
 
 ```javascript
 // Obtenir le token JWT
 const token = localStorage.getItem("jwt_token");
 
-// Accéder aux utilisateurs avec l'adaptateur
-fetch("users-api-adapter.php", {
+// Accéder à la liste des utilisateurs
+fetch("enhanced-proxy.php?endpoint=api/users", {
 	headers: {
 		Authorization: "Bearer " + token
 	}
@@ -33,8 +56,8 @@ fetch("users-api-adapter.php", {
 	.then((response) => response.json())
 	.then((data) => console.log(data));
 
-// Accéder aux notes via le proxy
-fetch("optimal-proxy.php?endpoint=api-notes.php", {
+// Accéder à un utilisateur spécifique (format REST)
+fetch("enhanced-proxy.php?endpoint=api/users/5", {
 	headers: {
 		Authorization: "Bearer " + token
 	}
@@ -43,27 +66,39 @@ fetch("optimal-proxy.php?endpoint=api-notes.php", {
 	.then((data) => console.log(data));
 ```
 
-## Structure des adaptateurs d'API
+## Filtrage des ressources
 
-Les adaptateurs d'API comme `users-api-adapter.php` servent de traducteurs entre notre frontend et le backend. Ils:
+Pour les ressources qui supportent le filtrage, ajoutez simplement les paramètres à l'URL:
 
-1. Reçoivent la requête du frontend
-2. Transforment la requête au format attendu par le backend
-3. Transmettent la requête au backend via le proxy optimal
-4. Reçoivent la réponse du backend
-5. Transforment la réponse au format attendu par le frontend
-6. Retournent la réponse au frontend
+```javascript
+// Obtenir les utilisateurs d'une classe spécifique
+fetch("enhanced-proxy.php?endpoint=api/users/classe/3", {
+	headers: {
+		Authorization: "Bearer " + token
+	}
+})
+	.then((response) => response.json())
+	.then((data) => console.log(data));
 
-## Paramètres des adaptateurs
+// Filtrer les notes par matière
+fetch("enhanced-proxy.php?endpoint=api/notes&matiere=5", {
+	headers: {
+		Authorization: "Bearer " + token
+	}
+})
+	.then((response) => response.json())
+	.then((data) => console.log(data));
+```
 
-### Adaptateur d'API Utilisateurs
+## Avantages de l'approche unifiée
 
-L'adaptateur d'API Utilisateurs (`users-api-adapter.php`) accepte les paramètres suivants:
+Le nouveau proxy unifié offre plusieurs avantages:
 
-- `?id=X` - Récupérer un utilisateur spécifique par son ID
-- `?classe=Y` - Récupérer tous les utilisateurs d'une classe spécifique
-
-Exemple: `users-api-adapter.php?id=5` pour obtenir l'utilisateur avec l'ID 5.
+1. **Interface uniforme**: Un seul point d'entrée pour tous les types d'API
+2. **Compatibilité maximale**: Fonctionne avec les formats REST et traditionnels
+3. **Journalisation améliorée**: Toutes les requêtes sont enregistrées avec détails
+4. **Gestion d'erreurs robuste**: Messages d'erreur clairs et formatés
+5. **Pas besoin d'adaptateurs multiples**: Tout passe par un seul proxy
 
 ## Dépannage
 
@@ -78,14 +113,13 @@ Si vous recevez une erreur 401, vérifiez que:
 
 Si vous recevez une erreur 404, vérifiez que:
 
-- Vous utilisez le bon endpoint
-- Pour les ressources qui nécessitent un adaptateur, utilisez l'adaptateur approprié
-- L'ID de ressource existe dans le backend
+- Vous utilisez le bon format d'endpoint
+- Le chemin d'API est correct (vérifiez l'orthographe)
+- Pour les ressources avec ID, vérifiez que l'ID existe
 
-### Erreur dans la réponse JSON
+### Consulter les logs
 
-Si la réponse contient une erreur, consultez les logs dans:
+Si vous rencontrez des problèmes, consultez les logs dans:
 
-- `logs/improved-jwt-bridge.log` pour les problèmes d'authentification
-- `logs/users-api.log` pour les problèmes avec l'API utilisateurs
-- `logs/optimal-proxy.log` pour les problèmes généraux de proxy
+- `logs/enhanced-proxy.log` - Contient des informations détaillées sur chaque requête
+- `logs/improved-jwt-bridge.log` - Pour les problèmes d'authentification

@@ -188,22 +188,27 @@ session_start();
 			displayResult(`Accès à la ressource "${resource}" avec le token JWT...`);
 
 			let endpoint;
+			// Utiliser le nouveau format REST pour les ressources
 			switch (resource) {
 				case 'notes':
-					endpoint = 'api-notes.php';
+					endpoint = 'api/notes';
 					break;
 				case 'users':
-					// Utiliser l'adaptateur d'API utilisateurs au lieu de l'endpoint direct
-					endpoint = 'users-api-adapter.php';
+					endpoint = 'api/users';
+					break;
+				case 'classes':
+					endpoint = 'api/classes';
+					break;
+				case 'profs':
+					endpoint = 'api/profs';
 					break;
 				default:
 					endpoint = resource;
 			}
 
 			try {
-				// Déterminer si on utilise un adaptateur (sans proxy) ou le proxy optimal
-				const useProxy = !endpoint.includes('adapter');
-				const url = useProxy ? `optimal-proxy.php?endpoint=${endpoint}` : endpoint;
+				// Utiliser le proxy amélioré pour tous les endpoints
+				const url = `enhanced-proxy.php?endpoint=${endpoint}`;
 
 				const response = await fetch(url, {
 					headers: {
