@@ -244,26 +244,73 @@ session_start();
 			// Ajouter des logs supplémentaires
 			console.log(`Tentative d'authentification sur: ${window.location.origin}/improved-jwt-bridge.php`);
 
+			// Afficher les données qui seront envoyées
+			const requestData = {
+				email,
+				password
+			};
+			console.log("Données à envoyer:", requestData);
+
 			try {
+				// 1. Ajout d'un timeout plus long pour les environnements Azure qui peuvent être plus lents
+				const controller = new AbortController();
+				const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 secondes de timeout
+
 				const response = await fetch('improved-jwt-bridge.php', {
 					method: 'POST',
 					headers: {
-						'Content-Type': 'application/json'
+						'Content-Type': 'application/json',
+						'Accept': 'application/json',
+						'X-Requested-With': 'XMLHttpRequest'
 					},
-					body: JSON.stringify({
-						email: email,
-						password: password
-					})
+					body: JSON.stringify(requestData),
+					signal: controller.signal
 				});
+
+				clearTimeout(timeoutId);
 
 				// Logging détaillé pour aider au diagnostic
 				console.log(`Réponse reçue: Status ${response.status}`);
+				console.log(`Headers:`, Object.fromEntries([...response.headers.entries()]));
+
 				if (!response.ok) {
 					console.warn(`Attention: La réponse n'est pas OK (${response.status})`);
+					// Essayer de lire le corps même en cas d'erreur
+					try {
+						const errorText = await response.text();
+						console.warn(`Corps de l'erreur:`, errorText);
+						try {
+							const errorJson = JSON.parse(errorText);
+							console.warn(`Corps de l'erreur (JSON):`, errorJson);
+						} catch (e) {
+							// Ce n'est pas du JSON, on a déjà affiché le texte
+						}
+					} catch (e) {
+						console.warn(`Impossible de lire le corps de l'erreur:`, e);
+					}
 				}
 
-				const data = await response.json();
-				console.log("Structure de la réponse:", data);
+				// Récupérer le corps de la réponse comme texte d'abord
+				const responseText = await response.text();
+				console.log("Réponse brute:", responseText);
+
+				// Essayer de parser comme JSON
+				let data;
+				try {
+					data = JSON.parse(responseText);
+					console.log("Structure de la réponse:", data);
+				} catch (jsonError) {
+					console.error("Erreur de parsing JSON:", jsonError);
+					// Si ce n'est pas du JSON mais que ça ressemble à un token JWT
+					if (responseText.trim().startsWith('ey') && responseText.trim().includes('.')) {
+						data = {
+							token: responseText.trim()
+						};
+						console.log("Réponse traitée comme un token JWT brut");
+					} else {
+						throw new Error(`Réponse non-JSON: ${responseText.substring(0, 100)}${responseText.length > 100 ? '...' : ''}`);
+					}
+				}
 
 				// Amélioration de la gestion du token - vérifier les différentes structures possibles
 				let token = null;
@@ -289,6 +336,11 @@ session_start();
 					token = data.data;
 					tokenSource = "token JWT direct dans data";
 				}
+				// Option 5: Réponse en texte brut qui est un JWT (commence par ey)
+				else if (typeof responseText === 'string' && responseText.trim().startsWith('ey') && responseText.trim().includes('.')) {
+					token = responseText.trim();
+					tokenSource = "token JWT sous forme de texte brut";
+				}
 
 				if (token) {
 					localStorage.setItem('jwt_token', token);
@@ -298,6 +350,7 @@ session_start();
 						tokenStored: true,
 						tokenSource: tokenSource,
 						isLocallyGenerated: data.isLocallyGenerated || false,
+						tokenPreview: `${token.substring(0, 15)}...${token.substring(token.length - 10)}`,
 						dataPreview: typeof data === 'object' ? JSON.stringify(data).substring(0, 100) + '...' : 'Non disponible'
 					}, 'success');
 
@@ -307,13 +360,81 @@ session_start();
 					} else {
 						console.info("Token obtenu directement du backend");
 					}
+
+					// Vérification rapide de la validité du token
+					try {
+						const parts = token.split('.');
+						if (parts.length === 3) {
+							const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+							console.log("Contenu décodé du token:", payload);
+						}
+					} catch (e) {
+						console.warn("Impossible de décoder le contenu du token:", e);
+					}
 				} else {
 					console.error("Aucun token trouvé dans la réponse:", data);
-					displayResult({
-						message: 'Échec de la récupération du JWT',
-						data: data,
-						help: "Structure de réponse non reconnue. Vérifiez la console pour plus de détails."
-					}, 'error');
+
+					// Approche alternative: appel direct vers le backend - en dernier recours
+					if (isAzureEnvironment && !window.hasTriedDirectBackend) {
+						window.hasTriedDirectBackend = true;
+						displayResult({
+							message: 'Échec de la récupération du JWT via le bridge. Tentative d\'accès direct au backend...',
+							data: data
+						});
+
+						try {
+							const backendUrl = 'https://app-backend-esgi-app.azurewebsites.net/api/auth/login';
+							console.log(`Tentative alternative via: ${backendUrl}`);
+
+							const directResponse = await fetch(backendUrl, {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+									'Accept': 'application/json',
+									'X-Requested-With': 'XMLHttpRequest'
+								},
+								body: JSON.stringify(requestData)
+							});
+
+							console.log(`Réponse backend directe: Status ${directResponse.status}`);
+							const directData = await directResponse.json();
+							console.log("Réponse du backend:", directData);
+
+							// Extraire le token du backend
+							let directToken = null;
+							if (directData.token) {
+								directToken = directData.token;
+							} else if (directData.data && directData.data.token) {
+								directToken = directData.data.token;
+							}
+
+							if (directToken) {
+								localStorage.setItem('jwt_token', directToken);
+								displayResult({
+									message: 'JWT obtenu avec succès directement du backend!',
+									tokenReceived: true,
+									tokenStored: true,
+									tokenSource: "appel direct au backend",
+									tokenPreview: `${directToken.substring(0, 15)}...${directToken.substring(directToken.length - 10)}`
+								}, 'success');
+							} else {
+								throw new Error("Aucun token trouvé dans la réponse directe du backend");
+							}
+						} catch (backendError) {
+							console.error("Erreur lors de l'accès direct au backend:", backendError);
+							displayResult({
+								message: 'Échec de la récupération du JWT (méthodes bridge et directe)',
+								error: `Bridge: ${JSON.stringify(data)}, Backend direct: ${backendError.message}`,
+								help: "Vérifiez les identifiants et l'état du backend"
+							}, 'error');
+						}
+					} else {
+						displayResult({
+							message: 'Échec de la récupération du JWT',
+							data: data,
+							help: "Structure de réponse non reconnue. Vérifiez la console pour plus de détails."
+						}, 'error');
+					}
 				}
 			} catch (error) {
 				// Logging d'erreur amélioré
@@ -322,7 +443,7 @@ session_start();
 					message: 'Erreur lors de la requête',
 					error: error.message,
 					help: isAzureEnvironment ?
-						"Vérifiez que le fichier improved-jwt-bridge.php est bien déployé sur Azure" : "Vérifiez que le serveur local est en cours d'exécution"
+						"Vérifiez que le fichier improved-jwt-bridge.php est bien déployé sur Azure et que le backend est accessible" : "Vérifiez que le serveur local est en cours d'exécution"
 				}, 'error');
 			}
 		}
