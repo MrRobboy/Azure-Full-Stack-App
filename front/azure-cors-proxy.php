@@ -127,6 +127,56 @@ $statusCode = $info['http_code'];
 // Close the cURL handle
 curl_close($ch);
 
+// Enhanced error handling for specific endpoints
+if ($statusCode == 404 || $statusCode >= 500) {
+	error_log("Error response for endpoint $endpoint: HTTP $statusCode");
+
+	// Special handling for user profile API
+	if ($endpoint === 'api/user/profile') {
+		error_log("Generating fallback user profile data");
+
+		// If session has user data, use it
+		if (session_status() !== PHP_SESSION_ACTIVE) {
+			session_start();
+		}
+
+		if (isset($_SESSION['user'])) {
+			// Generate response from session data
+			$fallbackResponse = [
+				'success' => true,
+				'user' => $_SESSION['user'],
+				'message' => 'Profile retrieved from session (backend unavailable)',
+				'is_fallback' => true
+			];
+			http_response_code(200);
+			echo json_encode($fallbackResponse);
+			exit;
+		} else {
+			// Send a more helpful error
+			http_response_code(401);
+			echo json_encode([
+				'success' => false,
+				'message' => 'User profile unavailable and no session data found',
+				'error' => 'Backend returned status ' . $statusCode,
+				'endpoint' => $endpoint,
+				'url' => $url
+			]);
+			exit;
+		}
+	}
+
+	// General fallback for other endpoints
+	if (empty($response) || !json_decode($response)) {
+		echo json_encode([
+			'success' => false,
+			'message' => 'Backend returned error status ' . $statusCode,
+			'endpoint' => $endpoint,
+			'url' => $url
+		]);
+		exit;
+	}
+}
+
 // Set the response status code
 http_response_code($statusCode);
 

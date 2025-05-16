@@ -132,18 +132,29 @@ ob_start();
         try {
             // Get user profile
             const userResult = await ApiService.getCurrentUser();
-            if (!userResult.success) {
-                NotificationSystem.error('Erreur de chargement du profil utilisateur');
-                console.error('User profile error:', userResult);
-                return;
-            }
+            console.log('User profile API result:', userResult);
 
-            const userData = userResult.data;
+            let userData;
+
+            // If API call fails, use session data from PHP
+            if (!userResult.success) {
+                console.error('User profile API error:', userResult);
+
+                // Create a user object from PHP session data
+                userData = {
+                    user: <?php echo json_encode($user); ?>
+                };
+                console.log('Using PHP session data as fallback:', userData);
+                NotificationSystem.info('Utilisation des données de session locales (API non disponible)');
+            } else {
+                userData = userResult.data;
+                console.log('API user data:', userData);
+            }
 
             // Update user information on the page
             updateUserInfo(userData);
 
-            // Load notes if we have a student ID
+            // Load additional data based on user role
             if (userData.user.role === 'ELEVE' && userData.user.id) {
                 await loadStudentNotes(userData.user.id);
             }
@@ -172,25 +183,61 @@ ob_start();
 
     // Update user information on the page
     function updateUserInfo(userData) {
-        // Update user name
+        console.log('Updating UI with user data:', userData);
+
+        if (!userData || !userData.user) {
+            console.error('Invalid user data format:', userData);
+            return;
+        }
+
+        // Get user object - handle both direct user object and nested user object
+        const user = userData.user;
+
+        // Update user name - handle different user data formats
         const userNameElements = document.querySelectorAll('.user-name');
         userNameElements.forEach(el => {
-            el.textContent = `${userData.user.prenom} ${userData.user.nom}`;
+            // Try different name formats
+            if (user.prenom && user.nom) {
+                el.textContent = `${user.prenom} ${user.nom}`;
+            } else if (user.name) {
+                el.textContent = user.name;
+            } else if (user.email) {
+                el.textContent = user.email;
+            } else {
+                el.textContent = "Utilisateur";
+            }
         });
 
         // Update user role
         const userRoleElements = document.querySelectorAll('.user-role');
         userRoleElements.forEach(el => {
-            el.textContent = userData.user.role;
+            el.textContent = user.role || "Utilisateur";
         });
 
         // Update profile picture if available
-        if (userData.user.photo) {
+        if (user.photo) {
             const userPhotoElements = document.querySelectorAll('.user-photo');
             userPhotoElements.forEach(el => {
-                el.src = userData.user.photo;
+                el.src = user.photo;
             });
         }
+
+        // Update welcome text with name if available
+        const welcomeTextElements = document.querySelectorAll('.welcome-text');
+        welcomeTextElements.forEach(el => {
+            let displayName = "Utilisateur";
+
+            // Try different name formats
+            if (user.prenom && user.nom) {
+                displayName = `${user.prenom} ${user.nom}`;
+            } else if (user.name) {
+                displayName = user.name;
+            } else if (user.email) {
+                displayName = user.email;
+            }
+
+            el.innerHTML = `Bienvenue, <strong>${displayName}</strong>`;
+        });
     }
 
     // Load student notes

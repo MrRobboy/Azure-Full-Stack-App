@@ -46,29 +46,69 @@ const ApiService = (function () {
 
 		try {
 			// Use our CORS proxy
-			const response = await fetch(
-				`${_corsProxy}?endpoint=${encodeURIComponent(
-					endpoint
-				)}`,
-				requestOptions
+			const proxyUrl = `${_corsProxy}?endpoint=${encodeURIComponent(
+				endpoint
+			)}`;
+			console.log(`Using proxy URL: ${proxyUrl}`);
+
+			const response = await fetch(proxyUrl, requestOptions);
+
+			console.log(
+				`Response status: ${response.status} for ${endpoint}`
 			);
 
 			// Handle non-JSON responses
 			const contentType =
 				response.headers.get("content-type");
+
+			// Debug response headers
+			console.log(`Response content-type: ${contentType}`);
+
 			if (
 				contentType &&
 				contentType.includes("application/json")
 			) {
-				const jsonData = await response.json();
-				return {
-					success: response.ok,
-					status: response.status,
-					data: jsonData,
-					response: response
-				};
+				try {
+					const jsonData = await response.json();
+					return {
+						success: response.ok,
+						status: response.status,
+						data: jsonData,
+						response: response
+					};
+				} catch (jsonError) {
+					console.error(
+						`Failed to parse JSON from ${endpoint}:`,
+						jsonError
+					);
+					// Get the raw text for debugging
+					const textData = await response
+						.clone()
+						.text();
+					console.error(
+						`Raw response data: ${textData.slice(
+							0,
+							200
+						)}...`
+					);
+
+					return {
+						success: false,
+						status: response.status,
+						data: null,
+						error: "Failed to parse JSON response",
+						rawResponse: textData.slice(
+							0,
+							500
+						)
+					};
+				}
 			} else {
 				const textData = await response.text();
+				console.log(
+					`Non-JSON response from ${endpoint}, length: ${textData.length} bytes`
+				);
+
 				return {
 					success: response.ok,
 					status: response.status,
@@ -81,11 +121,15 @@ const ApiService = (function () {
 				`API Request Error (${endpoint}):`,
 				error
 			);
+
+			// Create a more detailed error response
 			return {
 				success: false,
 				status: 0,
 				data: null,
-				error: error.message
+				error: error.message,
+				errorType: error.name,
+				errorStack: error.stack
 			};
 		}
 	}
