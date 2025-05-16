@@ -170,6 +170,11 @@ $pageTitle = "Connexion";
 ob_start();
 ?>
 
+<head>
+	<!-- Load our API service -->
+	<script src="js/api-service.js"></script>
+</head>
+
 <div class="login-container">
 	<div class="login-card">
 		<h2>Connexion</h2>
@@ -453,146 +458,44 @@ ob_start();
 		}
 	}
 
-	document.getElementById('login-form').addEventListener('submit', async function(e) {
-		e.preventDefault();
+	document.addEventListener('DOMContentLoaded', function() {
+		// Get the login form
+		const loginForm = document.getElementById('login-form');
 
-		const email = document.getElementById('email').value;
-		const password = document.getElementById('password').value;
-		const errorMessage = document.getElementById('error-message');
-		const submitButton = this.querySelector('button[type="submit"]');
-		const btnText = submitButton.querySelector('.btn-text');
-		const btnLoading = submitButton.querySelector('.btn-loading');
+		// Add submit handler
+		loginForm.addEventListener('submit', async function(e) {
+			e.preventDefault();
 
-		// Afficher le loader
-		btnText.style.display = 'none';
-		btnLoading.style.display = 'inline-block';
-		errorMessage.style.display = 'none';
-
-		// Notification pour informer l'utilisateur
-		NotificationSystem.info('Tentative de connexion...');
-
-		try {
+			// Show loading notification
+			NotificationSystem.showInfo('Tentative de connexion...');
 			console.log('Tentative de connexion...');
 
-			// Endpoint d'authentification
-			const loginEndpoint = 'api/auth/login';
+			// Get form data
+			const email = document.getElementById('email').value;
+			const password = document.getElementById('password').value;
 
-			// Données de connexion
-			const loginData = {
-				email,
-				password
-			};
-
-			// Utiliser la fonction handlePostRequest optimisée
-			console.log('Utilisation de handlePostRequest pour la connexion');
-
-			let response;
 			try {
-				// Version 3.0: Utiliser la méthode optimisée basée sur les résultats de post-test.php
-				response = await handlePostRequest(loginEndpoint, loginData);
+				// Use our API Service for login
+				const result = await ApiService.login(email, password);
 
-				console.log('Réponse reçue:', response);
+				console.log('Réponse reçue:', result);
 
-				if (!response.ok) {
-					throw new Error('Échec de la requête: ' + response.status);
-				}
-			} catch (postErr) {
-				console.error("Erreur avec handlePostRequest:", postErr);
-
-				// Solution de secours 1: Utiliser direct-login.php
-				try {
-					console.log('Tentative avec direct-login.php...');
-					NotificationSystem.info("Tentative avec solution de secours 1...");
-
-					// direct-login.php fait la requête côté serveur avec PHP
-					response = await fetch('direct-login.php', {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json'
-						},
-						body: JSON.stringify(loginData)
-					});
-
-					if (!response.ok) {
-						throw new Error('Solution de secours 1 a échoué');
-					}
-				} catch (directErr) {
-					console.error("Solution de secours 1 a échoué:", directErr);
-
-					// Solution de secours 2: Utiliser simple-login.php qui utilise GET au lieu de POST
-					try {
-						console.log('Tentative avec simple-login.php...');
-						NotificationSystem.info("Tentative avec solution de secours 2...");
-
-						// Encoder les données de connexion dans l'URL (bien que ce ne soit pas idéal pour un mot de passe)
-						const params = new URLSearchParams({
-							email: email,
-							password: password
-						});
-
-						response = await fetch(`simple-login.php?${params.toString()}`);
-
-						if (!response.ok) {
-							throw new Error('Solution de secours 2 a échoué');
-						}
-					} catch (simpleErr) {
-						console.error("Toutes les solutions ont échoué:", simpleErr);
-						throw new Error("Impossible de communiquer avec le backend. Veuillez réessayer plus tard.");
-					}
-				}
-			}
-
-			const responseText = await response.text();
-			console.log('Contenu de la réponse:', responseText);
-
-			let data;
-			try {
-				data = JSON.parse(responseText);
-			} catch (e) {
-				console.error('Erreur de parsing JSON:', e);
-				throw new Error('Réponse invalide du serveur: ' + e.message);
-			}
-
-			if (data.success) {
-				// Store user data in a session (using PHP session)
-				const sessionSaved = await storeSessionData(data.user, data.token);
-
-				if (sessionSaved) {
-					NotificationSystem.success('Connexion réussie! Redirection vers le tableau de bord...');
-					console.log('Login successful, redirecting to dashboard...');
-
-					// Short delay for notification to be visible
-					setTimeout(() => {
-						window.location.href = 'dashboard.php';
-					}, 1000);
+				if (result.success && result.data.success) {
+					// Success - redirect to dashboard
+					NotificationSystem.showSuccess('Connexion réussie. Redirection...');
+					window.location.href = 'dashboard.php';
 				} else {
-					throw new Error('Erreur de sauvegarde de session');
+					// Login failed
+					const errorMessage = result.data.message || 'Erreur de connexion';
+					NotificationSystem.showError(errorMessage);
+					console.log('Erreur de connexion:', result.data);
 				}
-			} else {
-				displayError({
-					type: 'Erreur d\'authentification',
-					message: data.message || 'Identifiants incorrects',
-					details: data
-				});
-				console.error('Erreur de connexion:', data);
+			} catch (error) {
+				// Exception occurred
+				NotificationSystem.showError('Erreur technique lors de la connexion');
+				console.error('Exception:', error);
 			}
-		} catch (error) {
-			displayError({
-				type: 'Erreur réseau',
-				message: 'Erreur de connexion au serveur: ' + error.message,
-				details: {
-					errorMessage: error.message,
-					useProxy: appConfig ? appConfig.useProxy : 'undefined',
-					proxyUrl: appConfig ? appConfig.proxyUrl : 'undefined',
-					isAzure: typeof isAzure !== 'undefined' ? isAzure : 'undefined'
-				}
-			});
-			console.error('Erreur:', error);
-		} finally {
-			// Réinitialiser le bouton
-			btnText.style.display = 'inline-block';
-			btnLoading.style.display = 'none';
-		}
+		});
 	});
 </script>
 
