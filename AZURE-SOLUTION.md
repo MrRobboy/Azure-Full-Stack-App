@@ -12,9 +12,10 @@ Access to fetch at 'https://app-backend-esgi-app.azurewebsites.net/api-cors.php'
 
 ## Cause principale
 
-1. **Configuration Nginx incomplète**: Nginx sur Azure ne transmettait pas correctement les en-têtes CORS.
+1. **Configuration Nginx/IIS incomplète**: Le serveur web sur Azure ne transmettait pas correctement les en-têtes CORS.
 2. **Problème de routage**: Les requêtes OPTIONS préflight n'étaient pas correctement gérées.
 3. **Configuration PHP et headers**: Les en-têtes CORS étaient appliqués trop tard dans le cycle de traitement.
+4. **Spécificités d'Azure**: Le Reverse Proxy d'Azure App Service supprime ou modifie certains en-têtes HTTP.
 
 ## Solution mise en place
 
@@ -28,9 +29,24 @@ Nous avons créé plusieurs points d'entrée API directs à la racine du projet:
 - `api-cors.php`: Gestion des requêtes CORS OPTIONS
 - `cors-test.php`: Outil de diagnostic CORS
 
-### 2. Correction des en-têtes CORS
+### 2. CORS Proxy côté frontend
 
-Chaque fichier API inclut maintenant:
+La solution la plus efficace mise en place est un **proxy CORS côté frontend**:
+
+- `azure-cors-proxy.php`: Un proxy PHP qui fait les requêtes côté serveur vers le backend
+- `direct-login.php`: Version optimisée du proxy spécifique à l'authentification
+
+Cette approche contourne complètement les problèmes CORS en:
+
+- Faisant les requêtes côté serveur (PHP) plutôt que côté client (JavaScript)
+- Transmettant fidèlement tous les en-têtes et données entre le client et le backend
+- Évitant le besoin de configurer CORS sur le serveur backend
+
+### 3. Configuration backend optimisée
+
+Malgré l'utilisation du proxy, nous avons également amélioré la configuration backend:
+
+#### En-têtes CORS dans les fichiers PHP
 
 ```php
 // IMPORTANT: Définir les en-têtes CORS avant toute autre opération
@@ -55,9 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 ```
 
-### 3. Configuration .htaccess
-
-Le fichier `.htaccess` a été mis à jour pour appliquer les en-têtes CORS au niveau du serveur web:
+#### Configuration .htaccess
 
 ```apache
 <IfModule mod_headers.c>
@@ -78,28 +92,42 @@ Le fichier `.htaccess` a été mis à jour pour appliquer les en-têtes CORS au 
 </IfModule>
 ```
 
-### 4. Configuration web.config pour IIS
+#### Configuration web.config pour IIS
 
-Un fichier `web.config` a été ajouté pour configurer IIS sur Azure:
+Modification du fichier web.config pour utiliser des outboundRules et un rewrite pour les requêtes OPTIONS:
 
 ```xml
-<httpProtocol>
-    <customHeaders>
-        <add name="Access-Control-Allow-Origin" value="https://app-frontend-esgi-app.azurewebsites.net" />
-        <add name="Access-Control-Allow-Methods" value="GET, POST, PUT, DELETE, OPTIONS" />
-        <add name="Access-Control-Allow-Headers" value="Content-Type, Authorization, X-Requested-With, Accept, Origin" />
-        <add name="Access-Control-Allow-Credentials" value="true" />
-        <add name="Access-Control-Max-Age" value="86400" />
-    </customHeaders>
-</httpProtocol>
+<rewrite>
+    <outboundRules>
+        <!-- Add CORS headers to all responses -->
+        <rule name="AddCorsHeaders" preCondition="PreflightRequest" enabled="true">
+            <match serverVariable="RESPONSE_Access-Control-Allow-Origin" pattern=".*" />
+            <action type="Rewrite" value="https://app-frontend-esgi-app.azurewebsites.net" />
+        </rule>
+        <!-- autres règles CORS -->
+    </outboundRules>
+
+    <rules>
+        <!-- Special handling for OPTIONS requests -->
+        <rule name="Options Method" stopProcessing="true">
+            <match url=".*" />
+            <conditions>
+                <add input="{REQUEST_METHOD}" pattern="^OPTIONS$" />
+            </conditions>
+            <action type="Rewrite" url="api-cors.php" />
+        </rule>
+        <!-- autres règles -->
+    </rules>
+</rewrite>
 ```
 
-### 5. Outils de test CORS
+### 4. Priorité de solution dans config.js
 
-Deux outils de test ont été créés:
+La configuration frontend a été modifiée pour privilégier les nouvelles solutions:
 
-- `front/cors-test.html`: Test CORS côté frontend
-- `front/test-direct-endpoints.php`: Test des endpoints directs
+1. `azure-cors-proxy.php` (solution principale)
+2. Accès direct aux endpoints API
+3. Autres méthodes de contournement
 
 ## Comment tester
 
@@ -111,9 +139,9 @@ Deux outils de test ont été créés:
 
 Si les problèmes CORS persistent:
 
-1. Vérifiez les logs dans `/logs/cors_test.log`
-2. Testez l'endpoint de diagnostic: `https://app-backend-esgi-app.azurewebsites.net/cors-test.php`
-3. Assurez-vous que `.htaccess` et `web.config` sont correctement déployés
+1. Vérifiez que `azure-cors-proxy.php` fonctionne correctement
+2. Consultez les logs dans `/logs/cors_proxy_errors.log`
+3. Vérifiez que le backend est accessible depuis le serveur frontend avec un simple `curl` ou via le test du proxy
 
 ## Configuration frontend
 

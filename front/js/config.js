@@ -1,5 +1,5 @@
 // Configuration de l'application
-// Version: 3.1 - Azure Edition - Communication POST optimisée
+// Version: 3.2 - Azure Edition - CORS Solution
 
 // Détecter l'environnement
 const isAzure = window.location.hostname.includes("azurewebsites.net");
@@ -20,13 +20,13 @@ const defaultConfig = {
 	useProxy: isAzure, // Activer par défaut sur Azure
 
 	// URL du proxy (sera testé et mis à jour automatiquement sur Azure)
-	proxyUrl: "simple-proxy.php",
+	proxyUrl: "azure-cors-proxy.php", // Nouveau proxy CORS optimisé
 
 	// Stratégie de contournement pour les erreurs 404
 	bypass404: true,
 
 	// Version de configuration
-	version: "3.1"
+	version: "3.2"
 };
 
 // Configuration pour l'environnement
@@ -40,6 +40,8 @@ async function findWorkingProxyPath() {
 
 	// Liste des chemins proxy à tester, par ordre de préférence
 	const possibleProxyPaths = [
+		"azure-cors-proxy.php", // Notre nouveau proxy CORS (prioritaire)
+		"direct-login.php", // Proxy d'authentification direct
 		"simple-proxy.php", // Racine
 		"api-bridge.php", // Alternative principale
 		"local-proxy-fix.php", // Version fixe (recommandée)
@@ -177,12 +179,41 @@ async function handlePostRequest(endpoint, data, options = {}) {
 		// Liste des endpoints d'authentification potentiels à essayer
 		const authEndpoints = [
 			// Essayer d'abord avec nos nouveaux points d'entrée directs
-			"api-auth-login.php", // Notre nouveau endpoint direct
+			"api-auth-login.php", // Notre nouveau endpoint direct (prioritaire)
 			"api/auth/login", // Endpoint standard
 			"api/auth/check-credentials" // Endpoint GET alternatif
 		];
 
-		// Essayer d'abord api-auth-login.php (point d'entrée direct)
+		// Essayer d'abord avec le proxy CORS Azure (solution optimale)
+		try {
+			console.log("Essai avec azure-cors-proxy.php...");
+			const corsProxyResponse = await fetch(
+				`azure-cors-proxy.php?endpoint=api-auth-login.php`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type":
+							"application/json",
+						Accept: "application/json",
+						"X-Requested-With":
+							"XMLHttpRequest",
+						Origin: window.location.origin
+					},
+					body: JSON.stringify(data)
+				}
+			);
+
+			if (corsProxyResponse.ok) {
+				console.log(
+					"azure-cors-proxy.php a fonctionné!"
+				);
+				return corsProxyResponse;
+			}
+		} catch (e) {
+			console.warn("Échec avec azure-cors-proxy.php:", e);
+		}
+
+		// Essayer avec api-auth-login.php (point d'entrée direct)
 		try {
 			console.log("Essai avec api-auth-login.php...");
 			const authResponse = await fetch(
@@ -208,40 +239,6 @@ async function handlePostRequest(endpoint, data, options = {}) {
 			}
 		} catch (e) {
 			console.warn("Échec avec api-auth-login.php:", e);
-		}
-
-		// Essayer avec GET auth/check-credentials, qui est connu pour fonctionner
-		try {
-			console.log("Essai avec GET api-auth-login.php...");
-			const params = new URLSearchParams({
-				email: data.email || "",
-				password: data.password || ""
-			});
-
-			const checkCredsResponse = await fetch(
-				`${
-					appConfig.backendBaseUrl
-				}/api-auth-login.php?${params.toString()}`,
-				{
-					method: "GET",
-					credentials: "include", // Important pour CORS avec cookies
-					headers: {
-						Accept: "application/json",
-						"X-Requested-With":
-							"XMLHttpRequest",
-						Origin: window.location.origin
-					}
-				}
-			);
-
-			if (checkCredsResponse.ok) {
-				console.log(
-					"GET api-auth-login.php a fonctionné!"
-				);
-				return checkCredsResponse;
-			}
-		} catch (e) {
-			console.warn("Échec avec GET api-auth-login.php:", e);
 		}
 
 		// Continuer avec direct-login.php (solution existante)
