@@ -193,15 +193,19 @@ session_start();
 					endpoint = 'api-notes.php';
 					break;
 				case 'users':
-					endpoint = 'api-users.php';
+					// Utiliser l'adaptateur d'API utilisateurs au lieu de l'endpoint direct
+					endpoint = 'users-api-adapter.php';
 					break;
 				default:
 					endpoint = resource;
 			}
 
 			try {
-				// Utiliser le proxy optimal avec le JWT
-				const response = await fetch(`optimal-proxy.php?endpoint=${endpoint}`, {
+				// Déterminer si on utilise un adaptateur (sans proxy) ou le proxy optimal
+				const useProxy = !endpoint.includes('adapter');
+				const url = useProxy ? `optimal-proxy.php?endpoint=${endpoint}` : endpoint;
+
+				const response = await fetch(url, {
 					headers: {
 						'Authorization': 'Bearer ' + token
 					}
