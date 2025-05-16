@@ -213,6 +213,27 @@
 - Correction de la construction des URLs pour le backend
 - Amélioration de la gestion des erreurs avec plus de contexte
 
+## [4.4.0] - 2024-05-16
+
+### Added
+
+- Fichier de test pour le proxy (`proxy-test.php`)
+     - Vérification du fonctionnement du proxy
+     - Affichage des informations de requête
+     - Test des headers
+
+### Changed
+
+- Amélioration de la configuration Nginx
+     - Ajout de `QUERY_STRING` pour les fichiers proxy
+     - Meilleure gestion des paramètres de requête
+     - Configuration plus détaillée des logs
+
+### Fixed
+
+- Correction de la gestion des paramètres de requête dans les fichiers proxy
+- Amélioration de la configuration FastCGI
+
 ## Prochaines Étapes
 
 1. Documentation
