@@ -263,17 +263,42 @@ session_start();
 				}
 
 				const data = await response.json();
-				console.log("Structure de la réponse:", Object.keys(data));
+				console.log("Structure de la réponse:", data);
 
-				// Stocker le token si disponible
+				// Amélioration de la gestion du token - vérifier les différentes structures possibles
+				let token = null;
+				let tokenSource = "inconnu";
+
+				// Option 1: Structure { success: true, data: { token: '...' } }
 				if (data.success && data.data && data.data.token) {
-					localStorage.setItem('jwt_token', data.data.token);
+					token = data.data.token;
+					tokenSource = "structure success.data.token";
+				}
+				// Option 2: Structure { token: '...' }
+				else if (data.token) {
+					token = data.token;
+					tokenSource = "structure directe token";
+				}
+				// Option 3: Structure { data: { token: '...' } }
+				else if (data.data && data.data.token) {
+					token = data.data.token;
+					tokenSource = "structure data.token";
+				}
+				// Option 4: Structure { data: '...' } (token direct)
+				else if (data.data && typeof data.data === 'string' && data.data.startsWith('ey')) {
+					token = data.data;
+					tokenSource = "token JWT direct dans data";
+				}
+
+				if (token) {
+					localStorage.setItem('jwt_token', token);
 					displayResult({
 						message: 'JWT obtenu avec succès !',
 						tokenReceived: true,
 						tokenStored: true,
+						tokenSource: tokenSource,
 						isLocallyGenerated: data.isLocallyGenerated || false,
-						data: data
+						dataPreview: typeof data === 'object' ? JSON.stringify(data).substring(0, 100) + '...' : 'Non disponible'
 					}, 'success');
 
 					// Afficher info additionnelle sur le type de token
@@ -283,9 +308,11 @@ session_start();
 						console.info("Token obtenu directement du backend");
 					}
 				} else {
+					console.error("Aucun token trouvé dans la réponse:", data);
 					displayResult({
-						message: 'Échec de la génération du JWT',
-						data: data
+						message: 'Échec de la récupération du JWT',
+						data: data,
+						help: "Structure de réponse non reconnue. Vérifiez la console pour plus de détails."
 					}, 'error');
 				}
 			} catch (error) {
