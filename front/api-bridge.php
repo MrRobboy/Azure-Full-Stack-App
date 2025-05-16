@@ -7,15 +7,17 @@
  * with built-in fallbacks for common API endpoints.
  */
 
-// Enable error reporting for debugging
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
+// Charger la configuration
+require_once __DIR__ . '/config/proxy.php';
 
-// Set headers for CORS and JSON response
-header('Content-Type: application/json; charset=UTF-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+// Configurer le logging
+setupLogging();
+
+// Définir les headers CORS
+$corsHeaders = getCorsHeaders();
+foreach ($corsHeaders as $header) {
+	header($header);
+}
 
 // Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -33,14 +35,11 @@ if (empty($endpoint)) {
 	exit;
 }
 
-// Backend API base URL
-$backendBaseUrl = 'https://app-backend-esgi-app.azurewebsites.net/api';
-
 // Build the full target URL
-$targetUrl = $backendBaseUrl;
+$targetUrl = BACKEND_BASE_URL;
 
 // Ensure we have a slash between base URL and endpoint if needed
-if (!str_starts_with($endpoint, '/') && !str_ends_with($backendBaseUrl, '/')) {
+if (!str_starts_with($endpoint, '/') && !str_ends_with(BACKEND_BASE_URL, '/')) {
 	$targetUrl .= '/';
 }
 
@@ -63,9 +62,10 @@ $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $targetUrl);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-curl_setopt($ch, CURLOPT_TIMEOUT, 10); // 10-second timeout
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Disable SSL verification (not recommended for production)
-curl_setopt($ch, CURLOPT_VERBOSE, true); // Enable verbose output
+curl_setopt($ch, CURLOPT_TIMEOUT, CURL_TIMEOUT);
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, CURL_CONNECT_TIMEOUT);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, SSL_VERIFY_PEER);
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, SSL_VERIFY_HOST);
 
 // Create a temporary file handle for CURL debug output
 $verbose = fopen('php://temp', 'w+');
@@ -75,11 +75,7 @@ curl_setopt($ch, CURLOPT_STDERR, $verbose);
 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
 
 // Add request headers
-$headers = [
-	'Content-Type: application/json',
-	'Accept: application/json',
-	'X-Requested-With: XMLHttpRequest'
-];
+$headers = DEFAULT_HEADERS;
 
 // Add Authorization header if present in original request
 if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
