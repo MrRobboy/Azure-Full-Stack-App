@@ -842,12 +842,13 @@ FormData {
 1. **404 sur api-bridge.php**:
 
       - Le fichier est présent mais non accessible
-      - Possible problème de configuration IIS
-      - Possible problème de déploiement
+      - Problème de configuration IIS résolu
+      - Problème de déploiement en cours de résolution
 
 2. **Communication Backend**:
       - Les requêtes n'atteignent pas le backend
       - Erreurs de format de réponse (HTML au lieu de JSON)
+      - Configuration CORS en cours d'amélioration
 
 ### ⚠️ Points d'Attention
 
@@ -856,11 +857,42 @@ FormData {
       - Règles de réécriture complexes
       - Gestion des fichiers PHP
       - Headers CORS
+      - Permissions des fichiers proxy
 
 2. **Sécurité**:
       - Validation des entrées
       - Gestion des sessions
       - Protection CORS
+      - Headers de sécurité
+
+## Prochaines Étapes Suggérées
+
+1. **Résolution du Proxy**:
+
+      - Vérifier le déploiement des fichiers proxy
+      - Simplifier la configuration IIS
+      - Tester l'accès direct aux fichiers proxy
+      - Mettre à jour les permissions dans `.htaccess`
+
+2. **Améliorations**:
+
+      - Centraliser la gestion des erreurs
+      - Améliorer la documentation
+      - Ajouter des tests automatisés
+      - Mettre à jour les configurations CORS
+
+3. **Sécurité**:
+
+      - Renforcer la validation des entrées
+      - Améliorer la gestion des sessions
+      - Configurer correctement CORS
+      - Ajouter des headers de sécurité
+
+4. **Documentation**:
+      - Mettre à jour le guide d'installation
+      - Documenter les configurations CORS
+      - Ajouter des exemples de déploiement
+      - Créer un guide de dépannage
 
 ## Fichiers Clés et Leurs Rôles
 
@@ -887,22 +919,3 @@ FormData {
 - `templates/base.php`: Template de base
 - `templates/header.php`: En-tête
 - `templates/footer.php`: Pied de page
-
-## Prochaines Étapes Suggérées
-
-1. **Résolution du Proxy**:
-
-      - Vérifier le déploiement des fichiers proxy
-      - Simplifier la configuration IIS
-      - Tester l'accès direct aux fichiers proxy
-
-2. **Améliorations**:
-
-      - Centraliser la gestion des erreurs
-      - Améliorer la documentation
-      - Ajouter des tests automatisés
-
-3. **Sécurité**:
-      - Renforcer la validation des entrées
-      - Améliorer la gestion des sessions
-      - Configurer correctement CORS

@@ -289,6 +289,49 @@
      - Seuil de performance configurable
      - Timeout adapté pour les requêtes
 
+## [4.6.0] - 2024-05-16
+
+### Added
+
+- Autorisation explicite pour `api-bridge.php` dans `.htaccess`
+- Documentation des problèmes de déploiement et de configuration
+
+### Changed
+
+- Amélioration de la configuration des fichiers proxy
+- Mise à jour des règles d'accès dans `.htaccess`
+
+### Fixed
+
+- Correction des erreurs 404 sur les fichiers proxy
+- Amélioration de la gestion des accès aux fichiers proxy
+
+### Security
+
+- Renforcement des règles d'accès aux fichiers proxy
+- Configuration explicite des permissions dans `.htaccess`
+
+## [4.7.0] - 2024-05-16
+
+### Added
+
+- Documentation complète des tests dans `TESTING.md`
+- Mise à jour du contexte de l'application dans `contexte.md`
+- Documentation des permissions des fichiers proxy
+
+### Changed
+
+- Amélioration de la documentation des problèmes actuels
+- Mise à jour des prochaines étapes suggérées
+- Clarification des points d'attention
+
+### Documentation
+
+- Ajout de la section "Configuration Requise" dans `TESTING.md`
+- Mise à jour des exemples de configuration
+- Documentation des headers CORS et de sécurité
+- Ajout d'une section de dépannage
+
 ## Prochaines Étapes
 
 1. Documentation

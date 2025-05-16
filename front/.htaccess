@@ -1,20 +1,28 @@
 # Ensure PHP files are properly executed
+
 <FilesMatch "\.php$">
-    SetHandler application/x-httpd-php
+SetHandler application/x-httpd-php
 </FilesMatch>
 
 # Allow access to proxy files from any location
+
 <Files "simple-proxy.php">
-    Order Allow,Deny
-    Allow from all
+Order Allow,Deny
+Allow from all
+</Files>
+
+<Files "api-bridge.php">
+Order Allow,Deny
+Allow from all
 </Files>
 
 <Files "proxy-health.php">
-    Order Allow,Deny
-    Allow from all
+Order Allow,Deny
+Allow from all
 </Files>
 
 # Enable CORS for all proxy requests
+
 <IfModule mod_headers.c>
     Header set Access-Control-Allow-Origin "*"
     Header set Access-Control-Allow-Methods "GET, POST, OPTIONS, PUT, DELETE"

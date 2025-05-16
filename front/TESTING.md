@@ -4,6 +4,26 @@
 
 Le fichier `proxy-test.php` est un outil de test unifié qui permet de vérifier tous les aspects du proxy API. Il effectue des tests complets sur la connexion, la sécurité, les performances et la validation des entrées.
 
+## Configuration Requise
+
+### Permissions des Fichiers
+
+Les fichiers proxy suivants doivent être accessibles :
+
+- `api-bridge.php`
+- `simple-proxy.php`
+- `proxy-health.php`
+
+Ces fichiers sont configurés dans `.htaccess` pour permettre l'accès depuis n'importe quelle origine.
+
+### Headers CORS
+
+Les headers CORS suivants sont configurés :
+
+- `Access-Control-Allow-Origin: *`
+- `Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE`
+- `Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With`
+
 ## Types de Tests
 
 ### 1. Tests de Connexion
