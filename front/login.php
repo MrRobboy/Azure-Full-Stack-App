@@ -467,7 +467,7 @@ ob_start();
 			e.preventDefault();
 
 			// Show loading notification
-			NotificationSystem.showInfo('Tentative de connexion...');
+			NotificationSystem.info('Tentative de connexion...');
 			console.log('Tentative de connexion...');
 
 			// Get form data
@@ -482,17 +482,17 @@ ob_start();
 
 				if (result.success && result.data.success) {
 					// Success - redirect to dashboard
-					NotificationSystem.showSuccess('Connexion réussie. Redirection...');
+					NotificationSystem.success('Connexion réussie. Redirection...');
 					window.location.href = 'dashboard.php';
 				} else {
 					// Login failed
 					const errorMessage = result.data.message || 'Erreur de connexion';
-					NotificationSystem.showError(errorMessage);
+					NotificationSystem.error(errorMessage);
 					console.log('Erreur de connexion:', result.data);
 				}
 			} catch (error) {
 				// Exception occurred
-				NotificationSystem.showError('Erreur technique lors de la connexion');
+				NotificationSystem.error('Erreur technique lors de la connexion');
 				console.error('Exception:', error);
 			}
 		});

@@ -95,7 +95,7 @@ ob_start();
             // Get user profile
             const userResult = await ApiService.getCurrentUser();
             if (!userResult.success) {
-                NotificationSystem.showError('Erreur de chargement du profil utilisateur');
+                NotificationSystem.error('Erreur de chargement du profil utilisateur');
                 console.error('User profile error:', userResult);
                 return;
             }
@@ -124,7 +124,7 @@ ob_start();
 
         } catch (error) {
             console.error('Error loading dashboard data:', error);
-            NotificationSystem.showError('Erreur de chargement des données');
+            NotificationSystem.error('Erreur de chargement des données');
 
             // Hide loading indicator
             const loadingIndicator = document.getElementById('loading-indicator');

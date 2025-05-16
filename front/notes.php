@@ -26,7 +26,7 @@
 			// Get user profile to determine role
 			const userResult = await ApiService.getCurrentUser();
 			if (!userResult.success) {
-				NotificationSystem.showError('Erreur de chargement du profil utilisateur');
+				NotificationSystem.error('Erreur de chargement du profil utilisateur');
 				console.error('Failed to load user profile:', userResult);
 				return;
 			}
@@ -45,7 +45,7 @@
 			}
 
 			if (!notesResult.success) {
-				NotificationSystem.showError('Erreur de chargement des notes');
+				NotificationSystem.error('Erreur de chargement des notes');
 				console.error('Failed to load notes:', notesResult);
 				return;
 			}
@@ -58,7 +58,7 @@
 
 		} catch (error) {
 			console.error('Error loading notes:', error);
-			NotificationSystem.showError('Erreur technique lors du chargement des notes');
+			NotificationSystem.error('Erreur technique lors du chargement des notes');
 		}
 	}
 
@@ -147,7 +147,7 @@
 
 			// Validate form data
 			if (!formData.eleve_id || !formData.matiere_id || !formData.examen_id || isNaN(formData.valeur)) {
-				NotificationSystem.showError('Veuillez remplir tous les champs');
+				NotificationSystem.error('Veuillez remplir tous les champs');
 				return;
 			}
 
@@ -156,18 +156,18 @@
 				const result = await ApiService.notes.create(formData);
 
 				if (result.success) {
-					NotificationSystem.showSuccess('Note ajoutée avec succès');
+					NotificationSystem.success('Note ajoutée avec succès');
 					noteForm.reset();
 
 					// Reload notes
 					loadNotes();
 				} else {
-					NotificationSystem.showError('Erreur lors de l\'ajout de la note');
+					NotificationSystem.error('Erreur lors de l\'ajout de la note');
 					console.error('Failed to add note:', result);
 				}
 			} catch (error) {
 				console.error('Error creating note:', error);
-				NotificationSystem.showError('Erreur technique lors de l\'ajout de la note');
+				NotificationSystem.error('Erreur technique lors de l\'ajout de la note');
 			}
 		});
 	}
@@ -194,7 +194,7 @@
 			}
 		} catch (error) {
 			console.error('Error loading form data:', error);
-			NotificationSystem.showError('Erreur lors du chargement des données du formulaire');
+			NotificationSystem.error('Erreur lors du chargement des données du formulaire');
 		}
 	}
 
@@ -257,7 +257,7 @@
 
 				// Validate
 				if (isNaN(newValue) || newValue < 0 || newValue > 20) {
-					NotificationSystem.showError('Veuillez saisir une note valide entre 0 et 20');
+					NotificationSystem.error('Veuillez saisir une note valide entre 0 et 20');
 					return;
 				}
 
@@ -266,18 +266,18 @@
 					const result = await ApiService.notes.update(note.id, newValue);
 
 					if (result.success) {
-						NotificationSystem.showSuccess('Note modifiée avec succès');
+						NotificationSystem.success('Note modifiée avec succès');
 						modalInstance.hide();
 
 						// Reload notes
 						loadNotes();
 					} else {
-						NotificationSystem.showError('Erreur lors de la modification de la note');
+						NotificationSystem.error('Erreur lors de la modification de la note');
 						console.error('Failed to update note:', result);
 					}
 				} catch (error) {
 					console.error('Error updating note:', error);
-					NotificationSystem.showError('Erreur technique lors de la modification de la note');
+					NotificationSystem.error('Erreur technique lors de la modification de la note');
 				}
 			});
 		}
@@ -296,17 +296,17 @@
 			const result = await ApiService.notes.delete(noteId);
 
 			if (result.success) {
-				NotificationSystem.showSuccess('Note supprimée avec succès');
+				NotificationSystem.success('Note supprimée avec succès');
 
 				// Reload notes
 				loadNotes();
 			} else {
-				NotificationSystem.showError('Erreur lors de la suppression de la note');
+				NotificationSystem.error('Erreur lors de la suppression de la note');
 				console.error('Failed to delete note:', result);
 			}
 		} catch (error) {
 			console.error('Error deleting note:', error);
-			NotificationSystem.showError('Erreur technique lors de la suppression de la note');
+			NotificationSystem.error('Erreur technique lors de la suppression de la note');
 		}
 	}
 </script>
