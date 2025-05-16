@@ -5,114 +5,89 @@
  * This is a simplified proxy specifically for retrieving subject (matiere) data
  */
 
-// Basic config
-ini_set('display_errors', 0);
+// Enable error reporting for debugging
 error_reporting(E_ALL);
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+ini_set('display_errors', 1);
 
-// Handle OPTIONS preflight
+// Set CORS headers
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Content-Type: application/json');
+
+// Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 	http_response_code(200);
-	exit;
+	exit();
 }
 
-// Target backend URL
-$backendUrl = 'https://app-backend-esgi-app.azurewebsites.net';
-$endpoint = 'api/matieres';
+// Get the endpoint from the query string
+$endpoint = $_GET['endpoint'] ?? '';
+if (empty($endpoint)) {
+	http_response_code(400);
+	echo json_encode(['error' => 'No endpoint specified']);
+	exit();
+}
 
-// Log access
-error_log("Matieres proxy accessed at " . date('Y-m-d H:i:s'));
+// Base URL for the backend API
+$baseUrl = 'https://app-backend-esgi-app.azurewebsites.net';
 
-// Full URL
-$url = $backendUrl . '/' . $endpoint;
+// Construct the full URL
+$url = $baseUrl . '/' . $endpoint;
+
+// Get the request method
+$method = $_SERVER['REQUEST_METHOD'];
 
 // Initialize cURL
-$ch = curl_init($url);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-	'Accept: application/json',
-	'X-Special-Proxy: matieres-proxy'
-]);
+$ch = curl_init();
 
-// Execute request
+// Set cURL options
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+
+// Forward headers
+$headers = getallheaders();
+$forwardHeaders = [];
+foreach ($headers as $key => $value) {
+	if (strtolower($key) !== 'host' && strtolower($key) !== 'content-length') {
+		$forwardHeaders[] = "$key: $value";
+	}
+}
+curl_setopt($ch, CURLOPT_HTTPHEADER, $forwardHeaders);
+
+// Forward request body for POST, PUT, etc.
+if (in_array($method, ['POST', 'PUT', 'PATCH'])) {
+	$input = file_get_contents('php://input');
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $input);
+}
+
+// Execute the request
 $response = curl_exec($ch);
-$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
 // Check for cURL errors
 if (curl_errno($ch)) {
-	$error = curl_error($ch);
-	error_log("Matieres proxy error: " . $error);
-
-	// Return fallback data
+	// If the request fails, return fallback data for matieres
+	http_response_code(200);
 	echo json_encode([
 		'success' => true,
 		'data' => [
-			[
-				'id_matiere' => 1,
-				'nom' => 'Mathématiques'
-			],
-			[
-				'id_matiere' => 2,
-				'nom' => 'Français'
-			],
-			[
-				'id_matiere' => 16,
-				'nom' => 'Docker'
-			],
-			[
-				'id_matiere' => 17,
-				'nom' => 'Azure'
-			]
+			['id' => 1, 'nom' => 'Mathématiques'],
+			['id' => 2, 'nom' => 'Français'],
+			['id' => 3, 'nom' => 'Anglais'],
+			['id' => 4, 'nom' => 'Histoire']
 		],
-		'message' => 'Using fallback data due to backend connection error',
-		'is_fallback' => true
+		'isFallback' => true
 	]);
-
-	curl_close($ch);
-	exit;
-}
-
-// Handle backend errors
-if ($http_code >= 400) {
-	error_log("Matieres backend returned error code: " . $http_code);
-
-	// Return fallback data
-	echo json_encode([
-		'success' => true,
-		'data' => [
-			[
-				'id_matiere' => 1,
-				'nom' => 'Mathématiques'
-			],
-			[
-				'id_matiere' => 2,
-				'nom' => 'Français'
-			],
-			[
-				'id_matiere' => 16,
-				'nom' => 'Docker'
-			],
-			[
-				'id_matiere' => 17,
-				'nom' => 'Azure'
-			]
-		],
-		'message' => 'Using fallback data due to backend error code ' . $http_code,
-		'is_fallback' => true
-	]);
-
-	curl_close($ch);
-	exit;
+	exit();
 }
 
 // Close cURL
 curl_close($ch);
 
-// Return the response
-http_response_code($http_code);
+// Set the response code
+http_response_code($httpCode);
+
+// Forward the response
 echo $response;
