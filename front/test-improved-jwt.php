@@ -88,6 +88,12 @@ session_start();
 		</p>
 	</div>
 
+	<div class="card" id="environmentInfo" style="border-color: #007bff; margin-bottom: 20px;">
+		<h2>Informations d'environnement</h2>
+		<div id="envDetails">Vérification de l'environnement...</div>
+		<div id="deploymentStatus" style="margin-top: 10px;"></div>
+	</div>
+
 	<div class="card">
 		<h2>Authentification avec JWT Amélioré</h2>
 		<div class="form-group">
@@ -117,6 +123,101 @@ session_start();
 
 	<script>
 		const output = document.getElementById('output');
+		const isAzureEnvironment = window.location.hostname.includes('azurewebsites.net');
+
+		// Afficher les informations d'environnement
+		document.addEventListener('DOMContentLoaded', async function() {
+			const envDetails = document.getElementById('envDetails');
+			const deploymentStatus = document.getElementById('deploymentStatus');
+
+			// Déterminer l'environnement
+			if (isAzureEnvironment) {
+				envDetails.innerHTML = `
+					<p><strong>Environnement détecté:</strong> Azure Web App</p>
+					<p><strong>Hostname:</strong> ${window.location.hostname}</p>
+					<p><strong>URL de base:</strong> ${window.location.origin}</p>
+				`;
+			} else {
+				envDetails.innerHTML = `
+					<p><strong>Environnement détecté:</strong> Développement local</p>
+					<p><strong>Hostname:</strong> ${window.location.hostname}</p>
+					<p><strong>URL de base:</strong> ${window.location.origin}</p>
+				`;
+			}
+
+			// Vérifier les composants déployés
+			try {
+				// Tester si le proxy amélioré est accessible
+				const proxyTest = await fetch('enhanced-proxy.php?endpoint=status.php')
+					.then(resp => {
+						if (!resp.ok) throw new Error(`Statut: ${resp.status}`);
+						return resp.json();
+					})
+					.then(data => {
+						return {
+							success: true,
+							data
+						};
+					})
+					.catch(err => {
+						return {
+							success: false,
+							error: err.message
+						};
+					});
+
+				// Vérifier si le JWT bridge est accessible (pas exécuté, juste vérifier la réponse 405 indiquant qu'il existe)
+				const bridgeTest = await fetch('improved-jwt-bridge.php')
+					.then(resp => {
+						// 405 Method Not Allowed est attendu et signifie que le fichier existe
+						if (resp.status === 405) {
+							return {
+								success: true,
+								message: "Bridge accessible (405 - Méthode GET non autorisée)"
+							};
+						}
+						if (!resp.ok) throw new Error(`Statut: ${resp.status}`);
+						return resp.json();
+					})
+					.then(data => {
+						return {
+							success: true,
+							data
+						};
+					})
+					.catch(err => {
+						return {
+							success: false,
+							error: err.message
+						};
+					});
+
+				// Afficher l'état de déploiement
+				let statusHTML = '<h3>État des composants:</h3><ul>';
+				statusHTML += `<li>Proxy amélioré: ${proxyTest.success ? '<span style="color:green">✓ Accessible</span>' : '<span style="color:red">✗ Non accessible</span> - ' + proxyTest.error}</li>`;
+				statusHTML += `<li>JWT Bridge: ${bridgeTest.success ? '<span style="color:green">✓ Accessible</span>' : '<span style="color:red">✗ Non accessible</span> - ' + bridgeTest.error}</li>`;
+
+				// Si les tests indiquent que les composants sont en place
+				if (proxyTest.success && bridgeTest.success) {
+					statusHTML += '</ul><p><strong style="color:green">✓ Tous les composants sont correctement déployés.</strong></p>';
+
+					// Si on est sur Azure, ajouter un message sur la redirection
+					if (isAzureEnvironment) {
+						statusHTML += `<p><strong>Backend cible:</strong> ${proxyTest.data?.api_base_url || 'Non détecté'}</p>`;
+					}
+				} else {
+					statusHTML += '</ul><p><strong style="color:red">✗ Certains composants ne sont pas accessibles.</strong></p>';
+					statusHTML += '<p>Vérifiez que tous les fichiers ont été déployés correctement.</p>';
+				}
+
+				deploymentStatus.innerHTML = statusHTML;
+			} catch (error) {
+				deploymentStatus.innerHTML = `
+					<h3>Erreur lors de la vérification des composants:</h3>
+					<p style="color:red">${error.message}</p>
+				`;
+			}
+		});
 
 		function displayResult(data, status = '') {
 			if (status === 'error') {
@@ -139,6 +240,10 @@ session_start();
 			const password = document.getElementById('password').value;
 
 			displayResult('Tentative d\'authentification avec le JWT Amélioré...');
+
+			// Ajouter des logs supplémentaires
+			console.log(`Tentative d'authentification sur: ${window.location.origin}/improved-jwt-bridge.php`);
+
 			try {
 				const response = await fetch('improved-jwt-bridge.php', {
 					method: 'POST',
@@ -151,7 +256,14 @@ session_start();
 					})
 				});
 
+				// Logging détaillé pour aider au diagnostic
+				console.log(`Réponse reçue: Status ${response.status}`);
+				if (!response.ok) {
+					console.warn(`Attention: La réponse n'est pas OK (${response.status})`);
+				}
+
 				const data = await response.json();
+				console.log("Structure de la réponse:", Object.keys(data));
 
 				// Stocker le token si disponible
 				if (data.success && data.data && data.data.token) {
@@ -163,6 +275,13 @@ session_start();
 						isLocallyGenerated: data.isLocallyGenerated || false,
 						data: data
 					}, 'success');
+
+					// Afficher info additionnelle sur le type de token
+					if (data.isLocallyGenerated) {
+						console.info("Token généré localement - Le backend n'a pas pu être contacté");
+					} else {
+						console.info("Token obtenu directement du backend");
+					}
 				} else {
 					displayResult({
 						message: 'Échec de la génération du JWT',
@@ -170,9 +289,13 @@ session_start();
 					}, 'error');
 				}
 			} catch (error) {
+				// Logging d'erreur amélioré
+				console.error("Erreur complète:", error);
 				displayResult({
 					message: 'Erreur lors de la requête',
-					error: error.message
+					error: error.message,
+					help: isAzureEnvironment ?
+						"Vérifiez que le fichier improved-jwt-bridge.php est bien déployé sur Azure" : "Vérifiez que le serveur local est en cours d'exécution"
 				}, 'error');
 			}
 		}
