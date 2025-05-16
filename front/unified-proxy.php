@@ -32,7 +32,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $endpoint = $_GET['endpoint'] ?? '';
 if (empty($endpoint)) {
 	http_response_code(400);
-	echo json_encode(['error' => 'No endpoint specified']);
+	echo json_encode([
+		'success' => false,
+		'error' => 'No endpoint specified',
+		'message' => 'Please provide an endpoint in the query string'
+	]);
 	exit();
 }
 
@@ -41,6 +45,9 @@ $baseUrl = 'https://app-backend-esgi-app.azurewebsites.net';
 
 // Construct the full URL
 $url = $baseUrl . '/' . $endpoint;
+
+// Log the request for debugging
+error_log("Proxy request to: " . $url);
 
 // Get the request method
 $method = $_SERVER['REQUEST_METHOD'];
@@ -75,63 +82,24 @@ $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
 // Check for cURL errors
 if (curl_errno($ch)) {
-	// If the request fails, return fallback data
-	$fallbackData = [
-		'api/matieres' => [
-			['id' => 1, 'nom' => 'Mathématiques'],
-			['id' => 2, 'nom' => 'Français'],
-			['id' => 3, 'nom' => 'Anglais'],
-			['id' => 4, 'nom' => 'Histoire']
-		],
-		'api/classes' => [
-			['id' => 1, 'nom' => '6ème A'],
-			['id' => 2, 'nom' => '6ème B'],
-			['id' => 3, 'nom' => '5ème A'],
-			['id' => 4, 'nom' => '5ème B']
-		],
-		'api/examens' => [
-			['id' => 1, 'nom' => 'Contrôle de Mathématiques'],
-			['id' => 2, 'nom' => 'Devoir de Français'],
-			['id' => 3, 'nom' => 'Test d\'Anglais']
-		],
-		'api/professeurs' => [
-			['id' => 1, 'nom' => 'Dupont', 'prenom' => 'Jean'],
-			['id' => 2, 'nom' => 'Martin', 'prenom' => 'Marie'],
-			['id' => 3, 'nom' => 'Bernard', 'prenom' => 'Pierre']
-		],
-		'api/user/profile' => [
-			'user' => [
-				'id' => 1,
-				'nom' => 'Admin',
-				'prenom' => 'Super',
-				'role' => 'ADMIN',
-				'email' => 'admin@example.com'
-			]
-		]
-	];
+	$error = curl_error($ch);
+	error_log("cURL Error for endpoint $endpoint: " . $error);
 
-	// Check if we have fallback data for this endpoint
-	if (isset($fallbackData[$endpoint])) {
-		echo json_encode([
-			'success' => true,
-			'data' => $fallbackData[$endpoint],
-			'isFallback' => true,
-			'source' => 'static_data'
-		]);
-	} else {
-		// If no fallback data, return error
-		http_response_code(404);
-		echo json_encode([
-			'success' => false,
-			'error' => 'Endpoint not supported',
-			'message' => 'This endpoint is not supported in fallback mode'
-		]);
-	}
+	http_response_code(500);
+	echo json_encode([
+		'success' => false,
+		'error' => 'API Connection Error',
+		'message' => 'Could not connect to the backend API',
+		'details' => $error
+	]);
 	exit();
 }
 
 // Close cURL
 curl_close($ch);
+
+// Log the response for debugging
+error_log("API Response for $endpoint: " . substr($response, 0, 200) . "...");
 
 // Set the response code
 http_response_code($httpCode);
