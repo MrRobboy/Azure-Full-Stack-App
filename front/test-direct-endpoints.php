@@ -149,6 +149,19 @@ header('Content-Type: text/html; charset=utf-8');
 		</div>
 	</div>
 
+	<div class="test-group">
+		<h3>6. Test Diagnostic CORS</h3>
+		<div class="endpoint">
+			<p><strong>URL:</strong> <span id="corsDiagnosticUrl"></span></p>
+			<p><strong>Méthode:</strong> GET</p>
+			<button onclick="testCorsDiagnostic()">Tester Diagnostic CORS</button>
+			<div id="corsDiagnosticResult" class="hidden">
+				<h4>Résultat:</h4>
+				<pre id="corsDiagnosticResponse"></pre>
+			</div>
+		</div>
+	</div>
+
 	<script>
 		// Configuration
 		let backendUrl = localStorage.getItem('backendUrl') || 'https://app-backend-esgi-app.azurewebsites.net';
@@ -166,6 +179,7 @@ header('Content-Type: text/html; charset=utf-8');
 		document.getElementById('notesUrl').textContent = `${backendUrl}/api-notes.php`;
 		document.getElementById('apiRouterUrl').textContent = `${backendUrl}/api-router.php`;
 		document.getElementById('corsTestUrl').textContent = `${backendUrl}/api-cors.php`;
+		document.getElementById('corsDiagnosticUrl').textContent = `${backendUrl}/cors-test.php`;
 
 		// Enregistrer la configuration
 		document.getElementById('saveConfig').addEventListener('click', function() {
@@ -183,6 +197,7 @@ header('Content-Type: text/html; charset=utf-8');
 			document.getElementById('notesUrl').textContent = `${backendUrl}/api-notes.php`;
 			document.getElementById('apiRouterUrl').textContent = `${backendUrl}/api-router.php`;
 			document.getElementById('corsTestUrl').textContent = `${backendUrl}/api-cors.php`;
+			document.getElementById('corsDiagnosticUrl').textContent = `${backendUrl}/cors-test.php`;
 
 			alert('Configuration enregistrée');
 		});
@@ -323,6 +338,30 @@ header('Content-Type: text/html; charset=utf-8');
 
 				responseEl.innerHTML = JSON.stringify(result, null, 2);
 				responseEl.className = response.ok && corsComplete ? 'success' : 'error';
+			} catch (error) {
+				responseEl.innerHTML = `Erreur: ${error.message}`;
+				responseEl.className = 'error';
+			}
+		}
+
+		// Test du nouvel outil de diagnostic CORS
+		async function testCorsDiagnostic() {
+			const resultDiv = document.getElementById('corsDiagnosticResult');
+			const responseEl = document.getElementById('corsDiagnosticResponse');
+			resultDiv.classList.remove('hidden');
+
+			try {
+				const response = await fetch(`${backendUrl}/cors-test.php`, {
+					credentials: 'include',
+					headers: {
+						'Accept': 'application/json',
+						'X-Test-Header': 'test-value'
+					}
+				});
+
+				const data = await response.json();
+				responseEl.innerHTML = JSON.stringify(data, null, 2);
+				responseEl.className = response.ok ? 'success' : 'error';
 			} catch (error) {
 				responseEl.innerHTML = `Erreur: ${error.message}`;
 				responseEl.className = 'error';

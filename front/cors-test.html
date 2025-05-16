@@ -135,6 +135,17 @@
 			</div>
 		</div>
 
+		<div class="test-panel">
+			<h2>5. Test de Diagnostic CORS</h2>
+			<button onclick="testCorsDiagnostic()">
+				Tester cors-test.php
+			</button>
+			<div id="cors-diagnostic-result" style="display: none">
+				<h3>Résultat:</h3>
+				<pre id="cors-diagnostic-response"></pre>
+			</div>
+		</div>
+
 		<script>
 			// Récupérer l'URL du backend du localStorage ou utiliser la valeur par défaut
 			let backendUrl =
@@ -327,6 +338,43 @@
 						false
 					);
 				}
+			}
+
+			// Test de diagnostic CORS
+			async function testCorsDiagnostic() {
+				try {
+					const response = await fetch(
+						`${backendUrl}/cors-test.php`,
+						{
+							method: "GET",
+							headers: {
+								Accept: "application/json",
+								"X-Test-Header":
+									"test-value"
+							},
+							credentials: "include"
+						}
+					);
+
+					const responseText =
+						await response.text();
+					displayResult(
+						"cors-diagnostic-result",
+						responseText,
+						response.ok
+					);
+				} catch (error) {
+					displayResult(
+						"cors-diagnostic-result",
+						`Erreur: ${error.message}`,
+						false
+					);
+				}
+			}
+
+			// Test des en-têtes CORS
+			async function testCorsHeaders() {
+				// ... existing code ...
 			}
 		</script>
 	</body>

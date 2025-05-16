@@ -9,6 +9,13 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-W
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Max-Age: 86400');
 
+// Forcer les en-têtes de cache pour éviter les problèmes de mise en cache
+header('Cache-Control: no-store, no-cache, must-revalidate');
+header('Pragma: no-cache');
+
+// Désactiver le buffer de sortie pour s'assurer que les en-têtes sont envoyés immédiatement
+if (ob_get_level()) ob_end_clean();
+
 // Traiter immédiatement les requêtes OPTIONS pour CORS
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 	http_response_code(204);
@@ -27,11 +34,12 @@ if (!is_dir(__DIR__ . '/logs')) {
 
 // Log the request for diagnostics
 error_log(sprintf(
-	"[%s] Auth API Request: Method=%s, URI=%s, Origin=%s",
+	"[%s] Auth API Request: Method=%s, URI=%s, Origin=%s, Headers=%s",
 	date('Y-m-d H:i:s'),
 	$_SERVER['REQUEST_METHOD'],
 	$_SERVER['REQUEST_URI'],
-	isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : 'non défini'
+	isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : 'non défini',
+	json_encode(getallheaders())
 ));
 
 // Load the AuthController
