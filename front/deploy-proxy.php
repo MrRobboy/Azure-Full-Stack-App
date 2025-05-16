@@ -14,38 +14,38 @@ echo "Current directory: $current_dir\n";
 // Source proxy file
 $source_proxy = $current_dir . '/simple-proxy.php';
 if (!file_exists($source_proxy)) {
-	die("ERROR: Source proxy file does not exist at: $source_proxy\n");
+    die("ERROR: Source proxy file does not exist at: $source_proxy\n");
 }
 echo "Source proxy found at: $source_proxy\n";
 
 // Directories to check/create
 $directories = [
-	$current_dir,                      // Current directory (already exists)
-	dirname($current_dir),             // Parent directory
-	$current_dir . '/proxy',           // Proxy subdirectory
-	$current_dir . '/api'              // API subdirectory
+    $current_dir,                      // Current directory (already exists)
+    dirname($current_dir),             // Parent directory
+    $current_dir . '/proxy',           // Proxy subdirectory
+    $current_dir . '/api'              // API subdirectory
 ];
 
 // Create directories and copy proxy files
 foreach ($directories as $dir) {
-	if ($dir !== $current_dir && !is_dir($dir)) {
-		if (mkdir($dir, 0755, true)) {
-			echo "Created directory: $dir\n";
-		} else {
-			echo "WARNING: Failed to create directory: $dir\n";
-			continue;
-		}
-	}
+    if ($dir !== $current_dir && !is_dir($dir)) {
+        if (mkdir($dir, 0755, true)) {
+            echo "Created directory: $dir\n";
+        } else {
+            echo "WARNING: Failed to create directory: $dir\n";
+            continue;
+        }
+    }
 
-	// Only copy to directories other than current (already has the file)
-	if ($dir !== $current_dir) {
-		$target_file = $dir . '/simple-proxy.php';
-		if (copy($source_proxy, $target_file)) {
-			echo "Copied proxy to: $target_file\n";
-		} else {
-			echo "WARNING: Failed to copy proxy to: $target_file\n";
-		}
-	}
+    // Only copy to directories other than current (already has the file)
+    if ($dir !== $current_dir) {
+        $target_file = $dir . '/simple-proxy.php';
+        if (copy($source_proxy, $target_file)) {
+            echo "Copied proxy to: $target_file\n";
+        } else {
+            echo "WARNING: Failed to copy proxy to: $target_file\n";
+        }
+    }
 }
 
 // Create a special health-check file
