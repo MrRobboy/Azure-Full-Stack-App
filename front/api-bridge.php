@@ -58,6 +58,13 @@ if ($method === 'OPTIONS') {
 $endpoint = isset($_GET['endpoint']) ? validateInput($_GET['endpoint']) : null;
 if (!$endpoint) {
 	error_log("Invalid or missing endpoint");
+	$corsHeaders = getCorsHeaders();
+	foreach ($corsHeaders as $header => $value) {
+		header("$header: $value");
+	}
+	foreach (SECURITY_CONFIG['headers'] as $header) {
+		header($header);
+	}
 	header('HTTP/1.1 400 Bad Request');
 	die(json_encode([
 		'success' => false,
@@ -71,6 +78,9 @@ if (!$endpoint) {
 // Construction de l'URL cible
 $baseUrl = rtrim(BACKEND_BASE_URL, '/');
 $endpoint = ltrim($endpoint, '/');
+if (strpos($endpoint, '.php') === false) {
+	$endpoint .= '.php';
+}
 $targetUrl = $baseUrl . '/' . $endpoint;
 
 error_log("Target URL: " . $targetUrl);
@@ -120,6 +130,13 @@ error_log("CURL Info: " . print_r($info, true));
 // Gestion des erreurs
 if ($error) {
 	error_log("Proxy Error: $error - URL: $targetUrl");
+	$corsHeaders = getCorsHeaders();
+	foreach ($corsHeaders as $header => $value) {
+		header("$header: $value");
+	}
+	foreach (SECURITY_CONFIG['headers'] as $header) {
+		header($header);
+	}
 	header('HTTP/1.1 502 Bad Gateway');
 	die(json_encode([
 		'success' => false,
@@ -140,7 +157,6 @@ $corsHeaders = getCorsHeaders();
 foreach ($corsHeaders as $header => $value) {
 	header("$header: $value");
 }
-
 // Envoi des headers de sécurité
 foreach (SECURITY_CONFIG['headers'] as $header) {
 	header($header);

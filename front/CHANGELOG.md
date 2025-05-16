@@ -368,6 +368,28 @@
 - Ajout de la section de dépannage dans TESTING.md
 - Documentation des headers de sécurité requis
 
+## [4.9.0] - 2024-05-16
+
+### Changed
+
+- Correction de la construction de l'URL dans `api-bridge.php` : ajout automatique de `.php` à l'endpoint si absent.
+- Envoi systématique des headers CORS et de sécurité dans toutes les réponses du proxy, y compris en cas d'erreur.
+
+### Fixed
+
+- Résolution des erreurs 404 sur les endpoints `/auth/login`, `/matieres`, `/notes` en adaptant la logique du proxy pour cibler les bons fichiers PHP du backend.
+- Correction de l'absence de headers CORS et sécurité dans les réponses du proxy.
+
+### Documentation
+
+- Ajout d'une explication sur la structure des endpoints backend (fichiers PHP à la racine et non routes REST).
+- Documentation des erreurs rencontrées lors des tests :
+     - 404 sur `/api/status` (inexistant)
+     - Succès sur `/status.php` (backend OK)
+     - 404 sur `/auth/login`, `/matieres`, `/notes` (fichiers absents)
+     - Absence de headers CORS et sécurité sur les réponses du proxy
+- Mise à jour des recommandations de test dans `TESTING.md`.
+
 ## Prochaines Étapes
 
 1. Documentation

@@ -49,16 +49,16 @@ curl -X GET "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endp
 curl -X GET "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endpoint=status.php"
 
 # Test de l'authentification
-curl -X POST "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endpoint=auth/login" \
+curl -X POST "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endpoint=auth/login.php" \
   -H "Content-Type: application/json" \
   -d '{"username":"test","password":"test"}'
 
 # Test des matières
-curl -X GET "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endpoint=matieres" \
+curl -X GET "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endpoint=matieres.php" \
   -H "Authorization: Bearer YOUR_TOKEN"
 
 # Test des notes
-curl -X GET "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endpoint=notes" \
+curl -X GET "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endpoint=notes.php" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -199,3 +199,10 @@ curl -X GET "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endp
       - URLs correctes
       - Headers appropriés
       - Données de test valides
+
+### Erreurs rencontrées lors des tests précédents
+
+- Succès sur `/status.php` (backend OK)
+- 404 sur `/api/status` (inexistant)
+- 404 sur `/auth/login`, `/matieres`, `/notes` (fichiers absents)
+- Absence de headers CORS et sécurité sur les réponses du proxy (corrigé)
