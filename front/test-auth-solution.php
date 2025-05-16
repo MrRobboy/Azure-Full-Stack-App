@@ -257,8 +257,17 @@ session_start();
 			}
 
 			displayResult('Accès à une ressource protégée avec le token...', 'info');
+
+			// Vérifier si c'est un token local
+			const isLocalToken = token.startsWith('LOCAL_AUTH.');
+
 			try {
-				const response = await fetch('optimal-proxy.php?endpoint=api-notes.php', {
+				// Utiliser le mock API pour les tokens locaux, sinon le proxy optimal
+				const apiUrl = isLocalToken ?
+					'local-api-mock.php?endpoint=api-notes.php' :
+					'optimal-proxy.php?endpoint=api-notes.php';
+
+				const response = await fetch(apiUrl, {
 					headers: {
 						'Authorization': 'Bearer ' + token
 					}
@@ -271,6 +280,7 @@ session_start();
 					displayResult({
 						message: 'Réponse de la ressource protégée',
 						status: response.status,
+						mockApi: isLocalToken,
 						data: data
 					});
 				} else {
