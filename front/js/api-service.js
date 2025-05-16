@@ -6,7 +6,8 @@
 // Singleton API Service
 const ApiService = (function () {
 	// Private properties
-	const _corsProxy = "unified-proxy.php";
+	const _corsProxy = "api-bridge.php"; // Updated proxy that works best
+	const _matieresProxy = "matieres-proxy.php"; // Dedicated matières proxy
 	const _directLoginPath = "unified-login.php";
 
 	// Detect environment
@@ -45,77 +46,29 @@ const ApiService = (function () {
 		}
 
 		try {
-			// Use our CORS proxy
+			// Special handling for matieres endpoint
+			if (endpoint.includes("matieres")) {
+				const matieresProxyUrl = `${_matieresProxy}?endpoint=${encodeURIComponent(
+					endpoint
+				)}`;
+				console.log(
+					`Using special matieres proxy URL: ${matieresProxyUrl}`
+				);
+				const response = await fetch(
+					matieresProxyUrl,
+					requestOptions
+				);
+				return handleResponse(response, endpoint);
+			}
+
+			// Use our CORS proxy for all other endpoints
 			const proxyUrl = `${_corsProxy}?endpoint=${encodeURIComponent(
 				endpoint
 			)}`;
 			console.log(`Using proxy URL: ${proxyUrl}`);
 
 			const response = await fetch(proxyUrl, requestOptions);
-
-			console.log(
-				`Response status: ${response.status} for ${endpoint}`
-			);
-
-			// Handle non-JSON responses
-			const contentType =
-				response.headers.get("content-type");
-
-			// Debug response headers
-			console.log(`Response content-type: ${contentType}`);
-
-			if (
-				contentType &&
-				contentType.includes("application/json")
-			) {
-				try {
-					const jsonData = await response.json();
-					return {
-						success: response.ok,
-						status: response.status,
-						data: jsonData,
-						response: response
-					};
-				} catch (jsonError) {
-					console.error(
-						`Failed to parse JSON from ${endpoint}:`,
-						jsonError
-					);
-					// Get the raw text for debugging
-					const textData = await response
-						.clone()
-						.text();
-					console.error(
-						`Raw response data: ${textData.slice(
-							0,
-							200
-						)}...`
-					);
-
-					return {
-						success: false,
-						status: response.status,
-						data: null,
-						error: "Failed to parse JSON response",
-						rawResponse: textData.slice(
-							0,
-							500
-						)
-					};
-				}
-			} else {
-				const textData = await response.text();
-				console.log(
-					`Non-JSON response from ${endpoint}, length: ${textData.length} bytes`
-				);
-
-				return {
-					success: response.ok,
-					status: response.status,
-					data: textData,
-					response: response
-				};
-			}
+			return handleResponse(response, endpoint);
 		} catch (error) {
 			console.error(
 				`API Request Error (${endpoint}):`,
@@ -130,6 +83,67 @@ const ApiService = (function () {
 				error: error.message,
 				errorType: error.name,
 				errorStack: error.stack
+			};
+		}
+	}
+
+	/**
+	 * Handle API response
+	 * @param {Response} response - Fetch Response object
+	 * @param {string} endpoint - Original endpoint for logging
+	 * @returns {Promise} - Processed response
+	 */
+	async function handleResponse(response, endpoint) {
+		console.log(
+			`Response status: ${response.status} for ${endpoint}`
+		);
+
+		// Debug response headers
+		const contentType = response.headers.get("content-type");
+		console.log(`Response content-type: ${contentType}`);
+
+		if (contentType && contentType.includes("application/json")) {
+			try {
+				const jsonData = await response.json();
+				return {
+					success: response.ok,
+					status: response.status,
+					data: jsonData,
+					response: response
+				};
+			} catch (jsonError) {
+				console.error(
+					`Failed to parse JSON from ${endpoint}:`,
+					jsonError
+				);
+				// Get the raw text for debugging
+				const textData = await response.clone().text();
+				console.error(
+					`Raw response data: ${textData.slice(
+						0,
+						200
+					)}...`
+				);
+
+				return {
+					success: false,
+					status: response.status,
+					data: null,
+					error: "Failed to parse JSON response",
+					rawResponse: textData.slice(0, 500)
+				};
+			}
+		} else {
+			const textData = await response.text();
+			console.log(
+				`Non-JSON response from ${endpoint}, length: ${textData.length} bytes`
+			);
+
+			return {
+				success: response.ok,
+				status: response.status,
+				data: textData,
+				response: response
 			};
 		}
 	}
@@ -198,44 +212,32 @@ const ApiService = (function () {
 		 * @param {number} eleveId - Student ID
 		 * @returns {Promise} - Student notes
 		 */
-		getByStudent: (eleveId) =>
-			makeRequest(`api-notes.php?eleve_id=${eleveId}`, "GET"),
+		getForStudent: (eleveId) =>
+			makeRequest(`api-notes.php?eleve=${eleveId}`, "GET"),
 
 		/**
-		 * Get specific note
-		 * @param {number} noteId - Note ID
-		 * @returns {Promise} - Note details
+		 * Get notes for specific exam
+		 * @param {number} examenId - Exam ID
+		 * @returns {Promise} - Exam notes
 		 */
-		getById: (noteId) =>
-			makeRequest(`api-notes.php?id=${noteId}`, "GET"),
+		getForExam: (examenId) =>
+			makeRequest(`api-notes.php?examen=${examenId}`, "GET"),
 
 		/**
-		 * Create new note
+		 * Add or update a note
 		 * @param {Object} noteData - Note data
-		 * @returns {Promise} - Creation result
+		 * @returns {Promise} - Result
 		 */
-		create: (noteData) =>
+		save: (noteData) =>
 			makeRequest("api-notes.php", "POST", noteData),
-
-		/**
-		 * Update existing note
-		 * @param {number} noteId - Note ID
-		 * @param {number} value - New note value
-		 * @returns {Promise} - Update result
-		 */
-		update: (noteId, value) =>
-			makeRequest("api-notes.php", "PUT", {
-				id: noteId,
-				valeur: value
-			}),
 
 		/**
 		 * Delete a note
 		 * @param {number} noteId - Note ID
-		 * @returns {Promise} - Delete result
+		 * @returns {Promise} - Result
 		 */
 		delete: (noteId) =>
-			makeRequest("api-notes.php", "DELETE", { id: noteId })
+			makeRequest(`api-notes.php?id=${noteId}`, "DELETE")
 	};
 
 	// Classes-related methods

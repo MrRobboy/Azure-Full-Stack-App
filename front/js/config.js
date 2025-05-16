@@ -1,5 +1,5 @@
 // Configuration de l'application
-// Version: 4.0 - Azure Edition - Unified CORS Solution
+// Version: 4.1 - Azure Edition - Proxy Fix
 
 // Détecter l'environnement
 const isAzure = window.location.hostname.includes("azurewebsites.net");
@@ -19,14 +19,25 @@ const defaultConfig = {
 	// Utiliser le proxy ou non
 	useProxy: isAzure, // Activer par défaut sur Azure
 
-	// URL du proxy unifié
-	proxyUrl: "unified-proxy.php", // Proxy CORS consolidé
+	// URL des proxies - avec priorité
+	proxyUrls: [
+		"matieres-proxy.php", // Proxy spécifique pour les matières
+		"api-bridge.php", // Alternative #1
+		"simple-proxy.php", // Alternative #2
+		"unified-proxy.php" // Original (peut ne pas fonctionner)
+	],
+
+	// URL du proxy par défaut
+	proxyUrl: "api-bridge.php", // Proxy fonctionnel
+
+	// Pour les matières spécifiquement
+	matieresProxyUrl: "matieres-proxy.php",
 
 	// Stratégie de contournement pour les erreurs 404
 	bypass404: true,
 
 	// Version de configuration
-	version: "4.0"
+	version: "4.1"
 };
 
 // Configuration pour l'environnement
@@ -36,41 +47,45 @@ let appConfig = { ...defaultConfig };
 async function verifyProxyAccess() {
 	if (!isAzure) return true; // Seulement exécuter sur Azure
 
-	console.log("Verifying access to unified proxy...");
+	console.log("Verifying access to proxy...");
 
-	try {
-		// Ajouter un paramètre unique pour éviter la mise en cache
-		const response = await fetch(
-			`${
-				appConfig.proxyUrl
-			}?endpoint=status.php&_=${Date.now()}`,
-			{
-				method: "GET",
-				timeout: 5000
-			}
-		);
-
-		if (response.ok) {
-			console.log("Unified proxy is working correctly!");
-			return true;
-		} else {
-			console.error(
-				"Unified proxy returned error status:",
-				response.status
+	// Essayer chaque proxy dans l'ordre jusqu'à ce que l'un fonctionne
+	for (const proxyUrl of appConfig.proxyUrls) {
+		try {
+			// Ajouter un paramètre unique pour éviter la mise en cache
+			const response = await fetch(
+				`${proxyUrl}?endpoint=status.php&_=${Date.now()}`,
+				{
+					method: "GET",
+					timeout: 5000
+				}
 			);
-			return false;
+
+			if (response.ok) {
+				console.log(
+					`Proxy ${proxyUrl} is working correctly!`
+				);
+				// Définir ce proxy comme proxy par défaut
+				appConfig.proxyUrl = proxyUrl;
+				return true;
+			}
+		} catch (error) {
+			console.warn(
+				`Error accessing proxy ${proxyUrl}:`,
+				error.message
+			);
 		}
-	} catch (error) {
-		console.error("Error accessing unified proxy:", error.message);
-		return false;
 	}
+
+	console.error("All proxies failed. Using fallback.");
+	return false;
 }
 
 // Sur Azure, initialiser avec notre configuration
 if (isAzure) {
-	console.log("Running on Azure with unified proxy");
+	console.log("Running on Azure with proxy");
 	console.log("App config:", appConfig);
-	console.log("Proxy URL:", appConfig.proxyUrl);
+	console.log("Default Proxy URL:", appConfig.proxyUrl);
 	console.log("API Base URL:", appConfig.apiBaseUrl);
 
 	// Vérifier l'accès au proxy
@@ -114,6 +129,13 @@ function getBackendUrl(endpoint) {
 function getFullUrl(fullPath) {
 	// Si nous utilisons le proxy sur Azure, construire l'URL du proxy
 	if (isAzure && appConfig.useProxy) {
+		// Traitement spécial pour les matières
+		if (fullPath.includes("matieres")) {
+			return `${
+				appConfig.matieresProxyUrl
+			}?endpoint=${encodeURIComponent(fullPath)}`;
+		}
+
 		return `${appConfig.proxyUrl}?endpoint=${encodeURIComponent(
 			fullPath
 		)}`;

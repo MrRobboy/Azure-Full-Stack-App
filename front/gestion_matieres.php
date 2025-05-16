@@ -254,21 +254,47 @@ ob_start();
 		];
 
 		try {
-			// First try using the special matieres-proxy
+			// Try each method in sequence until one works
 			let response, result;
+			let methodUsed = "";
 
+			// Method 1: Try using the special matieres-proxy
 			try {
 				console.log('Tentative avec matieres-proxy.php...');
 				response = await fetch('matieres-proxy.php');
 				result = await response.json();
 				console.log('Résultat avec matieres-proxy:', result);
+				methodUsed = "matieres-proxy.php";
 			} catch (proxyError) {
-				console.log('Échec avec matieres-proxy, utilisation du proxy unifié');
+				console.log('Échec avec matieres-proxy, tentative avec proxy unifié');
 
-				// Use the unified proxy
-				response = await fetch(getApiEndpoint('matieres'));
-				result = await response.json();
-				console.log('Résultat matières avec unified-proxy:', result);
+				// Method 2: Try using the unified proxy
+				try {
+					response = await fetch(getApiEndpoint('matieres'));
+					result = await response.json();
+					console.log('Résultat matières avec unified-proxy:', result);
+					methodUsed = "unified-proxy";
+				} catch (unifiedError) {
+					console.log('Échec avec unified-proxy, tentative avec direct-matieres.php');
+
+					// Method 3: Try using direct endpoint as last resort
+					try {
+						response = await fetch('direct-matieres.php');
+						result = await response.json();
+						console.log('Résultat avec direct-matieres:', result);
+						methodUsed = "direct-matieres.php";
+					} catch (directError) {
+						console.error('Tous les endpoints ont échoué, utilisation des données en dur');
+						// Use the in-code fallback data if all methods fail
+						result = {
+							success: true,
+							data: fallbackData,
+							message: 'Utilisation des données en dur (tous les endpoints ont échoué)',
+							is_fallback: true
+						};
+						methodUsed = "hardcoded fallback";
+					}
+				}
 			}
 
 			// Check for valid response format
@@ -303,8 +329,8 @@ ob_start();
 			}
 
 			// If fallback was used, show a notification
-			if (result.is_fallback) {
-				NotificationSystem.info('Données de secours utilisées: ' + (result.message || 'API non disponible'));
+			if (result.is_fallback || result.is_direct) {
+				NotificationSystem.info('Source des données: ' + methodUsed + ' - ' + (result.message || 'API non disponible'));
 			}
 
 			result.data.forEach(matiere => {
