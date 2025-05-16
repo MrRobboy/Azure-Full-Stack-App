@@ -1,10 +1,19 @@
 <?php
 // Dedicated Authentication API Endpoint - For direct login access
+
+// IMPORTANT: Définir les en-têtes CORS avant toute autre opération
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Origin');
 header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Max-Age: 86400');
+
+// Traiter immédiatement les requêtes OPTIONS pour CORS
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+	http_response_code(204);
+	exit;
+}
 
 // Enable error logging
 ini_set('display_errors', 0);
@@ -18,17 +27,12 @@ if (!is_dir(__DIR__ . '/logs')) {
 
 // Log the request for diagnostics
 error_log(sprintf(
-	"[%s] Auth API Request: Method=%s, URI=%s",
+	"[%s] Auth API Request: Method=%s, URI=%s, Origin=%s",
 	date('Y-m-d H:i:s'),
 	$_SERVER['REQUEST_METHOD'],
-	$_SERVER['REQUEST_URI']
+	$_SERVER['REQUEST_URI'],
+	isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : 'non défini'
 ));
-
-// Handle OPTIONS requests
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-	http_response_code(204);
-	exit;
-}
 
 // Load the AuthController
 try {

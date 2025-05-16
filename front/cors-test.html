@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0" />
+		<title>Test CORS Azure</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				line-height: 1.6;
+				margin: 0 auto;
+				max-width: 800px;
+				padding: 20px;
+			}
+			h1,
+			h2 {
+				color: #333;
+			}
+			.test-panel {
+				background-color: #f5f5f5;
+				border-radius: 4px;
+				margin-bottom: 20px;
+				padding: 15px;
+			}
+			button {
+				background-color: #4caf50;
+				border: none;
+				border-radius: 4px;
+				color: white;
+				cursor: pointer;
+				margin: 5px 0;
+				padding: 8px 16px;
+			}
+			button:hover {
+				background-color: #45a049;
+			}
+			pre {
+				background-color: #eee;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				max-height: 300px;
+				overflow: auto;
+				padding: 10px;
+			}
+			.success {
+				color: green;
+				font-weight: bold;
+			}
+			.error {
+				color: red;
+				font-weight: bold;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Test CORS pour Azure</h1>
+		<p>
+			Cette page teste les requêtes cross-origin vers les
+			différents endpoints API.
+		</p>
+
+		<div class="test-panel">
+			<h2>Configuration</h2>
+			<p>
+				<label for="backend-url">URL du backend:</label>
+				<input
+					type="text"
+					id="backend-url"
+					value="https://app-backend-esgi-app.azurewebsites.net"
+					style="width: 350px" />
+			</p>
+			<button id="save-config">Enregistrer</button>
+		</div>
+
+		<div class="test-panel">
+			<h2>1. Test de l'endpoint de CORS</h2>
+			<button onclick="testCors()">
+				Tester api-cors.php
+			</button>
+			<div id="cors-result" style="display: none">
+				<h3>Résultat:</h3>
+				<pre id="cors-response"></pre>
+			</div>
+		</div>
+
+		<div class="test-panel">
+			<h2>
+				2. Test de l'endpoint d'authentification
+				(OPTIONS)
+			</h2>
+			<button onclick="testAuthOptions()">
+				Tester OPTIONS api-auth-login.php
+			</button>
+			<div id="auth-options-result" style="display: none">
+				<h3>Résultat:</h3>
+				<pre id="auth-options-response"></pre>
+			</div>
+		</div>
+
+		<div class="test-panel">
+			<h2>3. Test de l'endpoint d'authentification (POST)</h2>
+			<p>
+				<label for="email">Email:</label>
+				<input
+					type="text"
+					id="email"
+					value="user@example.com" />
+			</p>
+			<p>
+				<label for="password">Mot de passe:</label>
+				<input
+					type="password"
+					id="password"
+					value="password" />
+			</p>
+			<button onclick="testAuthPost()">
+				Tester POST api-auth-login.php
+			</button>
+			<div id="auth-post-result" style="display: none">
+				<h3>Résultat:</h3>
+				<pre id="auth-post-response"></pre>
+			</div>
+		</div>
+
+		<div class="test-panel">
+			<h2>4. Test de l'endpoint d'API Router</h2>
+			<button onclick="testApiRouter()">
+				Tester api-router.php
+			</button>
+			<div id="api-router-result" style="display: none">
+				<h3>Résultat:</h3>
+				<pre id="api-router-response"></pre>
+			</div>
+		</div>
+
+		<script>
+			// Récupérer l'URL du backend du localStorage ou utiliser la valeur par défaut
+			let backendUrl =
+				localStorage.getItem("backendUrl") ||
+				"https://app-backend-esgi-app.azurewebsites.net";
+			document.getElementById("backend-url").value =
+				backendUrl;
+
+			// Enregistrer la configuration
+			document.getElementById("save-config").addEventListener(
+				"click",
+				function () {
+					backendUrl =
+						document.getElementById(
+							"backend-url"
+						).value;
+					localStorage.setItem(
+						"backendUrl",
+						backendUrl
+					);
+					alert("Configuration enregistrée");
+				}
+			);
+
+			// Fonction pour afficher les résultats
+			function displayResult(
+				elementId,
+				responseText,
+				success
+			) {
+				const resultElement =
+					document.getElementById(elementId);
+				const responseElement = document.getElementById(
+					elementId + "-response"
+				);
+
+				resultElement.style.display = "block";
+				responseElement.textContent = responseText;
+				responseElement.className = success
+					? "success"
+					: "error";
+			}
+
+			// Test de l'endpoint CORS
+			async function testCors() {
+				try {
+					const response = await fetch(
+						`${backendUrl}/api-cors.php`,
+						{
+							method: "GET",
+							headers: {
+								Accept: "application/json"
+							}
+						}
+					);
+
+					const responseText =
+						await response.text();
+					displayResult(
+						"cors-result",
+						responseText,
+						response.ok
+					);
+				} catch (error) {
+					displayResult(
+						"cors-result",
+						`Erreur: ${error.message}`,
+						false
+					);
+				}
+			}
+
+			// Test des OPTIONS pour l'endpoint d'authentification
+			async function testAuthOptions() {
+				try {
+					const response = await fetch(
+						`${backendUrl}/api-auth-login.php`,
+						{
+							method: "OPTIONS",
+							headers: {
+								Accept: "application/json",
+								"Access-Control-Request-Method":
+									"POST",
+								"Access-Control-Request-Headers":
+									"Content-Type"
+							}
+						}
+					);
+
+					// Pour une requête OPTIONS réussie, le corps est vide et le statut est 204
+					const headers = {};
+					response.headers.forEach(
+						(value, key) => {
+							headers[key] = value;
+						}
+					);
+
+					const responseText = JSON.stringify(
+						{
+							status: response.status,
+							statusText: response.statusText,
+							headers: headers
+						},
+						null,
+						2
+					);
+
+					displayResult(
+						"auth-options-result",
+						responseText,
+						response.status === 204
+					);
+				} catch (error) {
+					displayResult(
+						"auth-options-result",
+						`Erreur: ${error.message}`,
+						false
+					);
+				}
+			}
+
+			// Test du POST pour l'endpoint d'authentification
+			async function testAuthPost() {
+				try {
+					const email =
+						document.getElementById(
+							"email"
+						).value;
+					const password =
+						document.getElementById(
+							"password"
+						).value;
+
+					const response = await fetch(
+						`${backendUrl}/api-auth-login.php`,
+						{
+							method: "POST",
+							headers: {
+								"Content-Type":
+									"application/json",
+								Accept: "application/json"
+							},
+							body: JSON.stringify({
+								email: email,
+								password: password
+							})
+						}
+					);
+
+					const responseText =
+						await response.text();
+					displayResult(
+						"auth-post-result",
+						responseText,
+						response.ok
+					);
+				} catch (error) {
+					displayResult(
+						"auth-post-result",
+						`Erreur: ${error.message}`,
+						false
+					);
+				}
+			}
+
+			// Test de l'API Router
+			async function testApiRouter() {
+				try {
+					const response = await fetch(
+						`${backendUrl}/api-router.php`,
+						{
+							method: "GET",
+							headers: {
+								Accept: "application/json"
+							}
+						}
+					);
+
+					const responseText =
+						await response.text();
+					displayResult(
+						"api-router-result",
+						responseText,
+						response.ok
+					);
+				} catch (error) {
+					displayResult(
+						"api-router-result",
+						`Erreur: ${error.message}`,
+						false
+					);
+				}
+			}
+		</script>
+	</body>
+</html>

@@ -1,29 +1,38 @@
 <?php
 // Dedicated Notes API Endpoint
+
+// IMPORTANT: Définir les en-têtes CORS avant toute autre opération
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Origin');
 header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Max-Age: 86400');
+
+// Traiter immédiatement les requêtes OPTIONS pour CORS
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+	http_response_code(204);
+	exit;
+}
 
 // Enable error logging
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/logs/notes_api_errors.log');
 
+// Create logs directory if needed
+if (!is_dir(__DIR__ . '/logs')) {
+	mkdir(__DIR__ . '/logs', 0755, true);
+}
+
 // Log the request for diagnostics
 error_log(sprintf(
-	"[%s] Notes API Request: Method=%s, URI=%s",
+	"[%s] Notes API Request: Method=%s, URI=%s, Origin=%s",
 	date('Y-m-d H:i:s'),
 	$_SERVER['REQUEST_METHOD'],
-	$_SERVER['REQUEST_URI']
+	$_SERVER['REQUEST_URI'],
+	isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : 'non défini'
 ));
-
-// Handle OPTIONS requests
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-	http_response_code(204);
-	exit;
-}
 
 // Load required controllers
 try {
@@ -78,6 +87,7 @@ try {
 			}
 			// Handle notes by student
 			else if ($eleve_id) {
+				// Fixed: getNotesByEleveId -> getNotesByEleve
 				$result = $noteController->getNotesByEleve($eleve_id);
 				echo json_encode($result);
 				exit;
@@ -110,7 +120,7 @@ try {
 				$data['examen_id'] = 1; // Default value if not provided
 			}
 
-			// Create the note
+			// Create the note - Fixed: Pass all 4 required arguments
 			$result = $noteController->createNote(
 				$data['eleve_id'],
 				$data['matiere_id'],
@@ -137,7 +147,7 @@ try {
 			}
 
 			// Update the note
-			$result = $noteController->updateNote($data['id'], $data);
+			$result = $noteController->updateNote($data['id'], $data['valeur']);
 			echo json_encode($result);
 			exit;
 			break;

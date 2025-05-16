@@ -1,5 +1,5 @@
 # Configuration CORS et gestion des requêtes pour Azure
-# Version optimisée pour résoudre les problèmes de requêtes POST
+# Version optimisée pour résoudre les problèmes de requêtes API
 
 # Active le module de réécriture
 RewriteEngine On
@@ -10,16 +10,24 @@ RewriteBase /
     Require all granted
 </Limit>
 
-# Ajouter les en-têtes CORS à toutes les réponses
+# Ajouter les en-têtes CORS à toutes les réponses - IMPORTANT: ceci doit fonctionner même avant l'exécution du PHP
 <IfModule mod_headers.c>
-    Header always set Access-Control-Allow-Origin "https://app-frontend-esgi-app.azurewebsites.net"
-    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept"
-    Header always set Access-Control-Allow-Credentials "true"
-    Header always set Access-Control-Max-Age "86400"
+    # Définir les en-têtes CORS pour tous les fichiers PHP et particulièrement les fichiers API
+    <FilesMatch "\.(php)$">
+        Header always set Access-Control-Allow-Origin "https://app-frontend-esgi-app.azurewebsites.net"
+        Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept"
+        Header always set Access-Control-Allow-Credentials "true"
+        Header always set Access-Control-Max-Age "86400"
+    </FilesMatch>
     
-    # Traitement spécial pour les requêtes OPTIONS
+    # Traitement spécial pour les requêtes OPTIONS préflight
     <If "%{REQUEST_METHOD} == 'OPTIONS'">
+        Header always set Access-Control-Allow-Origin "https://app-frontend-esgi-app.azurewebsites.net"
+        Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept"
+        Header always set Access-Control-Allow-Credentials "true"
+        Header always set Access-Control-Max-Age "86400"
         Header always set Status "204"
         Header always set Content-Length "0"
         Header always set Content-Type "text/plain charset=UTF-8"
@@ -60,13 +68,13 @@ ServerSignature Off
 Options -Indexes
 
 # Protection des fichiers sensibles
-<FilesMatch "^(config\.php|\.htaccess|\.env)$">
+<FilesMatch "^(config\.php|\.env)$">
     Order allow,deny
     Deny from all
 </FilesMatch>
 
 # Forcer le type de contenu JSON pour l'API
-<FilesMatch "api\.php$">
+<FilesMatch "^api-.*\.php$">
     ForceType application/json
     Header set Content-Type "application/json"
 </FilesMatch> 

@@ -189,9 +189,14 @@ async function handlePostRequest(endpoint, data, options = {}) {
 				`${appConfig.backendBaseUrl}/api-auth-login.php`,
 				{
 					method: "POST",
+					credentials: "include", // Important pour CORS avec cookies
 					headers: {
 						"Content-Type":
-							"application/json"
+							"application/json",
+						Accept: "application/json",
+						"X-Requested-With":
+							"XMLHttpRequest",
+						Origin: window.location.origin
 					},
 					body: JSON.stringify(data)
 				}
@@ -207,7 +212,7 @@ async function handlePostRequest(endpoint, data, options = {}) {
 
 		// Essayer avec GET auth/check-credentials, qui est connu pour fonctionner
 		try {
-			console.log("Essai avec GET auth/check-credentials...");
+			console.log("Essai avec GET api-auth-login.php...");
 			const params = new URLSearchParams({
 				email: data.email || "",
 				password: data.password || ""
@@ -219,8 +224,12 @@ async function handlePostRequest(endpoint, data, options = {}) {
 				}/api-auth-login.php?${params.toString()}`,
 				{
 					method: "GET",
+					credentials: "include", // Important pour CORS avec cookies
 					headers: {
-						Accept: "application/json"
+						Accept: "application/json",
+						"X-Requested-With":
+							"XMLHttpRequest",
+						Origin: window.location.origin
 					}
 				}
 			);

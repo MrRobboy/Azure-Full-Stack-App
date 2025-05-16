@@ -136,6 +136,19 @@ header('Content-Type: text/html; charset=utf-8');
 		</div>
 	</div>
 
+	<div class="test-group">
+		<h3>5. Test CORS</h3>
+		<div class="endpoint">
+			<p><strong>URL:</strong> <span id="corsTestUrl"></span></p>
+			<p><strong>Méthode:</strong> OPTIONS</p>
+			<button onclick="testCorsHeaders()">Tester CORS Headers</button>
+			<div id="corsHeadersResult" class="hidden">
+				<h4>Résultat:</h4>
+				<pre id="corsHeadersResponse"></pre>
+			</div>
+		</div>
+	</div>
+
 	<script>
 		// Configuration
 		let backendUrl = localStorage.getItem('backendUrl') || 'https://app-backend-esgi-app.azurewebsites.net';
@@ -152,6 +165,7 @@ header('Content-Type: text/html; charset=utf-8');
 		document.getElementById('authLoginUrl').textContent = `${backendUrl}/api-auth-login.php`;
 		document.getElementById('notesUrl').textContent = `${backendUrl}/api-notes.php`;
 		document.getElementById('apiRouterUrl').textContent = `${backendUrl}/api-router.php`;
+		document.getElementById('corsTestUrl').textContent = `${backendUrl}/api-cors.php`;
 
 		// Enregistrer la configuration
 		document.getElementById('saveConfig').addEventListener('click', function() {
@@ -168,6 +182,7 @@ header('Content-Type: text/html; charset=utf-8');
 			document.getElementById('authLoginUrl').textContent = `${backendUrl}/api-auth-login.php`;
 			document.getElementById('notesUrl').textContent = `${backendUrl}/api-notes.php`;
 			document.getElementById('apiRouterUrl').textContent = `${backendUrl}/api-router.php`;
+			document.getElementById('corsTestUrl').textContent = `${backendUrl}/api-cors.php`;
 
 			alert('Configuration enregistrée');
 		});
@@ -266,6 +281,48 @@ header('Content-Type: text/html; charset=utf-8');
 
 				responseEl.innerHTML = data;
 				responseEl.className = response.ok ? 'success' : 'error';
+			} catch (error) {
+				responseEl.innerHTML = `Erreur: ${error.message}`;
+				responseEl.className = 'error';
+			}
+		}
+
+		// Test des en-têtes CORS
+		async function testCorsHeaders() {
+			const resultDiv = document.getElementById('corsHeadersResult');
+			const responseEl = document.getElementById('corsHeadersResponse');
+			resultDiv.classList.remove('hidden');
+
+			try {
+				// Simuler une requête préflight OPTIONS pour tester CORS
+				const response = await fetch(`${backendUrl}/api-cors.php`, {
+					method: 'OPTIONS',
+					headers: {
+						'Access-Control-Request-Method': 'POST',
+						'Access-Control-Request-Headers': 'Content-Type, Authorization'
+					}
+				});
+
+				// Pour les requêtes OPTIONS réussies le contenu est normalement vide
+				// On extrait les en-têtes pour voir les valeurs CORS
+				const headers = {};
+				for (const [key, value] of response.headers.entries()) {
+					headers[key] = value;
+				}
+
+				const result = {
+					status: response.status,
+					statusText: response.statusText,
+					headers: headers
+				};
+
+				// Vérifier si les en-têtes CORS importants sont présents
+				const corsComplete = headers['access-control-allow-origin'] &&
+					headers['access-control-allow-methods'] &&
+					headers['access-control-allow-headers'];
+
+				responseEl.innerHTML = JSON.stringify(result, null, 2);
+				responseEl.className = response.ok && corsComplete ? 'success' : 'error';
 			} catch (error) {
 				responseEl.innerHTML = `Erreur: ${error.message}`;
 				responseEl.className = 'error';
