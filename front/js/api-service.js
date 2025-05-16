@@ -6,8 +6,8 @@
 // Singleton API Service
 const ApiService = (function () {
 	// Private properties
-	const _corsProxy = "azure-cors-proxy.php";
-	const _directLoginPath = "direct-login.php";
+	const _corsProxy = "unified-proxy.php";
+	const _directLoginPath = "unified-login.php";
 
 	// Detect environment
 	const _isAzure = window.location.hostname.includes("azurewebsites.net");
@@ -135,7 +135,7 @@ const ApiService = (function () {
 	}
 
 	/**
-	 * Login using direct-login.php for authentication
+	 * Login using unified-login.php for authentication
 	 * @param {string} email - User email
 	 * @param {string} password - User password
 	 * @returns {Promise} - Authentication result
