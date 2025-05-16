@@ -665,22 +665,66 @@ const possibleBackendUrls = [
 // Function to check if a backend URL is accessible
 async function checkBackendUrl(url) {
 	try {
-		const statusUrl = url + "/status.php";
+		console.log(`Testing backend URL: ${url}`);
+
+		// Try first with deployment-complete.php (our new diagnostic endpoint)
+		const deploymentResponse = await fetch(
+			`${url}/deployment-complete.php`,
+			{
+				method: "GET",
+				headers: { Accept: "application/json" },
+				mode: "cors"
+			}
+		);
+
+		// If the diagnostic endpoint is available, we've found our backend
+		if (deploymentResponse.ok) {
+			console.log(
+				`Found working backend with deployment verification at: ${url}`
+			);
+			return {
+				url: url,
+				status: deploymentResponse.status,
+				ok: true,
+				diagnostic: true
+			};
+		}
+
+		// Fall back to the status check
+		const statusUrl = url + "/test-api.php";
+		console.log(`Testing API endpoint: ${statusUrl}`);
+
 		const response = await fetch(statusUrl, {
 			method: "GET",
-			headers: {
-				Accept: "application/json"
-			},
-			mode: "no-cors" // Try with no-cors to see if the URL exists
+			headers: { Accept: "application/json" },
+			mode: "cors"
 		});
 
-		// No-cors always returns opaque response, so we just check if we got a response at all
+		if (response.ok) {
+			console.log(`Found working API endpoint: ${statusUrl}`);
+			return {
+				url: url,
+				status: response.status,
+				ok: true
+			};
+		}
+
+		// Last resort: try with no-cors to see if the URL exists
+		const noCorsResponse = await fetch(`${url}/azure-init.php`, {
+			method: "GET",
+			mode: "no-cors"
+		});
+
 		return {
 			url: url,
-			status: response.status,
-			ok: response.status === 0 || response.ok
+			status: noCorsResponse.status,
+			ok: noCorsResponse.status === 0 || noCorsResponse.ok
 		};
 	} catch (error) {
+		console.warn(
+			`Error checking backend URL ${url}:`,
+			error.message
+		);
 		return {
 			url: url,
 			status: 0,
@@ -831,7 +875,7 @@ async function tryFindWorkingBackend() {
 
 		// First try using the proxy to test status.php
 		const proxyResponse = await fetch(
-			`${appConfig.proxyUrl}?endpoint=status.php`,
+			`${appConfig.proxyUrl}?endpoint=deployment-complete.php`,
 			{
 				method: "GET",
 				credentials: "include",
