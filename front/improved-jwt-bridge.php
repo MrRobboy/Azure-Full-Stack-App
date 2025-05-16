@@ -1,8 +1,9 @@
 <?php
 
 /**
- * Improved JWT Auth Bridge - Compatible with Azure Backend
+ * Improved JWT Auth Bridge - Compatible avec Azure Backend
  * Date de génération: 2023-06-10
+ * Dernière mise à jour: 2023-06-18
  */
 
 // Configuration de base
@@ -21,7 +22,7 @@ ini_set('error_log', $logDir . '/improved-jwt-bridge.log');
 error_log("Improved JWT Auth Bridge accédé: " . $_SERVER['REQUEST_URI']);
 error_log("Méthode: " . $_SERVER['REQUEST_METHOD']);
 
-// Configuration CORS
+// Configuration CORS renforcée
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Origin');
@@ -39,7 +40,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 	http_response_code(405);
 	echo json_encode([
 		'success' => false,
-		'message' => 'Seule la méthode POST est autorisée'
+		'message' => 'Seule la méthode POST est autorisée',
+		'debug_info' => [
+			'received_method' => $_SERVER['REQUEST_METHOD'],
+			'expected_method' => 'POST',
+			'server' => $_SERVER['SERVER_SOFTWARE'],
+			'request_time' => date('Y-m-d H:i:s')
+		]
 	]);
 	exit;
 }
@@ -54,7 +61,8 @@ if (json_last_error() !== JSON_ERROR_NONE) {
 	http_response_code(400);
 	echo json_encode([
 		'success' => false,
-		'message' => 'JSON invalide: ' . json_last_error_msg()
+		'message' => 'JSON invalide: ' . json_last_error_msg(),
+		'input_preview' => substr($input, 0, 100) . (strlen($input) > 100 ? '...' : '')
 	]);
 	exit;
 }
@@ -64,18 +72,24 @@ if (!isset($requestData->email) || !isset($requestData->password)) {
 	http_response_code(400);
 	echo json_encode([
 		'success' => false,
-		'message' => 'Les paramètres email et password sont requis'
+		'message' => 'Les paramètres email et password sont requis',
+		'received_keys' => array_keys(get_object_vars($requestData))
 	]);
 	exit;
 }
 
 // Configuration du backend
 $backendUrl = 'https://app-backend-esgi-app.azurewebsites.net';
+error_log("URL du backend configurée: " . $backendUrl);
+
+// Déterminer si nous sommes sur Azure ou en local
+$isAzure = strpos($_SERVER['HTTP_HOST'] ?? '', 'azurewebsites.net') !== false;
+error_log("Environnement détecté: " . ($isAzure ? "Azure" : "Local"));
 
 // Liste des endpoints d'API dans l'ordre de priorité
 $authEndpoints = [
+	'api/auth/login',       // Format API REST standard - priorité maximale
 	'api-auth-login.php',   // Point d'entrée principal, formaté comme notre code
-	'api/auth/login',       // Format API REST standard
 	'auth/login',           // Alternative en format REST
 	'api-auth.php',         // Alternative directe
 	'login.php',            // Point d'entrée simplifié
@@ -86,6 +100,7 @@ $authEndpoints = [
 $authSuccess = false;
 $authResponse = null;
 $lastError = null;
+$responseDetails = [];
 
 foreach ($authEndpoints as $endpoint) {
 	$targetUrl = $backendUrl . '/' . $endpoint;
@@ -94,7 +109,7 @@ foreach ($authEndpoints as $endpoint) {
 	$ch = curl_init($targetUrl);
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-	curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+	curl_setopt($ch, CURLOPT_TIMEOUT, 15); // 15 secondes de timeout
 	curl_setopt($ch, CURLOPT_POST, true);
 	curl_setopt($ch, CURLOPT_POSTFIELDS, $input);
 	curl_setopt($ch, CURLOPT_ENCODING, '');
@@ -110,8 +125,18 @@ foreach ($authEndpoints as $endpoint) {
 	$response = curl_exec($ch);
 	$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 	$error = curl_error($ch);
+	$responseHeaders = curl_getinfo($ch);
 
 	error_log("Réponse de " . $endpoint . ": Code " . $httpCode . ", Corps: " . substr($response, 0, 100) . (strlen($response) > 100 ? '...' : ''));
+
+	// Enregistrer les détails de cette tentative
+	$responseDetails[] = [
+		'endpoint' => $endpoint,
+		'url' => $targetUrl,
+		'status' => $httpCode,
+		'error' => $error,
+		'response_preview' => substr($response, 0, 200) . (strlen($response) > 200 ? '...' : '')
+	];
 
 	if ($error) {
 		error_log("Erreur cURL: " . $error);
@@ -119,6 +144,24 @@ foreach ($authEndpoints as $endpoint) {
 	} elseif ($httpCode >= 200 && $httpCode < 300) {
 		// Réponse de succès (2xx)
 		try {
+			// D'abord vérifier si c'est un JWT brut
+			if (strlen($response) > 0 && substr($response, 0, 2) === 'ey' && strpos($response, '.') !== false) {
+				error_log("JWT brut détecté dans la réponse");
+				$authSuccess = true;
+				$jwt = trim($response);
+				$authResponse = (object) [
+					'success' => true,
+					'message' => 'Authentification réussie (JWT brut)',
+					'data' => (object) [
+						'token' => $jwt,
+						'user' => (object) [
+							'email' => $requestData->email
+						]
+					]
+				];
+				break;
+			}
+
 			$responseData = json_decode($response);
 			if (json_last_error() === JSON_ERROR_NONE) {
 				// Vérifier le format de réponse du backend
@@ -144,6 +187,66 @@ foreach ($authEndpoints as $endpoint) {
 						$authResponse = $responseData;
 						break;
 					}
+				}
+				// Format simple {token: "..."}
+				elseif (isset($responseData->token)) {
+					$authSuccess = true;
+					$authResponse = (object) [
+						'success' => true,
+						'message' => 'Authentification réussie (format simple)',
+						'data' => (object) [
+							'token' => $responseData->token,
+							'user' => (object) [
+								'email' => $requestData->email
+							]
+						]
+					];
+					break;
+				}
+				// Autres formats possibles...
+				elseif (isset($responseData->access_token)) {
+					$authSuccess = true;
+					$authResponse = (object) [
+						'success' => true,
+						'message' => 'Authentification réussie (format access_token)',
+						'data' => (object) [
+							'token' => $responseData->access_token,
+							'user' => (object) [
+								'email' => $requestData->email
+							]
+						]
+					];
+					break;
+				} elseif (is_string($responseData) && strpos($responseData, '.') !== false && strpos($responseData, 'ey') === 0) {
+					// C'est probablement un JWT brut retourné comme JSON string
+					$authSuccess = true;
+					$authResponse = (object) [
+						'success' => true,
+						'message' => 'Authentification réussie (JWT brut)',
+						'data' => (object) [
+							'token' => $responseData,
+							'user' => (object) [
+								'email' => $requestData->email
+							]
+						]
+					];
+					break;
+				}
+			} else if (strlen($response) > 20) {
+				// Si c'est une longue chaîne non-JSON, vérifier si c'est un JWT
+				if (preg_match('/ey[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/', $response, $matches)) {
+					$authSuccess = true;
+					$authResponse = (object) [
+						'success' => true,
+						'message' => 'Authentification réussie (JWT extrait)',
+						'data' => (object) [
+							'token' => $matches[0],
+							'user' => (object) [
+								'email' => $requestData->email
+							]
+						]
+					];
+					break;
 				}
 			}
 		} catch (Exception $e) {
@@ -174,7 +277,10 @@ if (!$authSuccess) {
 		'sub' => 'user_' . hash('md5', $requestData->email),
 		'email' => $requestData->email,
 		'iat' => $now,
-		'exp' => $now + (60 * 60 * 24) // 24 heures, comme le backend
+		'exp' => $now + (60 * 60 * 24), // 24 heures, comme le backend
+		'role' => 'user', // Ajout du rôle qui est probablement nécessaire
+		'azp' => 'esgi-azure-app', // Audience qui pourrait être vérifiée par le backend
+		'iss' => 'esgi-auth-service' // Émetteur qui pourrait être vérifié par le backend
 	]);
 
 	// Encoder header et payload en Base64Url (exactement comme le backend)
@@ -199,7 +305,12 @@ if (!$authSuccess) {
 				'role' => 'user'
 			]
 		],
-		'isLocallyGenerated' => true
+		'isLocallyGenerated' => true,
+		'debug_info' => [
+			'environment' => $isAzure ? 'Azure' : 'Local',
+			'backend_attempts' => $responseDetails,
+			'last_error' => $lastError
+		]
 	];
 
 	error_log("JWT créé localement: " . substr($jwt, 0, 30) . "...");

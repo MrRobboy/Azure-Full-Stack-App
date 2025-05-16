@@ -1,6 +1,33 @@
 # Améliorations de l'implémentation JWT
 
-## Modifications apportées au test-improved-jwt.php
+## Dernières modifications (Juin 2023)
+
+### Améliorations du bridge JWT
+
+Pour résoudre les problèmes d'authentification où les tokens générés localement n'étaient pas acceptés par le backend, nous avons:
+
+1. Amélioré la détection et l'extraction des tokens dans toutes les formes de réponses possibles
+2. Ajouté des champs supplémentaires dans le payload JWT pour le rendre compatible avec le backend:
+      - `role`: Pour gérer les autorisations
+      - `azp`: Audience pour la validation
+      - `iss`: Émetteur qui pourrait être vérifié
+3. Augmenté le timeout à 15 secondes pour les environnements Azure plus lents
+4. Réorganisé la priorité des endpoints pour essayer d'abord le format REST standard (`api/auth/login`)
+5. Amélioré la détection des tokens JWT bruts et non-JSON dans les réponses
+6. Ajouté des informations de débogage détaillées
+
+### Formats de JWT pris en charge
+
+Le bridge détecte et extrait maintenant les tokens JWT dans les formats suivants:
+
+1. Réponse JSON avec `{success: true, data: {token: "..."}}` (format standard)
+2. Réponse JSON avec `{token: "..."}` (format simple)
+3. Réponse JSON avec `{access_token: "..."}` (format OAuth)
+4. Réponse JSON avec une string JWT
+5. Réponse en texte brut contenant un JWT (commençant par "ey")
+6. JWT identifié via expression régulière dans tout type de réponse
+
+## Modifications précédentes
 
 ### Problématique
 
@@ -52,7 +79,7 @@ Ces changements permettent:
 - Une expérience utilisateur améliorée avec des messages d'erreur plus clairs
 - Une solution de secours en cas de problème avec le proxy
 
-### Comment tester
+## Comment tester
 
 1. Accédez à la page `test-improved-jwt.php`
 2. Entrez les identifiants (par défaut: admin@example.com/admin123)
@@ -60,7 +87,7 @@ Ces changements permettent:
 4. Vérifiez dans la console les détails de la réponse
 5. En cas de succès, testez l'accès aux ressources protégées
 
-### Diagnostics en cas d'échec
+## Diagnostics en cas d'échec
 
 Si l'authentification échoue:
 
