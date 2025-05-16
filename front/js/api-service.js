@@ -158,10 +158,15 @@ const ApiService = (function () {
 					endpoint
 				);
 
-				// If direct proxy fails, use fallback data
-				if (!result.success) {
+				// If direct proxy fails or returns an error, use fallback data
+				if (
+					!result.success ||
+					result.message?.includes(
+						"non pris en charge"
+					)
+				) {
 					console.warn(
-						"Direct proxy failed, using fallback data"
+						"Direct proxy failed or unsupported endpoint, using fallback data"
 					);
 					return getFallbackData(endpoint);
 				}

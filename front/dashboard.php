@@ -292,112 +292,95 @@ ob_start();
     }
 
     // Function to fetch count for a specific entity
-    async function fetchCountFor(apiServiceMethod, endpoint, element, fallbackValue = '0') {
+    async function fetchCountFor(apiServiceMethod, elementId, fallbackValue = 0) {
         try {
-            let result;
-            if (apiServiceMethod) {
-                // Split the method name to get the object and method
-                const [objectName, methodName] = apiServiceMethod.split('.');
-                if (ApiService[objectName] && typeof ApiService[objectName][methodName] === 'function') {
-                    result = await ApiService[objectName][methodName]();
-                } else {
-                    throw new Error(`API method ${apiServiceMethod} not found`);
-                }
-            } else {
-                // Special handling for admin/users endpoint
-                if (endpoint === 'api/admin/users') {
-                    result = await ApiService.request('api/admin/users', 'GET');
-                } else {
-                    const response = await fetch(getApiEndpoint(endpoint));
-                    result = await response.json();
-                }
+            const element = document.getElementById(elementId);
+            if (!element) {
+                console.warn(`Element ${elementId} not found`);
+                return;
             }
 
+            // Show loading state
+            element.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            // Split the method name to get the service and method
+            const [service, method] = apiServiceMethod.split('.');
+            if (!ApiService[service] || typeof ApiService[service][method] !== 'function') {
+                throw new Error(`Invalid API service method: ${apiServiceMethod}`);
+            }
+
+            const result = await ApiService[service][method]();
+            console.log(`${apiServiceMethod} result:`, result);
+
             if (result.success && result.data) {
-                const count = Array.isArray(result.data) ? result.data.length : result.data;
-                if (element) {
-                    element.textContent = count.toString();
-                    if (result.isFallback) {
-                        element.classList.add('text-muted');
-                        element.title = 'Données de secours (API non disponible)';
-                        NotificationSystem.warning('Utilisation des données de secours pour certains compteurs');
-                    }
+                // Check if we're using fallback data
+                if (result.isFallback) {
+                    element.textContent = Array.isArray(result.data) ? result.data.length : fallbackValue;
+                    element.classList.add('text-warning');
+                    element.title = 'Données de secours (API non disponible)';
+                    NotificationSystem.warning(`Données de secours utilisées pour ${elementId}`);
+                } else {
+                    element.textContent = Array.isArray(result.data) ? result.data.length : fallbackValue;
+                    element.classList.remove('text-warning');
+                    element.title = '';
                 }
             } else {
-                throw new Error('Invalid response format');
+                throw new Error(result.message || 'Erreur lors du chargement des données');
             }
         } catch (error) {
-            console.error(`Error fetching count for ${apiServiceMethod || endpoint}:`, error);
+            console.error(`Error fetching count for ${apiServiceMethod}:`, error);
+            const element = document.getElementById(elementId);
             if (element) {
                 element.textContent = fallbackValue;
-                element.classList.add('text-muted');
-                element.title = 'Valeur par défaut (données non disponibles)';
+                element.classList.add('text-warning');
+                element.title = 'Données de secours (Erreur API)';
             }
+            NotificationSystem.error(`Erreur lors du chargement de ${elementId}`);
         }
     }
 
     // Function to load all dashboard data
     async function loadDashboardData() {
         try {
-            // Get user profile
+            // Get user profile data
             const userResult = await ApiService.getCurrentUser();
             console.log('User profile API result:', userResult);
 
-            let userData;
+            if (userResult.success && userResult.data) {
+                // Check if we're using fallback data
+                if (userResult.isFallback) {
+                    console.log('Using fallback user data');
+                    NotificationSystem.warning('Données utilisateur de secours utilisées');
+                }
 
-            // If API call fails, use session data from PHP
-            if (!userResult.success) {
-                console.error('User profile API error:', userResult);
-                NotificationSystem.warning('Utilisation des données de session locales (API non disponible)');
-
-                // Create a user object from PHP session data
-                userData = {
-                    user: <?php echo json_encode($user); ?>
-                };
-                console.log('Using PHP session data as fallback:', userData);
-            } else {
-                userData = userResult.data;
+                const userData = userResult.data.user || userResult.data;
                 console.log('API user data:', userData);
-            }
 
-            // Update user information on the page
-            if (userData && userData.user) {
+                if (!userData || typeof userData !== 'object') {
+                    throw new Error('Invalid user data format');
+                }
+
+                // Update UI with user data
+                console.log('Updating UI with user data:', userData);
                 updateUserInfo(userData);
 
                 // Load additional data based on user role
-                if (userData.user.role === 'ELEVE' && userData.user.id) {
-                    await loadStudentNotes(userData.user.id);
-                }
-                // Load teacher data if we have a teacher ID
-                else if (userData.user.role === 'PROF' && userData.user.id) {
-                    await loadTeacherData(userData.user.id);
-                }
-                // Load admin data
-                else if (userData.user.role === 'ADMIN') {
-                    await loadAdminDashboard();
+                if (userData.role === 'ADMIN') {
+                    await loadCounters();
+                } else if (userData.role === 'PROF') {
+                    await loadTeacherData(userData.id);
+                } else if (userData.role === 'ELEVE') {
+                    await loadStudentData(userData.id);
                 }
             } else {
-                console.error('Invalid user data format:', userData);
-                NotificationSystem.error('Données utilisateur invalides');
-
-                // Use session data as fallback
-                userData = {
-                    user: <?php echo json_encode($user); ?>
-                };
-                updateUserInfo(userData);
+                throw new Error(userResult.message || 'Failed to load user data');
             }
-
-            // Hide loading indicator
-            const loadingIndicator = document.getElementById('loading-indicator');
-            if (loadingIndicator) loadingIndicator.style.display = 'none';
-
         } catch (error) {
             console.error('Error loading dashboard data:', error);
-            NotificationSystem.error('Erreur de chargement des données');
-
+            NotificationSystem.error('Erreur lors du chargement des données');
+        } finally {
             // Hide loading indicator
-            const loadingIndicator = document.getElementById('loading-indicator');
-            if (loadingIndicator) loadingIndicator.style.display = 'none';
+            document.getElementById('loading-indicator').style.display = 'none';
         }
     }
 
