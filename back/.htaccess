@@ -1,5 +1,94 @@
-# Activer le moteur de réécriture
+# Configuration CORS et gestion des requêtes pour Azure
+# Version optimisée pour résoudre les problèmes de requêtes POST
+
+# Active le module de réécriture
 RewriteEngine On
+
+# Autoriser tous les verbes HTTP
+<Limit GET POST PUT DELETE OPTIONS>
+    Require all granted
+</Limit>
+
+# Ajouter les en-têtes CORS à toutes les réponses
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept"
+    Header always set Access-Control-Max-Age "86400"
+    
+    # Supprime l'en-tête ETag pour éviter les problèmes de cache avec les requêtes CORS
+    Header unset ETag
+    Header unset Pragma
+    FileETag None
+    
+    # Force la réponse spécifique à toutes les requêtes OPTIONS
+    <If "%{REQUEST_METHOD} == 'OPTIONS'">
+        Header always set Access-Control-Allow-Origin "*"
+        Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Accept"
+        Header always set Access-Control-Max-Age "86400"
+        Header always set Content-Length "0"
+        Header always set Content-Type "text/plain charset=UTF-8"
+        RewriteRule ^(.*)$ $1 [R=200,L]
+    </If>
+</IfModule>
+
+# Traitement spécial des requêtes OPTIONS
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]
+
+# Répondre avec succès aux requêtes POST même en l'absence de fichier (contournement Azure)
+# Cette règle est cruciale pour les problèmes 404 sur POST
+RewriteCond %{REQUEST_METHOD} POST
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^(.*)$ index.php [L,QSA]
+
+# Rediriger toutes les requêtes vers index.php si le fichier n'existe pas
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [L,QSA]
+
+# Forcer l'UTF-8 pour tous les types de contenu
+AddDefaultCharset UTF-8
+
+# Définir correctement le type MIME
+AddType application/json .json
+AddType application/javascript .js
+AddType text/css .css
+
+# Désactiver la signature du serveur
+ServerSignature Off
+
+# PHP Configuration spécifique pour Azure
+<IfModule mod_php7.c>
+    php_flag display_errors Off
+    php_value max_execution_time 300
+    php_value memory_limit 256M
+    php_value post_max_size 20M
+    php_value upload_max_filesize 20M
+    php_flag zlib.output_compression On
+</IfModule>
+
+# Activer la compression pour améliorer les performances
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json application/xml
+</IfModule>
+
+# Interdire l'accès aux fichiers sensibles
+<FilesMatch "(\.env|\.git|\.htaccess|composer\.json|composer\.lock|package\.json|package-lock\.json)$">
+    Require all denied
+</FilesMatch>
+
+# Ajouter des règles Azure spécifiques pour la mise en cache
+<IfModule mod_headers.c>
+    <FilesMatch "\.(ico|pdf|flv|jpg|jpeg|png|gif|js|css|swf)$">
+        Header set Cache-Control "max-age=86400, public"
+    </FilesMatch>
+</IfModule>
+
+# Ajout d'une redirection des requêtes index.php vers /
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /index\.php\ HTTP/
+RewriteRule ^index\.php$ / [R=301,L]
 
 # Définir la base des URL
 RewriteBase /

@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<configuration xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform">
+  <system.webServer>
+    <rewrite>
+      <rules>
+        <!-- Ajout de règles pour les requêtes OPTIONS -->
+        <rule name="OptionsRule" stopProcessing="true" xdt:Transform="InsertIfMissing">
+          <match url=".*" />
+          <conditions>
+            <add input="{REQUEST_METHOD}" pattern="^OPTIONS$" />
+          </conditions>
+          <action type="CustomResponse" statusCode="204" statusReason="No Content"
+            statusDescription="No Content" appendQueryString="false" />
+          <serverVariables>
+            <set name="RESPONSE_Access-Control-Allow-Origin" value="*" />
+            <set name="RESPONSE_Access-Control-Allow-Methods" value="GET, POST, PUT, DELETE, OPTIONS" />
+            <set name="RESPONSE_Access-Control-Allow-Headers" value="Content-Type, Authorization, X-Requested-With" />
+            <set name="RESPONSE_Access-Control-Max-Age" value="86400" />
+          </serverVariables>
+        </rule>
+      </rules>
+    </rewrite>
+    
+    <!-- Configuration CORS globale -->
+    <httpProtocol>
+      <customHeaders>
+        <add name="Access-Control-Allow-Origin" value="*" xdt:Transform="InsertIfMissing" />
+        <add name="Access-Control-Allow-Methods" value="GET, POST, PUT, DELETE, OPTIONS" xdt:Transform="InsertIfMissing" />
+        <add name="Access-Control-Allow-Headers" value="Content-Type, Authorization, X-Requested-With" xdt:Transform="InsertIfMissing" />
+        <add name="Access-Control-Max-Age" value="86400" xdt:Transform="InsertIfMissing" />
+      </customHeaders>
+    </httpProtocol>
+    
+    <!-- Support explicite pour les méthodes HTTP -->
+    <handlers>
+      <remove name="PHP_via_FastCGI" xdt:Transform="InsertIfMissing" />
+      <add name="PHP_via_FastCGI" path="*.php" verb="GET,POST,HEAD,OPTIONS" 
+           modules="FastCgiModule" 
+           scriptProcessor="%HOME%\site\wwwroot\bin\php\php-cgi.exe" 
+           resourceType="Either" 
+           xdt:Transform="InsertIfMissing" />
+    </handlers>
+  </system.webServer>
+</configuration> 
