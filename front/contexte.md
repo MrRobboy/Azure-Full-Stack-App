@@ -844,11 +844,13 @@ FormData {
       - Le fichier est présent mais non accessible
       - Problème de configuration IIS résolu
       - Problème de déploiement en cours de résolution
+      - Erreurs 404 sur tous les endpoints testés
 
 2. **Communication Backend**:
       - Les requêtes n'atteignent pas le backend
       - Erreurs de format de réponse (HTML au lieu de JSON)
       - Configuration CORS en cours d'amélioration
+      - Headers de sécurité manquants
 
 ### ⚠️ Points d'Attention
 
@@ -856,14 +858,27 @@ FormData {
 
       - Règles de réécriture complexes
       - Gestion des fichiers PHP
-      - Headers CORS
+      - Headers CORS manquants
       - Permissions des fichiers proxy
 
 2. **Sécurité**:
+
       - Validation des entrées
       - Gestion des sessions
       - Protection CORS
-      - Headers de sécurité
+      - Headers de sécurité manquants :
+           - X-Content-Type-Options
+           - X-Frame-Options
+           - X-XSS-Protection
+           - Strict-Transport-Security
+           - Content-Security-Policy
+
+3. **Headers CORS**:
+      - Access-Control-Allow-Origin manquant
+      - Access-Control-Allow-Methods manquant
+      - Access-Control-Allow-Headers manquant
+      - Access-Control-Max-Age manquant
+      - Access-Control-Allow-Credentials manquant
 
 ## Prochaines Étapes Suggérées
 
@@ -873,6 +888,7 @@ FormData {
       - Simplifier la configuration IIS
       - Tester l'accès direct aux fichiers proxy
       - Mettre à jour les permissions dans `.htaccess`
+      - Corriger les erreurs 404
 
 2. **Améliorations**:
 
@@ -880,19 +896,22 @@ FormData {
       - Améliorer la documentation
       - Ajouter des tests automatisés
       - Mettre à jour les configurations CORS
+      - Ajouter les headers de sécurité manquants
 
 3. **Sécurité**:
 
       - Renforcer la validation des entrées
       - Améliorer la gestion des sessions
       - Configurer correctement CORS
-      - Ajouter des headers de sécurité
+      - Ajouter les headers de sécurité manquants
+      - Mettre en place la validation des entrées
 
 4. **Documentation**:
       - Mettre à jour le guide d'installation
       - Documenter les configurations CORS
       - Ajouter des exemples de déploiement
       - Créer un guide de dépannage
+      - Documenter les headers de sécurité requis
 
 ## Fichiers Clés et Leurs Rôles
 

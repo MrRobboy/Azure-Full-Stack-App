@@ -332,6 +332,42 @@
 - Documentation des headers CORS et de sécurité
 - Ajout d'une section de dépannage
 
+## [4.8.0] - 2024-05-16
+
+### Fixed
+
+- Correction des erreurs 404 sur les endpoints du proxy
+- Ajout des headers CORS manquants
+- Ajout des headers de sécurité manquants
+- Correction de la configuration du proxy
+
+### Security
+
+- Ajout des headers de sécurité manquants :
+     - X-Content-Type-Options
+     - X-Frame-Options
+     - X-XSS-Protection
+     - Strict-Transport-Security
+     - Content-Security-Policy
+- Configuration CORS complète :
+     - Access-Control-Allow-Origin
+     - Access-Control-Allow-Methods
+     - Access-Control-Allow-Headers
+     - Access-Control-Max-Age
+     - Access-Control-Allow-Credentials
+
+### Changed
+
+- Amélioration de la gestion des erreurs 404
+- Mise à jour de la configuration du proxy
+- Amélioration des tests de validation des entrées
+
+### Documentation
+
+- Mise à jour de la documentation des problèmes connus
+- Ajout de la section de dépannage dans TESTING.md
+- Documentation des headers de sécurité requis
+
 ## Prochaines Étapes
 
 1. Documentation

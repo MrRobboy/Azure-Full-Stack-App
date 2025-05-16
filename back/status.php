@@ -5,22 +5,7 @@
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     // Envoyer les en-têtes CORS pour les requêtes preflight
     header('Content-Type: application/json');
-
-    // Récupérer l'origine de la requête
-    $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '*';
-    $allowed_origins = [
-        'https://app-frontend-esgi-app.azurewebsites.net',
-        'http://localhost',
-        'http://127.0.0.1'
-    ];
-
-    // Vérifier si l'origine est autorisée
-    if (in_array($origin, $allowed_origins) || strpos($origin, 'localhost') !== false || strpos($origin, '127.0.0.1') !== false) {
-        header("Access-Control-Allow-Origin: $origin");
-    } else {
-        header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
-    }
-
+    header('Access-Control-Allow-Origin: *');
     header('Access-Control-Allow-Credentials: true');
     header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
@@ -31,21 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 // Pour les requêtes normales
 header('Content-Type: application/json');
-
-// Même logique pour l'origine que pour les requêtes OPTIONS
-$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '*';
-$allowed_origins = [
-    'https://app-frontend-esgi-app.azurewebsites.net',
-    'http://localhost',
-    'http://127.0.0.1'
-];
-
-if (in_array($origin, $allowed_origins) || strpos($origin, 'localhost') !== false || strpos($origin, '127.0.0.1') !== false) {
-    header("Access-Control-Allow-Origin: $origin");
-} else {
-    header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
-}
-
+header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
@@ -68,7 +39,7 @@ $status = [
     'request' => [
         'method' => $_SERVER['REQUEST_METHOD'],
         'uri' => $_SERVER['REQUEST_URI'],
-        'origin' => $origin,
+        'origin' => $_SERVER['HTTP_ORIGIN'] ?? '*',
         'headers' => $headers,
         'cookies' => $request_cookies
     ],
@@ -78,9 +49,9 @@ $status = [
         'cookie_params' => session_get_cookie_params()
     ],
     'cors' => [
-        'allowed_origins' => $allowed_origins,
-        'current_origin' => $origin,
-        'is_allowed' => in_array($origin, $allowed_origins) || strpos($origin, 'localhost') !== false || strpos($origin, '127.0.0.1') !== false
+        'allowed_origins' => ['*'],
+        'current_origin' => $_SERVER['HTTP_ORIGIN'] ?? '*',
+        'is_allowed' => true
     ],
     'database' => [
         'type' => defined('DB_TYPE') ? DB_TYPE : 'sqlsrv',

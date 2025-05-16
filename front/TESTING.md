@@ -1,194 +1,201 @@
-# Guide de Test du Proxy
-
-## Fichier de Test Unifié
-
-Le fichier `proxy-test.php` est un outil de test unifié qui permet de vérifier tous les aspects du proxy API. Il effectue des tests complets sur la connexion, la sécurité, les performances et la validation des entrées.
+# Guide de Test de l'Application
 
 ## Configuration Requise
 
-### Permissions des Fichiers
+### Permissions des Fichiers Proxy
 
-Les fichiers proxy suivants doivent être accessibles :
+Les fichiers suivants doivent être accessibles et exécutables :
 
 - `api-bridge.php`
 - `simple-proxy.php`
 - `proxy-health.php`
 
-Ces fichiers sont configurés dans `.htaccess` pour permettre l'accès depuis n'importe quelle origine.
+### Headers CORS Configurés
 
-### Headers CORS
+Les headers CORS suivants sont configurés pour permettre les requêtes depuis n'importe quelle origine :
 
-Les headers CORS suivants sont configurés :
+```http
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With
+Access-Control-Expose-Headers: X-Rate-Limit-Remaining, X-Rate-Limit-Reset
+Access-Control-Max-Age: 86400
+```
 
-- `Access-Control-Allow-Origin: *`
-- `Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE`
-- `Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With`
+### Headers de Sécurité
 
-## Types de Tests
+Les headers de sécurité suivants sont configurés :
 
-### 1. Tests de Connexion
+```http
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+X-XSS-Protection: 1; mode=block
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';
+```
 
-Vérifie la connectivité avec tous les endpoints configurés :
+## Tests de Connexion
 
-- `status.php`
-- `auth/login`
-- `matieres`
-- `notes`
-
-Chaque test vérifie :
-
-- Le code HTTP de la réponse
-- La présence d'erreurs de connexion
-- Les logs détaillés de la requête
-
-### 2. Tests CORS
-
-Vérifie la présence et la configuration des headers CORS :
-
-- `Access-Control-Allow-Origin`
-- `Access-Control-Allow-Methods`
-- `Access-Control-Allow-Headers`
-- `Access-Control-Max-Age`
-- `Access-Control-Allow-Credentials`
-
-### 3. Tests de Sécurité
-
-Vérifie la présence des headers de sécurité :
-
-- `X-Content-Type-Options`
-- `X-Frame-Options`
-- `X-XSS-Protection`
-- `Strict-Transport-Security`
-- `Content-Security-Policy`
-
-### 4. Tests de Performance
-
-Mesure le temps de réponse des requêtes :
-
-- Seuil de performance : 1000ms
-- Mesure précise en millisecondes
-- Timeout configuré à 30 secondes
-
-### 5. Tests de Rate Limit
-
-Simule des requêtes multiples pour vérifier la limitation de taux :
-
-- 10 requêtes consécutives
-- Intervalle de 100ms entre les requêtes
-- Vérification des réponses 429
-
-### 6. Tests de Validation des Entrées
-
-Vérifie la validation des données :
-
-- Test avec entrée valide
-- Test avec entrée invalide (dépassement de limite)
-- Vérification des codes HTTP appropriés
-
-## Utilisation
-
-### Exécution des Tests
-
-Pour exécuter tous les tests :
+### Test du Proxy
 
 ```bash
-curl https://app-frontend-esgi-app.azurewebsites.net/proxy-test.php
+curl -X GET "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endpoint=status.php"
 ```
 
-### Format de la Réponse
+### Test des Endpoints
 
-La réponse est au format JSON et contient :
+```bash
+# Test de l'endpoint status
+curl -X GET "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endpoint=status.php"
 
-- Statut de chaque test (✅ ou ❌)
-- Messages descriptifs
-- Détails techniques
-- Logs de débogage
+# Test de l'authentification
+curl -X POST "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endpoint=auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"test","password":"test"}'
 
-### Exemple de Réponse
+# Test des matières
+curl -X GET "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endpoint=matieres" \
+  -H "Authorization: Bearer YOUR_TOKEN"
 
-```json
-{
-	"connection_test_status": {
-		"success": true,
-		"status": "✅",
-		"message": "Connection successful",
-		"details": {
-			"http_code": 200,
-			"response": "...",
-			"error": "",
-			"verbose_log": "..."
-		}
-	},
-	// ... autres tests ...
-	"info": {
-		"timestamp": "2024-05-16 16:40:38",
-		"server": "nginx/1.26.2",
-		"php_version": "8.2.27",
-		"request_method": "GET",
-		"request_uri": "/proxy-test.php",
-		"query_string": ""
-	}
-}
+# Test des notes
+curl -X GET "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endpoint=notes" \
+  -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
-## Configuration
+## Tests CORS
 
-Le fichier de test utilise une configuration centralisée dans la variable `$testConfig` :
+### Test des Headers CORS
 
-```php
-$testConfig = [
-    'base_url' => 'https://app-frontend-esgi-app.azurewebsites.net',
-    'endpoints' => [
-        'status' => 'status.php',
-        'auth' => 'auth/login',
-        'matieres' => 'matieres',
-        'notes' => 'notes'
-    ],
-    'security_headers' => [...],
-    'cors_headers' => [...]
-];
+```bash
+curl -X OPTIONS "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php" \
+  -H "Origin: http://localhost:8080" \
+  -H "Access-Control-Request-Method: GET" \
+  -H "Access-Control-Request-Headers: Content-Type, Authorization" \
+  -v
+```
+
+## Tests de Sécurité
+
+### Test des Headers de Sécurité
+
+```bash
+curl -X GET "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endpoint=status.php" \
+  -v
+```
+
+### Test de la Limite de Taux
+
+```bash
+# Test de la limite de 100 requêtes par heure
+for i in {1..101}; do
+  curl -X GET "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endpoint=status.php"
+done
+```
+
+## Tests de Performance
+
+### Test de Temps de Réponse
+
+```bash
+time curl -X GET "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endpoint=status.php"
 ```
 
 ## Dépannage
 
 ### Erreurs Courantes
 
-1. **Could not resolve host**
+#### 404 sur les Endpoints
 
-      - Vérifier l'URL de base dans la configuration
-      - Vérifier la connectivité réseau
+**Symptômes** :
 
-2. **Headers CORS manquants**
+- Erreur 404 lors de l'accès aux endpoints
+- Message "File not found"
 
-      - Vérifier la configuration CORS dans le proxy
-      - Vérifier les headers dans la réponse
+**Solutions** :
 
-3. **Erreurs de timeout**
-      - Augmenter le timeout dans la configuration
-      - Vérifier la performance du serveur
+1. Vérifier que les fichiers proxy sont bien déployés
+2. Vérifier la configuration IIS
+3. Vérifier les permissions des fichiers
+4. Vérifier les logs d'erreur
 
-### Logs de Débogage
+#### Headers CORS Manquants
 
-Les logs verbeux sont disponibles dans la réponse pour chaque test :
+**Symptômes** :
 
-- Détails de la requête cURL
-- Headers de la réponse
-- Erreurs éventuelles
+- Erreurs CORS dans la console du navigateur
+- Requêtes bloquées par le navigateur
 
-## Maintenance
+**Headers Manquants** :
 
-### Ajout de Nouveaux Tests
+- Access-Control-Allow-Origin
+- Access-Control-Allow-Methods
+- Access-Control-Allow-Headers
+- Access-Control-Expose-Headers
+- Access-Control-Max-Age
 
-Pour ajouter un nouveau test :
+**Solutions** :
 
-1. Créer une nouvelle fonction de test
-2. Ajouter l'appel dans la fonction `runTests`
-3. Mettre à jour la documentation
+1. Vérifier la configuration CORS dans `config/proxy.php`
+2. Vérifier que les headers sont bien envoyés
+3. Vérifier les logs du proxy
 
-### Modification de la Configuration
+#### Headers de Sécurité Manquants
 
-Pour modifier la configuration :
+**Symptômes** :
 
-1. Mettre à jour la variable `$testConfig`
-2. Ajuster les seuils et timeouts selon les besoins
-3. Mettre à jour la documentation
+- Avertissements de sécurité dans la console
+- Headers de sécurité manquants dans la réponse
+
+**Headers Manquants** :
+
+- X-Content-Type-Options
+- X-Frame-Options
+- X-XSS-Protection
+- Strict-Transport-Security
+- Content-Security-Policy
+
+**Solutions** :
+
+1. Vérifier la configuration des headers dans `config/proxy.php`
+2. Vérifier que les headers sont bien envoyés
+3. Vérifier les logs du proxy
+
+#### Erreurs de Validation des Entrées
+
+**Symptômes** :
+
+- Erreurs 400 Bad Request
+- Messages d'erreur de validation
+
+**Solutions** :
+
+1. Vérifier la longueur des entrées
+2. Vérifier le format des données
+3. Vérifier les logs de validation
+
+### Logs de Debug
+
+Les logs détaillés sont disponibles pour chaque test en ajoutant le paramètre `debug=true` :
+
+```bash
+curl -X GET "https://app-frontend-esgi-app.azurewebsites.net/api-bridge.php?endpoint=status.php&debug=true"
+```
+
+### Vérification de la Configuration
+
+1. Vérifier la configuration IIS :
+
+      - Règles de réécriture
+      - Gestion des fichiers PHP
+      - Configuration CORS
+
+2. Vérifier la configuration du proxy :
+
+      - Fichiers de configuration
+      - Permissions
+      - Logs
+
+3. Vérifier la configuration des tests :
+      - URLs correctes
+      - Headers appropriés
+      - Données de test valides

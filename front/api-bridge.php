@@ -84,6 +84,8 @@ curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, SSL_VERIFY_HOST);
 curl_setopt($ch, CURLOPT_TIMEOUT, CURL_TIMEOUT);
 curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, CURL_CONNECT_TIMEOUT);
 curl_setopt($ch, CURLOPT_VERBOSE, true);
+curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Suivre les redirections
+curl_setopt($ch, CURLOPT_MAXREDIRS, 5); // Maximum de redirections
 
 // Configuration des headers
 $headers = DEFAULT_HEADERS;
