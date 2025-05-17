@@ -493,3 +493,14 @@
      - Détection et nettoyage automatique des références bloquantes
      - Connexion directe à la base de données pour les opérations critiques
      - Suppression forcée avec confirmation de sécurité
+
+## [4.19.0] - 2024-05-17
+
+### Changed
+
+- Amélioration de l'outil de diagnostic des classes (direct-class-delete.php)
+     - Remplacement des identifiants codés en dur par un formulaire de connexion
+     - Utilisation des sessions PHP pour stocker temporairement les identifiants
+     - Ajout d'une fonctionnalité de déconnexion pour sécuriser l'accès
+     - Interface utilisateur améliorée avec des styles CSS plus élaborés
+     - Gestion plus sécurisée des connexions à la base de données
