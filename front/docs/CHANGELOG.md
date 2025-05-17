@@ -1,13 +1,4 @@
-# Changelog
-
-## [4.13.0] - 2024-05-17
-
-### Fixed
-
-- Correction du problème de suppression des classes
-     - Ajout d'une vérification explicite dans le contrôleur pour détecter si une classe contient des élèves
-     - Amélioration des messages d'erreur lors de la tentative de suppression d'une classe avec élèves
-     - Simplification du modèle Classe.php en déplaçant la logique de vérification dans le contrôleur
+# Changelog## [4.14.0] - 2024-05-17### Fixed- Correction du problème persistant de suppression des classes - Modification des fonctions deleteClasse et updateClasse pour envoyer les identifiants dans l'URL plutôt que dans le corps de la requête - Alignement avec le comportement attendu par le backend qui attend les IDs dans le chemin de l'URL - Harmonisation du format de requête avec les standards REST## [4.13.0] - 2024-05-17### Fixed- Correction du problème de suppression des classes - Ajout d'une vérification explicite dans le contrôleur pour détecter si une classe contient des élèves - Amélioration des messages d'erreur lors de la tentative de suppression d'une classe avec élèves - Simplification du modèle Classe.php en déplaçant la logique de vérification dans le contrôleur
 
 ## [4.12.0] - 2024-05-17
 
