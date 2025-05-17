@@ -197,7 +197,13 @@ switch ($_SERVER['REQUEST_METHOD']) {
 
 	case 'DELETE':
 		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
-		logMessage('DELETE request transmise');
+		$inputData = file_get_contents('php://input');
+		if (!empty($inputData)) {
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $inputData);
+			logMessage('DELETE data transmise', json_decode($inputData, true));
+		} else {
+			logMessage('DELETE request transmise sans données');
+		}
 		break;
 
 	default:

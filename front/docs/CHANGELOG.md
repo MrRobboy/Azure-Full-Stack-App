@@ -8,6 +8,7 @@
      - Mise à jour de la fonction `deleteMatiere` dans `gestion_matieres.php` pour envoyer l'ID dans le corps de la requête
      - Mise à jour de la fonction `handleMatiereSubmit` pour envoyer l'ID dans le corps de la requête lors des opérations PUT
      - Modification de `ApiService.js` pour inclure les données dans le corps des requêtes DELETE (ajout de "DELETE" à la liste des méthodes supportant un body)
+     - Correction de `unified-proxy.php` pour transmettre le corps des requêtes DELETE au backend (ajout du traitement de php://input pour les requêtes DELETE)
 
 ### Changed
 
