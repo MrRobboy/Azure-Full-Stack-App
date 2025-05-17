@@ -7,18 +7,8 @@ if (!isset($_SESSION['user']) || !isset($_SESSION['token'])) {
 	exit;
 }
 
-// Get user data
-$user = $_SESSION['user'];
-
-// Check if user has admin role
-if ($user['role'] !== 'admin') {
-	// Redirect non-admin users
-	header('Location: dashboard.php');
-	exit;
-}
-
 $pageTitle = "Gestion des Classes";
-require_once 'templates/base.php';
+ob_start(); // Début de la mise en tampon
 ?>
 
 <div class="container">
@@ -245,13 +235,14 @@ require_once 'templates/base.php';
 			const id = document.getElementById('edit_id_classe').value;
 			const formData = new FormData(event.target);
 			const data = {
+				id: id,
 				nom_classe: formData.get('nom_classe'),
 				niveau: formData.get('niveau'),
 				numero: formData.get('numero'),
 				rythme: formData.get('rythme')
 			};
 
-			const result = await ApiService.request(`classes/${id}`, 'PUT', data);
+			const result = await ApiService.request('classes', 'PUT', data);
 
 			if (!result.success) {
 				throw new Error(result.error || 'Erreur lors de la mise à jour de la classe');
@@ -273,7 +264,9 @@ require_once 'templates/base.php';
 		}
 
 		try {
-			const result = await ApiService.request(`classes/${id}`, 'DELETE');
+			const result = await ApiService.request('classes', 'DELETE', {
+				id: id
+			});
 
 			if (!result.success) {
 				throw new Error(result.error || 'Erreur lors de la suppression de la classe');
