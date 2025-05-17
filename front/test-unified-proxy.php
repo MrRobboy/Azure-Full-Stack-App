@@ -122,11 +122,25 @@ header('Content-Type: text/html; charset=utf-8');
 		<pre id="post-details"></pre>
 	</div>
 
+	<div class="test-section">
+		<h2>5. Test de l'outil de diagnostic d'URL</h2>
+		<p>Vérifie les différentes constructions d'URL pour identifier la meilleure approche.</p>
+
+		<div class="action-buttons">
+			<button id="url-debug-btn" class="btn btn-info">Exécuter le test d'URL</button>
+		</div>
+
+		<div id="url-debug-result" class="result-container">
+			<div class="waiting">En attente de l'exécution du test...</div>
+		</div>
+	</div>
+
 	<h2>Résumé des tests</h2>
 	<div id="test-summary" class="test-status pending">Aucun test exécuté</div>
 
 	<script src="js/config.js?v=5.0"></script>
 	<script src="js/api-service.js?v=2.0"></script>
+	<script src="js/debug-utils.js"></script>
 	<script>
 		// Fonction utilitaire pour mettre à jour un résultat de test
 		function updateTestResult(id, success, message, details = null) {
@@ -272,6 +286,30 @@ header('Content-Type: text/html; charset=utf-8');
 				console.error('POST test error:', error);
 				updateTestResult('post', false, `Erreur: ${error.message}`);
 			}
+		});
+
+		// Ajout du test d'URL
+		document.getElementById('url-debug-btn').addEventListener('click', async function() {
+			const resultContainer = document.getElementById('url-debug-result');
+			resultContainer.innerHTML = '<div class="loading">Test en cours...</div>';
+
+			try {
+				const response = await fetch('url-debug.php');
+				const data = await response.json();
+
+				let html = '<div class="success">Test d\'URL complété</div>';
+				html += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+
+				resultContainer.innerHTML = html;
+			} catch (error) {
+				resultContainer.innerHTML = '<div class="error">Erreur: ' + error.message + '</div>';
+			}
+		});
+
+		// Log des résultats détaillés dans la console
+		window.addEventListener('load', function() {
+			console.log('🔍 Débogage activé. Ouvrez la console pour plus de détails.');
+			console.log('📋 Instructions: Utilisez le bouton Debug en bas à droite pour voir les détails des requêtes');
 		});
 	</script>
 </body>

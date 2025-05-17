@@ -5,7 +5,7 @@
  * Ce proxy gère toutes les communications entre le frontend et le backend 
  * en résolvant les problèmes de CORS sur Azure.
  * 
- * Version: 1.0.2
+ * Version: 1.0.3
  */
 
 // Configuration proxy
@@ -82,26 +82,21 @@ if (strpos($endpoint, 'auth/login') !== false) {
 	$requestUrl .= STATUS_ENDPOINT;
 	logMessage('Redirection vers endpoint de statut', ['endpoint' => STATUS_ENDPOINT]);
 } else {
-	// Vérifiez si l'endpoint est une des ressources principales
-	$mainEndpoints = ['matieres', 'classes', 'examens', 'profs', 'users', 'notes', 'privileges'];
-	$isMainEndpoint = false;
-
-	foreach ($mainEndpoints as $mainEndpoint) {
-		if (strpos($endpoint, $mainEndpoint) === 0) {
-			$isMainEndpoint = true;
-			break;
-		}
-	}
-
-	if ($isMainEndpoint) {
-		$requestUrl .= '/api/' . $endpoint;
-	} else {
-		// Fallback pour les autres endpoints - essayer directement avec le chemin fourni
-		$requestUrl .= '/' . $endpoint;
-	}
-
-	logMessage('Redirection vers endpoint', ['url' => $requestUrl, 'endpoint' => $endpoint]);
+	// Pour tous les autres endpoints, toujours préfixer avec /api/ 
+	// Cette partie a été modifiée - on ne fait plus la distinction entre les endpoints principaux et les autres
+	// car tous doivent passer par /api/ sur le backend
+	$requestUrl .= '/api/' . $endpoint;
+	logMessage('Redirection vers endpoint API standard', ['url' => $requestUrl, 'endpoint' => $endpoint]);
 }
+
+// Ajout de logs détaillés sur la construction de l'URL
+logMessage('URL finale construite', [
+	'endpoint_original' => $_GET['endpoint'],
+	'endpoint_processed' => $endpoint,
+	'base_url' => API_BASE_URL,
+	'request_url' => $requestUrl,
+	'method' => $_SERVER['REQUEST_METHOD']
+]);
 
 logMessage('Proxying request', [
 	'method' => $_SERVER['REQUEST_METHOD'],
@@ -192,6 +187,19 @@ logMessage('Réponse brute', [
 	'effective_url' => $effectiveUrl,
 	'response_size' => strlen($response)
 ]);
+
+// Ajout de logs détaillés sur la réponse HTTP
+if ($httpCode >= 400) {
+	logMessage('Erreur HTTP reçue', [
+		'http_code' => $httpCode,
+		'effective_url' => $effectiveUrl,
+		'response' => substr($response, 0, 1000) // Limiter la taille pour éviter des logs trop grands
+	]);
+
+	// Ajout d'information de debug cURL
+	$curlInfo = curl_getinfo($ch);
+	logMessage('Information cURL détaillées', $curlInfo);
+}
 
 // Traitement des erreurs cURL
 if ($response === false) {

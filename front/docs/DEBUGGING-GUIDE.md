@@ -4,6 +4,40 @@
 
 Avec la désactivation des données simulées dans le proxy unifié (version 3.0.2), vous pouvez désormais voir les erreurs réelles retournées par le back-end. Ce guide vous aidera à interpréter ces erreurs et à déboguer efficacement les problèmes de communication entre le front-end et le back-end.
 
+## Nouveaux outils de débogage (version 3.0.3)
+
+### 1. Outil d'inspection des requêtes
+
+Une interface de débogage est désormais disponible dans toutes les pages de l'application. Elle permet de:
+
+- Visualiser en temps réel les requêtes HTTP
+- Examiner les détails des requêtes et réponses
+- Identifier les problèmes de communication avec le backend
+
+Pour l'utiliser:
+
+1. Cherchez le bouton "🔍 Debug" en bas à droite de n'importe quelle page
+2. Cliquez sur ce bouton pour ouvrir le panneau de débogage
+3. Consultez les statistiques et les détails des requêtes
+
+### 2. Outil de diagnostic d'URL
+
+Un nouvel outil (`url-debug.php`) a été ajouté pour tester les différentes constructions d'URL et identifier la plus efficace pour communiquer avec le backend.
+
+Pour l'utiliser:
+
+1. Accédez à la page de test du proxy unifié (`test-unified-proxy.php`)
+2. Exécutez le test de diagnostic d'URL (section 5)
+3. Analysez les résultats pour comprendre quelle construction d'URL fonctionne le mieux
+
+### 3. Logs améliorés
+
+Le proxy unifié dispose maintenant d'un système de journalisation plus détaillé qui capture:
+
+- La construction exacte des URLs
+- Les détails complets des erreurs HTTP
+- Les informations cURL détaillées
+
 ## Journal du proxy
 
 Le proxy unifié enregistre toutes les requêtes et réponses dans des fichiers de log situés dans le dossier `/front/logs/`. Ces logs contiennent des informations précieuses pour le débogage :
@@ -22,6 +56,9 @@ cat /front/logs/proxy-YYYY-MM-DD.log | tail -n 100
 
 # Rechercher des erreurs spécifiques
 grep "Erreur" /front/logs/proxy-YYYY-MM-DD.log
+
+# Consulter les logs de diagnostic d'URL
+cat /front/logs/url-debug-YYYY-MM-DD.log
 ```
 
 ## Codes d'erreur HTTP courants
@@ -33,6 +70,8 @@ Cette erreur indique que l'endpoint demandé n'existe pas sur le back-end. Véri
 - L'URL de l'endpoint dans la requête
 - Les routes définies dans `/back/routes/api.php`
 - Les règles de routage du proxy unifié dans `/front/unified-proxy.php`
+
+**Mise à jour**: La construction d'URL a été simplifiée dans le proxy unifié. Tous les endpoints (sauf auth/login, auth/user et status) utilisent maintenant le préfixe `/api/` directement.
 
 ### 401 Unauthorized / 403 Forbidden
 
@@ -60,7 +99,11 @@ Les erreurs CORS sont généralement visibles uniquement dans la console du navi
 
 ## Étapes de débogage
 
-### 1. Vérification rapide
+### 1. Utiliser l'outil de débogage intégré
+
+Le nouvel outil de débogage (bouton "🔍 Debug") est la façon la plus simple et rapide de diagnostiquer les problèmes.
+
+### 2. Vérification rapide
 
 Commencez par une vérification rapide des connexions :
 
@@ -72,11 +115,15 @@ fetch("unified-proxy.php?endpoint=status")
 	.catch((error) => console.error("Error:", error));
 ```
 
-### 2. Analyser les logs du proxy
+### 3. Analyser les logs du proxy
 
 Consultez les logs du proxy pour voir exactement ce qui a été envoyé au back-end et ce qui a été reçu en retour.
 
-### 3. Tester l'endpoint directement
+### 4. Utiliser l'outil de diagnostic d'URL
+
+Lancez l'outil de diagnostic d'URL pour tester différentes constructions d'URL et identifier celle qui fonctionne pour chaque endpoint.
+
+### 5. Tester l'endpoint directement
 
 Utilisez un outil comme Postman ou cURL pour tester l'endpoint directement, sans passer par le proxy :
 
@@ -84,20 +131,13 @@ Utilisez un outil comme Postman ou cURL pour tester l'endpoint directement, sans
 curl -v https://app-backend-esgi-app.azurewebsites.net/api/matieres
 ```
 
-### 4. Vérifier la configuration du proxy
+### 6. Vérifier la configuration du proxy
 
 Si vous suspectez un problème dans le proxy, vérifiez les configurations dans :
 
 - `/front/unified-proxy.php`
 - `/front/js/config.js`
 - `/front/js/api-service.js`
-
-### 5. Tester avec un autre proxy
-
-Pour isoler la source du problème, essayez différentes méthodes d'accès au back-end :
-
-- Utilisez `/front/test-unified-proxy.php` pour tester le proxy unifié
-- Créez une requête directe sans proxy pour comparer les résultats
 
 ## Interprétation des réponses
 
@@ -132,12 +172,14 @@ Pour isoler la source du problème, essayez différentes méthodes d'accès au b
 - Routes mal configurées
 - Mauvaise URL de base pour l'API
 - Redirection non configurée sur Azure
+- Construction d'URL incorrecte dans le proxy
 
 **Solutions** :
 
 - Vérifier les routes dans `/back/routes/api.php`
 - Vérifier l'URL de base dans `/front/js/config.js`
-- Vérifier la configuration du serveur web sur Azure
+- Vérifier la construction d'URL dans `unified-proxy.php`
+- Utiliser l'outil de diagnostic d'URL pour tester différentes constructions
 
 ### 2. Problème : Certains endpoints fonctionnent, d'autres non
 
@@ -177,25 +219,12 @@ Si vous avez besoin de rétablir temporairement les données simulées pour test
 define('ENABLE_MOCK_DATA', true); // Activer temporairement les données simulées
 ```
 
-### Ajout de logs personnalisés
+### Développer des tests d'intégration
 
-Pour ajouter des logs personnalisés dans vos pages :
-
-```javascript
-console.log("Debug:", data);
-fetch("unified-proxy.php?endpoint=log", {
-	method: "POST",
-	headers: { "Content-Type": "application/json" },
-	body: JSON.stringify({
-		type: "debug",
-		message: "Test message",
-		data: data
-	})
-});
-```
+Pour une approche plus systématique du débogage, envisagez de développer des tests d'intégration automatisés qui vérifient régulièrement la disponibilité et le bon fonctionnement des endpoints API.
 
 ## Conclusion
 
-Le débogage efficace repose sur la compréhension des erreurs réelles plutôt que sur des suppositions. La désactivation des données simulées permet une vision claire des problèmes et accélère leur résolution.
+Le débogage efficace repose sur la compréhension des erreurs réelles plutôt que sur des suppositions. La désactivation des données simulées et l'ajout de nouveaux outils de débogage permettent une vision claire des problèmes et accélèrent leur résolution.
 
 Pour toute assistance supplémentaire, n'hésitez pas à consulter les autres guides dans le dossier `/front/docs/` ou à contacter l'équipe de développement.

@@ -1,5 +1,52 @@
 # CHANGELOG v3.0
 
+## Version 3.0.3 - Amélioration du débogage et correction des URLs - 2023-12-10
+
+### Problèmes identifiés
+
+1. **Erreurs 404 persistantes sur les endpoints API** : Malgré la désactivation des données simulées, les endpoints API continuaient à retourner des erreurs 404.
+2. **Construction d'URL incorrecte** : Le proxy construisait incorrectement les URLs pour certains endpoints.
+3. **Manque d'outils de débogage** : Il était difficile de diagnostiquer précisément les problèmes de communication.
+
+### Solutions mises en œuvre
+
+#### 1. Correction de la construction d'URL dans le proxy unifié
+
+- Simplification de la logique de construction d'URL : tous les endpoints (sauf auth/login, auth/user et status) utilisent maintenant systématiquement le préfixe `/api/`.
+- Suppression de la distinction entre les "endpoints principaux" et les autres.
+- Amélioration des logs pour tracer précisément la construction des URLs.
+
+#### 2. Nouvel outil de diagnostic d'URL
+
+- Création d'un script `url-debug.php` qui teste différentes constructions d'URL pour chaque endpoint.
+- Comparaison des résultats pour identifier la méthode la plus efficace.
+
+#### 3. Système de débogage client avancé
+
+- Développement d'un utilitaire JavaScript `debug-utils.js` qui intercepte et trace toutes les requêtes HTTP.
+- Ajout d'une interface utilisateur de débogage accessible sur toutes les pages de l'application.
+- Affichage détaillé des requêtes/réponses avec statistiques et filtrage.
+
+#### 4. Documentation améliorée
+
+- Mise à jour du guide de débogage avec les nouveaux outils et les meilleures pratiques.
+- Documentation des modifications apportées à la construction d'URL.
+
+### Fichiers modifiés/ajoutés
+
+- `/front/unified-proxy.php` (corrigé - construction d'URL simplifiée)
+- `/front/js/debug-utils.js` (nouveau - utilitaire de débogage)
+- `/front/url-debug.php` (nouveau - outil de diagnostic d'URL)
+- `/front/test-unified-proxy.php` (mis à jour - ajout du test d'URL)
+- `/front/docs/DEBUGGING-GUIDE.md` (mis à jour)
+- `/front/docs/CHANGELOG-v3.md` (mis à jour)
+
+### Impact attendu
+
+- Résolution des erreurs 404 sur les endpoints API.
+- Capacité à diagnostiquer précisément les problèmes de communication.
+- Expérience de développement et de débogage considérablement améliorée.
+
 ## Version 3.0.2 - Désactivation des données simulées - 2023-12-09
 
 ### Modification importante
