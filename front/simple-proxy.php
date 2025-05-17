@@ -1,59 +1,34 @@
 <?php
-// Simple proxy without JWT authentication
-header('Content-Type: application/json');
 
-// Configuration
-$backendBaseUrl = 'https://app-backend-esgi-app.azurewebsites.net/';
+/**
+ * Simple Proxy Fallback
+ * Un proxy de secours qui redirige simplement vers le proxy unifié
+ */
 
-// Get endpoint from query parameter
-$endpoint = isset($_GET['endpoint']) ? $_GET['endpoint'] : '';
+// Si un endpoint est spécifié, rediriger vers le proxy unifié
+if (isset($_GET['endpoint'])) {
+	$endpoint = $_GET['endpoint'];
 
-if (empty($endpoint)) {
-	echo json_encode(['error' => 'No endpoint specified']);
+	// Construire l'URL de redirection
+	$redirectUrl = 'unified-proxy.php?endpoint=' . urlencode($endpoint);
+
+	// Si d'autres paramètres sont présents, les ajouter à l'URL
+	$params = $_GET;
+	unset($params['endpoint']);
+
+	if (!empty($params)) {
+		$redirectUrl .= '&' . http_build_query($params);
+	}
+
+	// Rediriger
+	header('Location: ' . $redirectUrl);
 	exit;
 }
 
-// Combine URL
-$url = $backendBaseUrl . $endpoint;
-
-// Initialize cURL session
-$ch = curl_init();
-
-// Set cURL options
-curl_setopt($ch, CURLOPT_URL, $url);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-
-// Forward request method
-$method = $_SERVER['REQUEST_METHOD'];
-curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-
-// Forward request headers
-$headers = [];
-if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
-	$headers[] = 'Authorization: ' . $_SERVER['HTTP_AUTHORIZATION'];
-}
-curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-// Forward POST data if applicable
-if ($method === 'POST' || $method === 'PUT') {
-	$postData = file_get_contents('php://input');
-	curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
-}
-
-// Execute request
-$response = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-// Set status code
-http_response_code($httpCode);
-
-// Log the request details
-error_log("Proxy request to: $url, Method: $method, Status: $httpCode");
-
-// Close cURL session
-curl_close($ch);
-
-// Return response
-echo $response;
+// Si pas d'endpoint, retourner une erreur
+header('Content-Type: application/json');
+echo json_encode([
+	'success' => false,
+	'message' => 'Paramètre endpoint manquant',
+	'proxy' => 'simple-proxy-fallback'
+]);

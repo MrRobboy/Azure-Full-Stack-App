@@ -1,506 +1,228 @@
 <?php
 session_start();
 
-// Check if user is logged in
-if (!isset($_SESSION['user']) || !isset($_SESSION['token'])) {
+// Redirection vers la page de connexion si non connecté
+if (!isset($_SESSION['prof_id'])) {
 	header('Location: login.php');
-	exit;
-}
-
-// Get user data
-$user = $_SESSION['user'];
-
-// Check if user has admin role
-if ($user['role'] !== 'admin') {
-	// Redirect non-admin users
-	header('Location: dashboard.php');
-	exit;
+	exit();
 }
 
 $pageTitle = "Gestion des Matières";
-ob_start();
+require_once 'templates/base.php';
 ?>
-
-<head>
-	<title><?php echo $pageTitle; ?></title>
-	<link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
-	<link rel="stylesheet" href="css/styles.css">
-</head>
-
-<style>
-	.container {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 20px;
-	}
-
-	.main-content {
-		background: white;
-		padding: 20px;
-		border-radius: 8px;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-	}
-
-	h1 {
-		color: #333;
-		margin-bottom: 20px;
-	}
-
-	.form-container {
-		margin-bottom: 30px;
-		padding: 20px;
-		background: #f8f9fa;
-		border-radius: 8px;
-	}
-
-	.form-row {
-		margin-bottom: 15px;
-	}
-
-	label {
-		display: block;
-		margin-bottom: 5px;
-		color: #555;
-	}
-
-	input[type="text"] {
-		width: 100%;
-		padding: 8px;
-		border: 1px solid #ddd;
-		border-radius: 4px;
-		font-size: 14px;
-	}
-
-	.btn {
-		background: #007bff;
-		color: white;
-		padding: 10px 20px;
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 14px;
-		transition: background 0.3s;
-	}
-
-	.btn:hover {
-		background: #0056b3;
-	}
-
-	.table-responsive {
-		overflow-x: auto;
-	}
-
-	.table {
-		width: 100%;
-		border-collapse: collapse;
-		margin-top: 20px;
-	}
-
-	.table th,
-	.table td {
-		padding: 12px;
-		text-align: left;
-		border-bottom: 1px solid #ddd;
-	}
-
-	.table th {
-		background: #f8f9fa;
-		font-weight: 600;
-	}
-
-	.btn-edit {
-		background: #28a745;
-		margin-right: 5px;
-	}
-
-	.btn-edit:hover {
-		background: #218838;
-	}
-
-	.btn-danger {
-		background: #dc3545;
-	}
-
-	.btn-danger:hover {
-		background: #c82333;
-	}
-
-	.modal {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background-color: rgba(0, 0, 0, 0.5);
-		z-index: 1000;
-	}
-
-	.modal-content {
-		background: white;
-		padding: 20px;
-		border-radius: 8px;
-		width: 90%;
-		max-width: 500px;
-		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-	}
-
-	.modal-content h3 {
-		margin-top: 0;
-		color: #333;
-	}
-
-	.form-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 10px;
-		margin-top: 20px;
-	}
-
-	.btn-secondary {
-		background: #6c757d;
-		color: white;
-	}
-
-	.btn-secondary:hover {
-		background: #5a6268;
-	}
-</style>
 
 <div class="container">
 	<div class="main-content">
-		<h1>Gestion des Matières</h1>
-
-		<div class="form-container">
-			<h3>Ajouter une matière</h3>
-			<form id="addMatiereForm">
-				<div class="form-row">
-					<label for="nom">Nom de la matière :</label>
-					<input type="text" name="nom" id="nom" required>
-				</div>
-				<button type="submit" class="btn">Ajouter la matière</button>
-			</form>
+		<div class="page-header d-flex justify-content-between align-items-center">
+			<div>
+				<h1>Gestion des Matières</h1>
+				<p class="subtitle">Ajouter, modifier ou supprimer des matières</p>
+			</div>
+			<div id="connection-status">
+				<span id="offline-badge" class="badge bg-warning" style="display: none;">
+					<i class="fas fa-exclamation-triangle"></i> Mode hors-ligne
+				</span>
+			</div>
 		</div>
 
-		<h3>Liste des matières</h3>
-		<div class="table-responsive">
-			<table class="table" id="matieresTable">
-				<thead>
-					<tr>
-						<th>Nom</th>
-						<th>Actions</th>
-					</tr>
-				</thead>
-				<tbody>
-					<!-- Les matières seront chargées dynamiquement -->
-				</tbody>
-			</table>
+		<div class="card mb-4">
+			<div class="card-header">
+				<h3>Liste des matières</h3>
+			</div>
+			<div class="card-body">
+				<div id="matieres-loading" class="text-center py-4">
+					<div class="spinner-border text-primary" role="status">
+						<span class="visually-hidden">Chargement...</span>
+					</div>
+					<p class="mt-2">Chargement des matières...</p>
+				</div>
+
+				<div id="matieres-error" class="alert alert-danger" style="display: none;"></div>
+
+				<div id="matieres-list" style="display: none;">
+					<table id="matieresTable" class="table table-striped">
+						<thead>
+							<tr>
+								<th>Nom</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</div>
+
+				<button id="refresh-btn" class="btn btn-outline-primary btn-sm mt-3">
+					<i class="fas fa-sync-alt"></i> Rafraîchir la liste
+				</button>
+			</div>
+		</div>
+
+		<div class="card">
+			<div class="card-header">
+				<h3 id="form-title">Ajouter une matière</h3>
+			</div>
+			<div class="card-body">
+				<form id="matiere-form">
+					<input type="hidden" id="matiere-id" value="">
+
+					<div class="form-group mb-3">
+						<label for="nom">Nom de la matière :</label>
+						<input type="text" class="form-control" id="nom" name="nom" required>
+					</div>
+
+					<div class="d-flex justify-content-between">
+						<button type="submit" class="btn btn-primary">
+							<i class="fas fa-save"></i> <span id="btn-action-text">Ajouter</span>
+						</button>
+
+						<button type="button" id="btn-cancel" class="btn btn-secondary" style="display: none;">
+							<i class="fas fa-times"></i> Annuler
+						</button>
+					</div>
+				</form>
+			</div>
 		</div>
 	</div>
 </div>
 
+<style>
+	.subtitle {
+		color: #6c757d;
+		font-size: 1.1rem;
+		margin-bottom: 20px;
+	}
+
+	.btn-action {
+		margin-right: 5px;
+	}
+
+	#offline-badge {
+		font-size: 0.9rem;
+		padding: 0.5rem 0.75rem;
+	}
+</style>
+
 <script src="js/notification-system.js?v=1.1"></script>
 <script src="js/error-messages.js"></script>
-<script src="js/config.js?v=1.9"></script>
+<script src="js/config.js?v=5.0"></script>
+<script src="js/api-service.js?v=2.0"></script>
+
 <script>
-	// Function to get API endpoint with proxy support
-	function getApiEndpoint(endpoint) {
-		return `${appConfig.proxyUrl}?endpoint=${encodeURIComponent(endpoint)}`;
-	}
-
-	// Vérifier que les scripts sont chargés
-	console.log('Vérification du chargement des scripts...');
-	console.log('NotificationSystem:', typeof NotificationSystem);
-	console.log('ErrorMessages:', typeof ErrorMessages);
-
-	if (typeof NotificationSystem === 'undefined') {
-		console.error('Le script notification-system.js n\'est pas chargé correctement');
-	}
-
-	if (typeof ErrorMessages === 'undefined') {
-		console.error('Le script error-messages.js n\'est pas chargé correctement');
-	}
+	// Mode édition
+	let editMode = false;
+	let currentMatiere = null;
 
 	// Fonction pour charger les matières
 	async function loadMatieres() {
-		console.log('Chargement des matières...');
-		const fallbackData = [{
-				id_matiere: 1,
-				nom: "Mathématiques"
-			},
-			{
-				id_matiere: 2,
-				nom: "Français"
-			},
-			{
-				id_matiere: 3,
-				nom: "Anglais"
-			},
-			{
-				id_matiere: 4,
-				nom: "Histoire-Géographie"
-			},
-			{
-				id_matiere: 16,
-				nom: "Docker"
-			},
-			{
-				id_matiere: 17,
-				nom: "Azure"
-			}
-		];
-
 		try {
-			// Try each method in sequence until one works
-			let response, result;
-			let methodUsed = "";
+			console.log('Chargement des matières...');
 
-			// Method 1: Try using the special matieres-proxy
-			try {
-				console.log('Tentative avec matieres-proxy.php...');
-				response = await fetch('matieres-proxy.php');
-				result = await response.json();
-				console.log('Résultat avec matieres-proxy:', result);
-				methodUsed = "matieres-proxy.php";
-			} catch (proxyError) {
-				console.log('Échec avec matieres-proxy, tentative avec proxy unifié');
+			// Afficher l'indicateur de chargement
+			document.getElementById('matieres-loading').style.display = 'block';
+			document.getElementById('matieres-list').style.display = 'none';
+			document.getElementById('matieres-error').style.display = 'none';
 
-				// Method 2: Try using the unified proxy
-				try {
-					response = await fetch(getApiEndpoint('matieres'));
-					result = await response.json();
-					console.log('Résultat matières avec unified-proxy:', result);
-					methodUsed = "unified-proxy";
-				} catch (unifiedError) {
-					console.log('Échec avec unified-proxy, tentative avec direct-matieres.php');
+			// Appel API via notre service
+			const result = await ApiService.request('matieres');
+			console.log('Résultat de la requête:', result);
 
-					// Method 3: Try using direct endpoint as last resort
-					try {
-						response = await fetch('direct-matieres.php');
-						result = await response.json();
-						console.log('Résultat avec direct-matieres:', result);
-						methodUsed = "direct-matieres.php";
-					} catch (directError) {
-						console.error('Tous les endpoints ont échoué, utilisation des données en dur');
-						// Use the in-code fallback data if all methods fail
-						result = {
-							success: true,
-							data: fallbackData,
-							message: 'Utilisation des données en dur (tous les endpoints ont échoué)',
-							is_fallback: true
-						};
-						methodUsed = "hardcoded fallback";
-					}
-				}
+			// Gérer les erreurs
+			if (!result.success) {
+				throw new Error(result.error || (result.data && result.data.message) || 'Erreur lors du chargement des matières');
 			}
 
-			// Check for valid response format
-			if (!result || typeof result !== 'object') {
-				console.error('Format de réponse invalide:', result);
-				throw new Error(ErrorMessages.GENERAL.INVALID_RESPONSE);
+			// Vérifier si nous avons des données
+			let matieres = [];
+			if (result.data && result.data.data) {
+				matieres = result.data.data;
+			} else if (result.data) {
+				matieres = Array.isArray(result.data) ? result.data : [];
 			}
 
-			// Check for empty data array
-			if (!result.data || !Array.isArray(result.data)) {
-				console.warn('Données manquantes ou format invalide, utilisation des données de secours');
-
-				// Use fallback data if the response doesn't contain a data array
-				result = {
-					success: true,
-					data: fallbackData,
-					message: 'Utilisation des données de secours (format de réponse invalide)',
-					is_fallback: true
-				};
-
-				// Show a notification
-				NotificationSystem.warning('Utilisation des données de secours (format de réponse invalide)');
+			// Vérifier les données simulées
+			if (result.data && result.data.simulated) {
+				console.warn('Utilisation de données simulées pour les matières');
+				NotificationSystem.warning('Mode hors-ligne - Données simulées');
+				document.getElementById('offline-badge').style.display = 'inline-block';
+			} else {
+				document.getElementById('offline-badge').style.display = 'none';
 			}
 
-			// Populate the table
-			const tbody = document.querySelector('#matieresTable tbody');
-			tbody.innerHTML = '';
+			// Afficher les matières dans le tableau
+			displayMatieres(matieres);
 
-			if (result.data.length === 0) {
-				tbody.innerHTML = '<tr><td colspan="2">Aucune matière trouvée</td></tr>';
-				return;
-			}
+			// Notification de succès
+			NotificationSystem.success('Matières chargées avec succès');
 
-			// If fallback was used, show a notification
-			if (result.is_fallback || result.is_direct) {
-				NotificationSystem.info('Source des données: ' + methodUsed + ' - ' + (result.message || 'API non disponible'));
-			}
-
-			result.data.forEach(matiere => {
-				const tr = document.createElement('tr');
-				tr.innerHTML = `
-					<td>${matiere.nom}</td>
-					<td>
-						<button class="btn btn-edit" onclick="editMatiere(${matiere.id_matiere}, '${matiere.nom}')">Modifier</button>
-						<button class="btn btn-danger" onclick="deleteMatiere(${matiere.id_matiere})">Supprimer</button>
-					</td>
-				`;
-				tbody.appendChild(tr);
-			});
 		} catch (error) {
 			console.error('Erreur lors du chargement des matières:', error);
-			NotificationSystem.error('Erreur: ' + error.message);
-
-			// Show fallback data in case of error
-			const tbody = document.querySelector('#matieresTable tbody');
-			tbody.innerHTML = '';
-
-			fallbackData.forEach(matiere => {
-				const tr = document.createElement('tr');
-				tr.innerHTML = `
-					<td>${matiere.nom}</td>
-					<td>
-						<button class="btn btn-edit" onclick="editMatiere(${matiere.id_matiere}, '${matiere.nom}')">Modifier</button>
-						<button class="btn btn-danger" onclick="deleteMatiere(${matiere.id_matiere})">Supprimer</button>
-					</td>
-				`;
-				tbody.appendChild(tr);
-			});
-
-			NotificationSystem.warning('Affichage des données de secours suite à une erreur. Fonctionnalités limitées.');
+			NotificationSystem.error(error.message);
+			document.getElementById('matieres-error').textContent = error.message;
+			document.getElementById('matieres-error').style.display = 'block';
+		} finally {
+			// Masquer l'indicateur de chargement
+			document.getElementById('matieres-loading').style.display = 'none';
+			document.getElementById('matieres-list').style.display = 'block';
 		}
 	}
 
-	// Fonction pour ajouter une matière
-	document.getElementById('addMatiereForm').addEventListener('submit', async function(e) {
-		e.preventDefault();
-		const nom = document.getElementById('nom').value;
+	// Fonction pour afficher les matières dans le tableau
+	function displayMatieres(matieres) {
+		const tbody = document.querySelector('#matieresTable tbody');
+		tbody.innerHTML = '';
 
-		if (!nom) {
-			NotificationSystem.warning('Veuillez entrer un nom pour la matière');
+		if (matieres.length === 0) {
+			tbody.innerHTML = '<tr><td colspan="2" class="text-center">Aucune matière trouvée</td></tr>';
 			return;
 		}
 
-		try {
-			console.log('Ajout d\'une nouvelle matière:', nom);
-
-			const response = await fetch(getApiEndpoint('matieres'), {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					nom
-				})
-			});
-
-			// Check if response is OK
-			if (!response.ok) {
-				throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
-			}
-
-			const responseText = await response.text();
-			let result;
-
-			try {
-				result = JSON.parse(responseText);
-			} catch (e) {
-				console.error('Réponse invalide (non-JSON):', responseText);
-				throw new Error('Réponse invalide du serveur: ' + responseText.substring(0, 100));
-			}
-
-			console.log('Résultat de la création:', result);
-
-			if (!result.success) {
-				throw new Error(result.message || result.error || 'Erreur lors de l\'ajout de la matière');
-			}
-
-			document.getElementById('nom').value = '';
-			NotificationSystem.success('La matière a été ajoutée avec succès');
-			loadMatieres();
-		} catch (error) {
-			console.error('Erreur lors de l\'ajout de la matière:', error);
-			NotificationSystem.error(error.message);
-		}
-	});
-
-	// Fonction pour modifier une matière
-	async function editMatiere(id, currentNom) {
-		const modal = document.createElement('div');
-		modal.className = 'modal';
-		modal.innerHTML = `
-			<div class="modal-content">
-				<h3>Modifier la matière</h3>
-				<form id="editMatiereForm">
-					<div class="form-row">
-						<label for="editNom">Nom :</label>
-						<input type="text" id="editNom" value="${currentNom}" required>
-					</div>
-					<div class="form-actions">
-						<button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
-						<button type="submit" class="btn">Enregistrer</button>
-					</div>
-				</form>
-			</div>
-		`;
-
-		document.body.appendChild(modal);
-
-		// Gérer la soumission du formulaire
-		document.getElementById('editMatiereForm').addEventListener('submit', async function(e) {
-			e.preventDefault();
-			const newNom = document.getElementById('editNom').value;
-
-			if (!newNom) {
-				NotificationSystem.warning('Veuillez entrer un nom pour la matière');
-				return;
-			}
-
-			try {
-				console.log(`Modification de la matière ID ${id}: ${newNom}`);
-
-				const response = await fetch(getApiEndpoint(`matieres/${id}`), {
-					method: 'PUT',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						nom: newNom
-					})
-				});
-
-				// Check if response is OK
-				if (!response.ok) {
-					throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
-				}
-
-				const responseText = await response.text();
-				let result;
-
-				try {
-					result = JSON.parse(responseText);
-				} catch (e) {
-					console.error('Réponse invalide (non-JSON):', responseText);
-					throw new Error('Réponse invalide du serveur: ' + responseText.substring(0, 100));
-				}
-
-				if (!result.success) {
-					throw new Error(result.error || result.message || 'Erreur lors de la modification de la matière');
-				}
-
-				closeModal();
-				NotificationSystem.success('La matière a été modifiée avec succès');
-				loadMatieres();
-			} catch (error) {
-				console.error('Erreur lors de la modification:', error);
-				NotificationSystem.error(error.message);
-			}
+		matieres.forEach(matiere => {
+			const tr = document.createElement('tr');
+			tr.innerHTML = `
+				<td>${matiere.nom}</td>
+				<td>
+					<button class="btn btn-sm btn-outline-primary btn-action" onclick="editMatiere(${matiere.id_matiere || matiere.id}, '${matiere.nom}')">
+						<i class="fas fa-edit"></i> Modifier
+					</button>
+					<button class="btn btn-sm btn-outline-danger btn-action" onclick="deleteMatiere(${matiere.id_matiere || matiere.id})">
+						<i class="fas fa-trash"></i> Supprimer
+					</button>
+				</td>
+			`;
+			tbody.appendChild(tr);
 		});
 	}
 
-	// Fonction pour fermer le modal
-	function closeModal() {
-		const modal = document.querySelector('.modal');
-		if (modal) {
-			modal.remove();
-		}
+	// Fonction pour éditer une matière
+	function editMatiere(id, nom) {
+		editMode = true;
+		currentMatiere = {
+			id_matiere: id,
+			nom
+		};
+
+		document.getElementById('matiere-id').value = id;
+		document.getElementById('nom').value = nom;
+		document.getElementById('form-title').textContent = 'Modifier une matière';
+		document.getElementById('btn-action-text').textContent = 'Modifier';
+		document.getElementById('btn-cancel').style.display = 'block';
+
+		// Scroll vers le formulaire
+		document.getElementById('matiere-form').scrollIntoView({
+			behavior: 'smooth'
+		});
+	}
+
+	// Fonction pour annuler l'édition
+	function cancelEdit() {
+		editMode = false;
+		currentMatiere = null;
+
+		document.getElementById('matiere-id').value = '';
+		document.getElementById('nom').value = '';
+		document.getElementById('form-title').textContent = 'Ajouter une matière';
+		document.getElementById('btn-action-text').textContent = 'Ajouter';
+		document.getElementById('btn-cancel').style.display = 'none';
 	}
 
 	// Fonction pour supprimer une matière
@@ -510,57 +232,132 @@ ob_start();
 		}
 
 		try {
-			console.log('Tentative de suppression de la matière:', id);
+			console.log(`Suppression de la matière #${id}`);
+			NotificationSystem.info('Suppression en cours...');
 
-			const response = await fetch(getApiEndpoint(`matieres/${id}`), {
-				method: 'DELETE',
-				headers: {
-					'Content-Type': 'application/json'
-				}
-			});
+			// Appel API via notre service
+			const result = await ApiService.request(`matieres/${id}`, 'DELETE');
 
-			// Check if response is OK
-			if (!response.ok) {
-				throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+			if (!result.success) {
+				throw new Error(result.error || (result.data && result.data.message) || 'Erreur lors de la suppression de la matière');
 			}
 
-			const responseText = await response.text();
-			let result;
-
-			try {
-				result = JSON.parse(responseText);
-			} catch (e) {
-				console.error('Réponse invalide (non-JSON):', responseText);
-				throw new Error('Réponse invalide du serveur: ' + responseText.substring(0, 100));
+			// Vérifier si les données sont simulées
+			if (result.data && result.data.simulated) {
+				console.warn('Réponse simulée pour la suppression de matière');
+				NotificationSystem.warning('Suppression simulée (backend indisponible)');
 			}
 
-			if (result.success) {
-				NotificationSystem.success(result.message || 'La matière a été supprimée avec succès');
-				// Attendre un court instant avant de recharger les matières
-				await new Promise(resolve => setTimeout(resolve, 500));
-				await loadMatieres();
-			} else {
-				throw new Error(result.message || result.error || 'Erreur lors de la suppression de la matière');
-			}
+			// Recharger les matières
+			await loadMatieres();
+
+			// Notification de succès
+			NotificationSystem.success('Matière supprimée avec succès');
+
 		} catch (error) {
-			console.error('Erreur lors de la suppression:', error);
+			console.error('Erreur lors de la suppression de la matière:', error);
 			NotificationSystem.error(error.message);
 		}
 	}
 
-	// Charger les données au chargement de la page
-	document.addEventListener('DOMContentLoaded', function() {
-		console.log('Chargement de la page...');
+	// Fonction pour gérer la soumission du formulaire
+	async function handleMatiereSubmit(event) {
+		event.preventDefault();
 
-		// Tester le système de notification
-		console.log('Test du système de notification...');
-		NotificationSystem.info('Bienvenue sur la page de gestion des matières');
+		const nomInput = document.getElementById('nom');
+		const nom = nomInput.value.trim();
 
-		loadMatieres();
+		if (!nom) {
+			NotificationSystem.warning('Veuillez entrer un nom de matière');
+			nomInput.focus();
+			return;
+		}
+
+		try {
+			NotificationSystem.info('Traitement en cours...');
+
+			if (editMode) {
+				// Mode édition - Mettre à jour une matière existante
+				const id = document.getElementById('matiere-id').value;
+				console.log(`Mise à jour de la matière #${id}:`, {
+					nom
+				});
+
+				const result = await ApiService.request(`matieres/${id}`, 'PUT', {
+					nom
+				});
+
+				if (!result.success) {
+					throw new Error(result.error || (result.data && result.data.message) || 'Erreur lors de la mise à jour de la matière');
+				}
+
+				// Vérifier si les données sont simulées
+				if (result.data && result.data.simulated) {
+					console.warn('Réponse simulée pour la mise à jour de matière');
+					NotificationSystem.warning('Mise à jour simulée (backend indisponible)');
+				}
+
+				NotificationSystem.success('Matière mise à jour avec succès');
+			} else {
+				// Mode ajout - Créer une nouvelle matière
+				console.log('Création d\'une matière:', {
+					nom
+				});
+
+				const result = await ApiService.request('matieres', 'POST', {
+					nom
+				});
+
+				if (!result.success) {
+					throw new Error(result.error || (result.data && result.data.message) || 'Erreur lors de la création de la matière');
+				}
+
+				// Vérifier si les données sont simulées
+				if (result.data && result.data.simulated) {
+					console.warn('Réponse simulée pour la création de matière');
+					NotificationSystem.warning('Création simulée (backend indisponible)');
+				}
+
+				NotificationSystem.success('Matière ajoutée avec succès');
+			}
+
+			// Réinitialiser le formulaire
+			cancelEdit();
+			nomInput.value = '';
+
+			// Recharger les matières
+			await loadMatieres();
+
+		} catch (error) {
+			console.error('Erreur lors de la soumission du formulaire:', error);
+			NotificationSystem.error(error.message);
+		}
+	}
+
+	// Initialisation de la page
+	document.addEventListener('DOMContentLoaded', async function() {
+		try {
+			// Vérifier que le système de notification est chargé
+			if (typeof NotificationSystem === 'undefined') {
+				console.error('Le système de notification n\'est pas chargé !');
+				alert('Erreur de chargement du système de notification');
+			}
+
+			// Charger les matières
+			await loadMatieres();
+
+			// Gestionnaires d'événements
+			document.getElementById('matiere-form').addEventListener('submit', handleMatiereSubmit);
+			document.getElementById('btn-cancel').addEventListener('click', cancelEdit);
+			document.getElementById('refresh-btn').addEventListener('click', loadMatieres);
+
+		} catch (error) {
+			console.error('Erreur lors de l\'initialisation de la page:', error);
+			if (typeof NotificationSystem !== 'undefined') {
+				NotificationSystem.error(error.message);
+			} else {
+				alert(`Erreur: ${error.message}`);
+			}
+		}
 	});
 </script>
-
-<?php
-$content = ob_get_clean();
-require_once 'templates/base.php';
-?>

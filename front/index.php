@@ -11,44 +11,65 @@ $pageTitle = "Accueil";
 ob_start();
 ?>
 
-<div class="hero">
-	<div class="hero-content">
-		<h1>Bienvenue sur le site web des meilleurs étudiants de l'ESGI</h1>
-		<p class="hero-description">
-			Une plateforme complète pour gérer les notes, les matières, les classes et les examens.
-			Simplifiez votre travail d'enseignant avec notre outil intuitif.
-		</p>
-		<div class="hero-features">
-			<div class="feature-card">
-				<i class="fas fa-graduation-cap fa-3x"></i>
-				<h3>Gestion des notes</h3>
-				<p>Enregistrez et gérez facilement les notes de vos élèves</p>
-			</div>
-			<div class="feature-card">
-				<i class="fas fa-book fa-3x"></i>
-				<h3>Matières</h3>
-				<p>Organisez vos matières et vos cours</p>
-			</div>
-			<div class="feature-card">
-				<i class="fas fa-users fa-3x"></i>
-				<h3>Classes</h3>
-				<p>Gérez vos classes et vos élèves</p>
-			</div>
-			<div class="feature-card">
-				<i class="fas fa-calendar-alt fa-3x"></i>
-				<h3>Examens</h3>
-				<p>Planifiez et gérez vos examens</p>
-			</div>
-		</div>
-		<div class="hero-actions">
-			<a href="login.php" class="btn btn-primary btn-lg">
-				<i class="fas fa-sign-in-alt"></i> Se connecter
-			</a>
-			<a href="simple-login.php" class="btn btn-secondary btn-lg" style="margin-left: 10px;">
-				<i class="fas fa-bolt"></i> Connexion simplifiée
-			</a>
-			<div style="margin-top: 10px; font-size: 0.8rem;">
-				<i class="fas fa-info-circle"></i> La connexion simplifiée est recommandée pour Azure
+<div class="container mt-5">
+	<div class="row justify-content-center">
+		<div class="col-md-8">
+			<div class="card shadow">
+				<div class="card-header bg-primary text-white">
+					<h2 class="m-0">Bienvenue sur l'application de gestion des notes</h2>
+				</div>
+				<div class="card-body">
+					<p class="lead">Cette application permet aux enseignants de gérer les notes des élèves de manière simple et efficace.</p>
+
+					<hr>
+
+					<h3>Accès rapide</h3>
+					<div class="row mt-4">
+						<div class="col-md-6 mb-3">
+							<div class="card h-100">
+								<div class="card-body">
+									<h5 class="card-title">Espace Enseignant</h5>
+									<p class="card-text">Accédez à votre espace pour gérer les notes et les examens.</p>
+									<a href="login.php" class="btn btn-primary">Se connecter</a>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6 mb-3">
+							<div class="card h-100">
+								<div class="card-body">
+									<h5 class="card-title">Test du Proxy</h5>
+									<p class="card-text">Testez le système de proxy unifié pour vérifier la connexion avec le backend.</p>
+									<a href="test-unified-proxy.php" class="btn btn-info">Lancer les tests</a>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<hr>
+
+					<h3>Documentation</h3>
+					<ul class="list-group mt-3">
+						<li class="list-group-item d-flex justify-content-between align-items-center">
+							Guide du proxy unifié
+							<a href="docs/PROXY-GUIDE.md" class="btn btn-sm btn-outline-primary">Consulter</a>
+						</li>
+						<li class="list-group-item d-flex justify-content-between align-items-center">
+							Guide de migration
+							<a href="docs/MIGRATION-GUIDE.md" class="btn btn-sm btn-outline-primary">Consulter</a>
+						</li>
+						<li class="list-group-item d-flex justify-content-between align-items-center">
+							Guide de débogage
+							<a href="docs/DEBUGGING-GUIDE.md" class="btn btn-sm btn-outline-primary">Consulter</a>
+						</li>
+						<li class="list-group-item d-flex justify-content-between align-items-center">
+							Changelog
+							<a href="docs/CHANGELOG-v3.md" class="btn btn-sm btn-outline-primary">Consulter</a>
+						</li>
+					</ul>
+				</div>
+				<div class="card-footer text-muted">
+					Version 3.0.2 - Sans données simulées
+				</div>
 			</div>
 		</div>
 	</div>

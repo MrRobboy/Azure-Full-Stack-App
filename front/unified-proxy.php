@@ -5,15 +5,17 @@
  * Ce proxy gère toutes les communications entre le frontend et le backend 
  * en résolvant les problèmes de CORS sur Azure.
  * 
- * Version: 1.0.0
+ * Version: 1.0.2
  */
 
 // Configuration proxy
 define('API_BASE_URL', 'https://app-backend-esgi-app.azurewebsites.net');
 define('AUTH_ENDPOINT', '/api-auth-login.php');  // Endpoint d'authentification spécial
 define('USER_ENDPOINT', '/api/auth/user');       // Endpoint pour les infos utilisateur
+define('STATUS_ENDPOINT', '/status.php');        // Endpoint de statut
 define('LOG_DIR', __DIR__ . '/logs');            // Répertoire des logs
 define('DEBUG', true);                           // Mode debug
+define('ENABLE_MOCK_DATA', false);                // Désactivation des données simulées
 
 // Création du répertoire de logs si nécessaire
 if (!is_dir(LOG_DIR)) {
@@ -76,9 +78,29 @@ if (strpos($endpoint, 'auth/login') !== false) {
 } elseif (strpos($endpoint, 'auth/user') !== false || $endpoint === 'user/profile') {
 	$requestUrl .= USER_ENDPOINT;
 	logMessage('Redirection vers endpoint utilisateur', ['endpoint' => USER_ENDPOINT]);
+} elseif ($endpoint === 'status') {
+	$requestUrl .= STATUS_ENDPOINT;
+	logMessage('Redirection vers endpoint de statut', ['endpoint' => STATUS_ENDPOINT]);
 } else {
-	$requestUrl .= '/api/' . $endpoint;
-	logMessage('Redirection vers endpoint standard', ['endpoint' => '/api/' . $endpoint]);
+	// Vérifiez si l'endpoint est une des ressources principales
+	$mainEndpoints = ['matieres', 'classes', 'examens', 'profs', 'users', 'notes', 'privileges'];
+	$isMainEndpoint = false;
+
+	foreach ($mainEndpoints as $mainEndpoint) {
+		if (strpos($endpoint, $mainEndpoint) === 0) {
+			$isMainEndpoint = true;
+			break;
+		}
+	}
+
+	if ($isMainEndpoint) {
+		$requestUrl .= '/api/' . $endpoint;
+	} else {
+		// Fallback pour les autres endpoints - essayer directement avec le chemin fourni
+		$requestUrl .= '/' . $endpoint;
+	}
+
+	logMessage('Redirection vers endpoint', ['url' => $requestUrl, 'endpoint' => $endpoint]);
 }
 
 logMessage('Proxying request', [
@@ -114,7 +136,17 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 // Configuration spécifique selon la méthode HTTP
 switch ($_SERVER['REQUEST_METHOD']) {
 	case 'GET':
-		// Rien à faire, GET est la méthode par défaut pour cURL
+		// Transmission des paramètres GET s'il y en a (sauf endpoint)
+		$queryParams = $_GET;
+		unset($queryParams['endpoint']);
+
+		if (!empty($queryParams)) {
+			$queryString = http_build_query($queryParams);
+			$separator = (strpos($requestUrl, '?') === false) ? '?' : '&';
+			$requestUrl .= $separator . $queryString;
+			curl_setopt($ch, CURLOPT_URL, $requestUrl);
+			logMessage('Paramètres GET transmis', $queryParams);
+		}
 		break;
 
 	case 'POST':
@@ -151,6 +183,15 @@ switch ($_SERVER['REQUEST_METHOD']) {
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+$effectiveUrl = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+
+// Log de la réponse complète pour debug
+logMessage('Réponse brute', [
+	'status' => $httpCode,
+	'content_type' => $contentType,
+	'effective_url' => $effectiveUrl,
+	'response_size' => strlen($response)
+]);
 
 // Traitement des erreurs cURL
 if ($response === false) {
@@ -159,9 +200,13 @@ if ($response === false) {
 	echo json_encode([
 		'success' => false,
 		'message' => 'Erreur de communication avec l\'API',
-		'error' => $error
+		'error' => $error,
+		'debug' => [
+			'url' => $requestUrl,
+			'method' => $_SERVER['REQUEST_METHOD']
+		]
 	]);
-	logMessage('Erreur cURL', ['error' => $error]);
+	logMessage('Erreur cURL', ['error' => $error, 'url' => $requestUrl]);
 	curl_close($ch);
 	exit;
 }
@@ -172,7 +217,19 @@ curl_close($ch);
 // Transmission du code HTTP de la réponse
 http_response_code($httpCode);
 
-// Traitement de la réponse
+// Si c'est une requête d'authentification et qu'elle a réussi, on transmet la réponse telle quelle
+if (strpos($endpoint, 'auth/login') !== false && $httpCode >= 200 && $httpCode < 300) {
+	echo $response;
+	logMessage('Réponse d\'authentification transmise', ['status' => $httpCode]);
+	exit;
+}
+
+// Si c'est un endpoint de statut et qu'il y a une erreur 404, PAS de statut simulé, on transmet l'erreur
+if ($endpoint === 'status' && $httpCode === 404) {
+	logMessage('Erreur 404 sur l\'endpoint de statut - Transmission de l\'erreur réelle');
+}
+
+// Traitement général de la réponse
 if (strpos($contentType, 'application/json') !== false) {
 	// La réponse est déjà du JSON, on la transmet telle quelle
 	echo $response;
@@ -183,7 +240,8 @@ if (strpos($contentType, 'application/json') !== false) {
 		'success' => $httpCode >= 200 && $httpCode < 300,
 		'message' => 'Réponse non-JSON reçue du serveur',
 		'status' => $httpCode,
-		'raw_response' => $response
+		'raw_response' => $response,
+		'url' => $effectiveUrl
 	]);
-	logMessage('Réponse non-JSON encapsulée', ['status' => $httpCode]);
+	logMessage('Réponse non-JSON encapsulée', ['status' => $httpCode, 'url' => $effectiveUrl]);
 }

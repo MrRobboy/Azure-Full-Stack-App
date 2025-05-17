@@ -1,5 +1,69 @@
 # CHANGELOG v3.0
 
+## Version 3.0.2 - Désactivation des données simulées - 2023-12-09
+
+### Modification importante
+
+- **Désactivation des mock data** : Les données simulées (mock/fallback) ont été désactivées dans le proxy unifié pour faciliter le débogage et voir les erreurs réelles du backend.
+
+### Justification
+
+Les données simulées, bien qu'utiles pour garantir une expérience utilisateur continue en cas de problèmes de backend, masquaient les erreurs réelles et rendaient difficile le debugging des problèmes de connexion entre le frontend et le backend.
+
+### Changements techniques
+
+- Suppression de la génération de réponse simulée pour l'endpoint de statut lors d'une erreur 404
+- Suppression de la génération de données simulées pour les endpoints principaux (matières, classes, etc.)
+- Transmission directe des erreurs HTTP pour permettre un débogage efficace
+- Ajout d'une constante `ENABLE_MOCK_DATA` (définie à `false`) pour désactiver cette fonctionnalité
+
+### Fichiers modifiés
+
+- `/front/unified-proxy.php` (mis à jour - suppression des données simulées)
+- `/front/docs/CHANGELOG-v3.md` (mis à jour)
+
+## Version 3.0.1 - Corrections du proxy unifié - 2023-12-08
+
+### Problèmes identifiés
+
+1. **Erreurs 404 sur les endpoints API** : Le proxy unifié ne parvenait pas à accéder correctement aux endpoints du backend, résultant en des erreurs 404 pour tous les endpoints sauf l'authentification.
+2. **Problèmes de fallback** : Les proxies alternatifs configurés dans config.js étaient également inaccessibles.
+3. **Gestion des paramètres GET** : Les paramètres de requête n'étaient pas correctement transmis au backend.
+
+### Solutions mises en œuvre
+
+#### 1. Amélioration du proxy unifié
+
+- Ajout d'un endpoint spécifique pour le statut du backend (`/status.php`).
+- Création d'un système de routage intelligent pour les endpoints principaux.
+- Ajout d'un mécanisme pour transmettre les paramètres GET.
+- Amélioration de la journalisation avec plus de détails.
+
+#### 2. Système de fallback robuste
+
+- Transformation des proxies existants en redirecteurs vers le proxy unifié.
+- Configuration de tous les proxies alternatifs (`azure-proxy.php`, `simple-proxy.php`, `api-bridge.php`) comme fallbacks.
+
+#### 3. Données simulées pour les tests
+
+- Ajout de réponses simulées lorsque les endpoints principaux (matières, classes, etc.) retournent une erreur 404.
+- Création d'une réponse simulée pour l'endpoint de statut lorsque celui-ci est inaccessible.
+
+### Fichiers modifiés
+
+- `/front/unified-proxy.php` (mis à jour)
+- `/front/azure-proxy.php` (mis à jour)
+- `/front/simple-proxy.php` (mis à jour)
+- `/front/api-bridge.php` (mis à jour)
+- `/front/docs/CHANGELOG-v3.md` (mis à jour)
+
+### Résultats attendus
+
+- Pages de gestion fonctionnelles malgré les problèmes d'accès au backend.
+- Authentification fonctionnelle pour accéder au dashboard.
+- Communication robuste entre le front-end et le back-end via le proxy unifié.
+- Fallback transparent vers des données simulées en cas d'indisponibilité du backend.
+
 ## Version 3.0.0 - Refonte du système de proxy - 2023-12-07
 
 ### Objectif
