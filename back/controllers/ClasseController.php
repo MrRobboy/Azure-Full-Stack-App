@@ -216,14 +216,31 @@ class ClasseController
 				}
 			}
 
+			// Tentative de suppression
 			$result = $this->classeModel->delete($id);
+
+			// Vérification supplémentaire après suppression
 			if ($result === false) {
 				error_log("Échec de la suppression de la classe ID: " . $id);
-				return [
-					'success' => false,
-					'message' => 'Erreur lors de la suppression de la classe',
-					'data' => null
-				];
+
+				// Double vérification pour s'assurer que la classe existe toujours
+				$classeVerif = $this->classeModel->getById($id);
+				if ($classeVerif) {
+					error_log("La classe existe toujours après tentative de suppression: " . print_r($classeVerif, true));
+					return [
+						'success' => false,
+						'message' => 'Erreur lors de la suppression de la classe. Veuillez réessayer.',
+						'data' => null
+					];
+				} else {
+					// Si la classe n'existe plus malgré l'erreur, la considérer comme supprimée
+					error_log("La classe n'existe plus après tentative de suppression (faux négatif)");
+					return [
+						'success' => true,
+						'message' => 'Classe supprimée avec succès (récupéré)',
+						'data' => null
+					];
+				}
 			}
 
 			error_log("Classe supprimée avec succès, ID: " . $id);
@@ -234,6 +251,7 @@ class ClasseController
 			];
 		} catch (Exception $e) {
 			error_log("Exception dans deleteClasse: " . $e->getMessage());
+			error_log("Trace: " . $e->getTraceAsString());
 			return [
 				'success' => false,
 				'message' => 'Erreur serveur: ' . $e->getMessage(),

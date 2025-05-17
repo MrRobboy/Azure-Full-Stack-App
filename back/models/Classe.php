@@ -154,13 +154,24 @@ class Classe
 				return false;
 			}
 
+			// Vérifier si une ligne a bien été supprimée
+			$rowCount = $stmt->rowCount();
+			error_log("Nombre de lignes affectées par la suppression: " . $rowCount);
+
+			if ($rowCount == 0) {
+				error_log("Aucune ligne supprimée pour la classe ID: " . $id);
+				return false;
+			}
+
 			error_log("Classe supprimée avec succès");
 			return true;
 		} catch (PDOException $e) {
 			error_log("Erreur PDO dans delete: " . $e->getMessage());
+			error_log("Trace: " . $e->getTraceAsString());
 			return false;
 		} catch (Exception $e) {
 			error_log("Erreur générale dans delete: " . $e->getMessage());
+			error_log("Trace: " . $e->getTraceAsString());
 			return false;
 		}
 	}

@@ -454,3 +454,13 @@
 - Mise à jour de la documentation des problèmes connus
 - Ajout de la section de dépannage dans TESTING.md
 - Documentation des headers de sécurité requis
+
+## [4.16.0] - 2024-05-17
+
+### Fixed
+
+- Correction en profondeur du problème persistant de suppression des classes
+     - Amélioration du modèle Classe.php avec ajout de vérification du nombre de lignes affectées par la requête DELETE
+     - Renforcement du contrôleur ClasseController.php avec double vérification après suppression
+     - Ajout de logs détaillés pour mieux diagnostiquer les problèmes de suppression
+     - Amélioration de la gestion des erreurs avec traces d'exceptions complètes
