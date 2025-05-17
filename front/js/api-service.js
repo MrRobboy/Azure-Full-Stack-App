@@ -1,159 +1,145 @@
 /**
- * API Service - Utility for all API communications
- * This service handles all communications with the backend API through our CORS proxy solution
+ * API Service - Utilitaire pour toutes les communications API
+ * Version 2.0 - Compatible avec le proxy unifié
  */
 
 // Singleton API Service
 const ApiService = (function () {
-	// Private properties
-	const _corsProxy = window.appConfig?.proxyUrl || "api-bridge.php";
-
-	/**
-	 * Test the proxy connection
-	 * @returns {Promise} - Test result
-	 */
-	async function testProxy() {
-		console.log("Testing proxy connection...");
-		try {
-			const response = await fetch("test-proxy.php");
-			const data = await response.json();
-			console.log("Proxy test response:", data);
-			return data;
-		} catch (error) {
-			console.error("Proxy test failed:", error);
-			throw error;
-		}
+	// Génère un identifiant unique pour chaque requête (pour le debug)
+	function generateRequestId() {
+		return (
+			Date.now().toString(36) +
+			Math.random().toString(36).substr(2, 5)
+		);
 	}
 
 	/**
-	 * Make an API request using our CORS proxy
-	 * @param {string} endpoint - API endpoint path
-	 * @param {string} method - HTTP method (GET, POST, PUT, DELETE)
-	 * @param {Object} data - Request body data
-	 * @param {Object} options - Additional options
-	 * @returns {Promise} - Response promise
+	 * Effectue une requête API
+	 * @param {string} endpoint - Endpoint API (sans le / initial)
+	 * @param {string} method - Méthode HTTP (GET, POST, PUT, DELETE)
+	 * @param {Object} data - Données à envoyer (null pour GET/DELETE)
+	 * @param {Object} options - Options supplémentaires
+	 * @returns {Promise<Object>} - Promesse avec la réponse
 	 */
-	async function makeRequest(
+	async function request(
 		endpoint,
 		method = "GET",
 		data = null,
 		options = {}
 	) {
-		console.log(`Making ${method} request to: ${endpoint}`);
-		if (data) {
-			console.log("Request data:", data);
-		}
-
-		const requestOptions = {
-			method: method,
-			headers: {
-				Accept: "application/json",
-				"X-Requested-With": "XMLHttpRequest"
-			},
-			...options
-		};
-
-		// Add content-type for requests with body
-		if (data && ["POST", "PUT", "PATCH"].includes(method)) {
-			requestOptions.headers["Content-Type"] =
-				"application/json";
-			requestOptions.body = JSON.stringify(data);
-		}
+		const requestId = generateRequestId();
+		console.log(
+			`[${requestId}] 🌐 API Request: ${method} ${endpoint}`
+		);
 
 		try {
-			// First test the proxy
-			await testProxy();
-
-			// Ensure endpoint doesn't start with a slash
+			// S'assurer que l'endpoint ne commence pas par un slash
 			const cleanEndpoint = endpoint.startsWith("/")
 				? endpoint.substring(1)
 				: endpoint;
-			const proxyUrl = `${_corsProxy}?endpoint=${encodeURIComponent(
-				cleanEndpoint
-			)}`;
-			console.log(`Using proxy URL: ${proxyUrl}`);
 
-			const response = await fetch(proxyUrl, requestOptions);
-			console.log(
-				`Response status: ${response.status} for ${endpoint}`
-			);
+			// Utiliser la fonction globale pour obtenir l'URL du proxy
+			const url = window.getProxyUrl(cleanEndpoint);
 
+			// Configuration de la requête
+			const requestOptions = {
+				method: method,
+				headers: {
+					Accept: "application/json",
+					"Content-Type": "application/json",
+					"X-Request-ID": requestId
+				},
+				...options
+			};
+
+			// Ajouter le corps de la requête pour les méthodes qui le supportent
+			if (data && ["POST", "PUT", "PATCH"].includes(method)) {
+				requestOptions.body = JSON.stringify(data);
+				console.log(
+					`[${requestId}] Request data:`,
+					data
+				);
+			}
+
+			// Exécuter la requête
+			console.log(`[${requestId}] Fetching: ${url}`);
+			const response = await fetch(url, requestOptions);
+
+			// Analyser la réponse
 			const contentType =
 				response.headers.get("content-type");
-			console.log(`Response content-type: ${contentType}`);
+			let responseData;
 
+			// Déterminer si la réponse est du JSON
 			if (
 				contentType &&
 				contentType.includes("application/json")
 			) {
-				const jsonData = await response.json();
-				console.log(
-					`Response data for ${endpoint}:`,
-					jsonData
-				);
-				return {
-					success: response.ok,
-					status: response.status,
-					data: jsonData
-				};
+				responseData = await response.json();
 			} else {
+				// Si ce n'est pas du JSON, retourner le texte brut
 				const textData = await response.text();
-				console.log(
-					`Non-JSON response from ${endpoint}:`,
-					textData
-				);
-				return {
-					success: response.ok,
-					status: response.status,
-					data: textData
-				};
+				responseData = { raw: textData };
 			}
+
+			console.log(
+				`[${requestId}] Response status: ${response.status}`
+			);
+
+			// Retourner un objet standardisé
+			return {
+				success: response.ok,
+				status: response.status,
+				data: responseData
+			};
 		} catch (error) {
-			console.error(`Request failed for ${endpoint}:`, error);
-			throw error;
+			console.error(`[${requestId}] Request failed:`, error);
+			return {
+				success: false,
+				status: 0,
+				error: error.message,
+				data: null
+			};
 		}
 	}
 
 	/**
-	 * Login using the API
-	 * @param {string} email - User email
-	 * @param {string} password - User password
-	 * @returns {Promise} - Authentication result
+	 * Authentifie un utilisateur
+	 * @param {string} email - Email de l'utilisateur
+	 * @param {string} password - Mot de passe
+	 * @returns {Promise<Object>} - Résultat de l'authentification
 	 */
 	async function login(email, password) {
-		console.log(`Attempting login for: ${email}`);
-		return makeRequest("auth/login", "POST", {
-			email,
-			password
-		});
+		console.log(`🔒 Login attempt for: ${email}`);
+		return request("auth/login", "POST", { email, password });
 	}
 
 	/**
-	 * Logout current user
-	 * @returns {Promise} - Logout result
+	 * Déconnecte l'utilisateur courant
+	 * @returns {Promise<Object>} - Résultat de la déconnexion
 	 */
 	async function logout() {
-		return makeRequest("auth/logout", "POST");
+		console.log("🚪 Logout requested");
+		return request("auth/logout", "POST");
 	}
 
 	/**
-	 * Get current user profile
-	 * @returns {Promise} - User profile data
+	 * Récupère le profil de l'utilisateur courant
+	 * @returns {Promise<Object>} - Données du profil utilisateur
 	 */
 	async function getCurrentUser() {
-		console.log("Getting current user profile...");
-		return makeRequest("user/profile", "GET");
+		console.log("👤 Fetching current user profile");
+		return request("user/profile", "GET");
 	}
 
-	// Public API
+	// API publique
 	return {
+		request,
 		login,
 		logout,
-		getCurrentUser,
-		request: makeRequest,
-		testProxy
+		getCurrentUser
 	};
 })();
 
-// Make available globally
+// Rendre disponible globalement
 window.ApiService = ApiService;

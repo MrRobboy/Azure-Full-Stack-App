@@ -1,5 +1,5 @@
 // Configuration de l'application
-// Version: 4.3 - Azure Edition - Enhanced Proxy
+// Version: 5.0 - Unified Proxy Edition
 
 // Détecter l'environnement
 const isAzure = window.location.hostname.includes("azurewebsites.net");
@@ -17,28 +17,21 @@ const defaultConfig = {
 	backendBaseUrl: "https://app-backend-esgi-app.azurewebsites.net",
 
 	// Utiliser le proxy ou non
-	useProxy: isAzure, // Activer par défaut sur Azure
-
-	// URL des proxies - avec priorité
-	proxyUrls: [
-		"azure-proxy.php", // Nouveau proxy optimisé pour Azure
-		"simple-proxy.php", // Alternative fonctionnelle
-		"api-bridge.php", // Proxy principal (fallback)
-		"matieres-proxy.php", // Proxy spécifique pour les matières
-		"unified-proxy.php" // Original
-	],
+	useProxy: true, // Toujours utiliser le proxy pour éviter les problèmes CORS
 
 	// URL du proxy par défaut
-	proxyUrl: "azure-proxy.php",
+	proxyUrl: "unified-proxy.php",
 
-	// Pour les matières spécifiquement
-	matieresProxyUrl: "azure-proxy.php",
-
-	// Stratégie de contournement pour les erreurs 404
-	bypass404: true,
+	// Proxies disponibles avec priorité
+	proxyUrls: [
+		"unified-proxy.php", // Nouveau proxy unifié (prioritaire)
+		"azure-proxy.php", // Alternative Azure
+		"simple-proxy.php", // Alternative simple
+		"api-bridge.php" // Fallback
+	],
 
 	// Version de configuration
-	version: "4.3"
+	version: "5.0"
 };
 
 // Configuration pour l'environnement
@@ -46,28 +39,39 @@ let appConfig = { ...defaultConfig };
 
 // Fonction pour vérifier l'accessibilité du proxy
 async function verifyProxyAccess() {
-	if (!isAzure) return true; // Seulement exécuter sur Azure
+	console.log("Verifying access to unified proxy...");
 
-	console.log("Verifying access to proxy...");
-
-	// D'abord vérifier test-proxy.php
 	try {
-		const testResponse = await fetch(
-			`test-proxy.php?_=${Date.now()}`
+		const response = await fetch(
+			`${appConfig.proxyUrl}?endpoint=status&_=${Date.now()}`,
+			{
+				method: "GET",
+				headers: {
+					Accept: "application/json",
+					"Content-Type": "application/json"
+				},
+				timeout: 5000
+			}
 		);
-		if (testResponse.ok) {
-			const testData = await testResponse.json();
-			console.log("Test proxy response:", testData);
+
+		if (response.ok) {
+			console.log(`Unified proxy is working correctly!`);
+			return true;
 		}
 	} catch (error) {
-		console.warn("Test proxy check failed:", error.message);
+		console.warn(`Error accessing unified proxy:`, error.message);
 	}
 
-	// Essayer chaque proxy dans l'ordre jusqu'à ce que l'un fonctionne
-	for (const proxyUrl of appConfig.proxyUrls) {
+	// Si le proxy unifié échoue, essayer les alternatives
+	console.log("Fallback to alternative proxies...");
+
+	// Essayer chaque proxy alternatif dans l'ordre
+	for (let i = 1; i < appConfig.proxyUrls.length; i++) {
+		const proxyUrl = appConfig.proxyUrls[i];
+
 		try {
 			const response = await fetch(
-				`${proxyUrl}?endpoint=status.php&_=${Date.now()}`,
+				`${proxyUrl}?endpoint=status&_=${Date.now()}`,
 				{
 					method: "GET",
 					headers: {
@@ -81,7 +85,7 @@ async function verifyProxyAccess() {
 
 			if (response.ok) {
 				console.log(
-					`Proxy ${proxyUrl} is working correctly!`
+					`Alternative proxy ${proxyUrl} is working, using it instead`
 				);
 				appConfig.proxyUrl = proxyUrl;
 				return true;
@@ -94,24 +98,21 @@ async function verifyProxyAccess() {
 		}
 	}
 
-	console.error("All proxies failed. Using fallback.");
+	console.error("All proxies failed. Using first one anyway.");
 	return false;
 }
 
-// Sur Azure, initialiser avec notre configuration
-if (isAzure) {
-	console.log("Running on Azure with proxy");
-	console.log("App config:", appConfig);
-	console.log("Default Proxy URL:", appConfig.proxyUrl);
-	console.log("API Base URL:", appConfig.apiBaseUrl);
+// Initialiser avec notre configuration
+console.log("App config initialized with:", appConfig);
+console.log("Default Proxy URL:", appConfig.proxyUrl);
+console.log("API Base URL:", appConfig.apiBaseUrl);
 
-	// Vérifier l'accès au proxy
-	verifyProxyAccess().then((success) => {
-		if (!success) {
-			console.warn("Using fallback proxy configuration");
-		}
-	});
-}
+// Vérifier l'accès au proxy
+verifyProxyAccess().then((success) => {
+	if (!success) {
+		console.warn("Using fallback proxy configuration");
+	}
+});
 
 // Fonction pour obtenir l'URL complète de l'API
 function getApiUrl(endpoint) {
@@ -128,56 +129,29 @@ function getApiUrl(endpoint) {
 	return `${appConfig.apiBaseUrl}${endpoint}`;
 }
 
-// Fonction pour obtenir l'URL complète du backend
-function getBackendUrl(endpoint) {
-	// Si l'endpoint est déjà une URL complète, la retourner
-	if (endpoint.startsWith("http")) {
-		return endpoint;
-	}
+// Fonction pour obtenir l'URL du proxy avec l'endpoint encodé
+function getProxyUrl(endpoint) {
+	// Nettoyer l'endpoint
+	const cleanEndpoint = endpoint.startsWith("/")
+		? endpoint.substring(1)
+		: endpoint;
 
-	// Assurer qu'il y a un slash entre l'URL de base et l'endpoint si nécessaire
-	if (
-		!endpoint.startsWith("/") &&
-		!appConfig.backendBaseUrl.endsWith("/")
-	) {
-		return `${appConfig.backendBaseUrl}/${endpoint}`;
-	}
-
-	return `${appConfig.backendBaseUrl}${endpoint}`;
-}
-
-// Fonction pour obtenir l'URL complète (avec ou sans proxy)
-function getFullUrl(fullPath) {
-	// Si nous utilisons le proxy sur Azure, construire l'URL du proxy
-	if (isAzure && appConfig.useProxy) {
-		// Traitement spécial pour les matières
-		if (fullPath.includes("matieres")) {
-			return `${
-				appConfig.matieresProxyUrl
-			}?endpoint=${encodeURIComponent(fullPath)}`;
-		}
-
-		return `${appConfig.proxyUrl}?endpoint=${encodeURIComponent(
-			fullPath
-		)}`;
-	}
-
-	// Sinon, retourner l'URL directe
-	return fullPath;
+	// Construire l'URL complète du proxy
+	return `${appConfig.proxyUrl}?endpoint=${encodeURIComponent(
+		cleanEndpoint
+	)}`;
 }
 
 // Exposer les fonctions utilitaires globalement
 window.appConfig = appConfig;
 window.getApiUrl = getApiUrl;
-window.getBackendUrl = getBackendUrl;
-window.getFullUrl = getFullUrl;
+window.getProxyUrl = getProxyUrl;
 
 // Exporter la configuration pour les modules
 if (typeof module !== "undefined" && module.exports) {
 	module.exports = {
 		appConfig,
 		getApiUrl,
-		getBackendUrl,
-		getFullUrl
+		getProxyUrl
 	};
 }

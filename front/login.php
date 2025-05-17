@@ -25,14 +25,6 @@ ob_start();
 				<span class="error-title">Erreur</span>
 			</div>
 			<div class="error-content"></div>
-			<div class="error-details" style="display: none;">
-				<div class="error-type"></div>
-				<div class="error-timestamp"></div>
-				<div class="error-trace"></div>
-			</div>
-			<button class="btn btn-link btn-sm toggle-details" onclick="toggleErrorDetails()">
-				Afficher les détails
-			</button>
 		</div>
 		<form id="login-form">
 			<div class="form-group">
@@ -63,149 +55,155 @@ ob_start();
 	</div>
 </div>
 
-<script src="js/config.js?v=4.0"></script>
+<script src="js/config.js?v=5.0"></script>
+<script src="js/api-service.js?v=2.0"></script>
 <script src="js/notification-system.js?v=1.1"></script>
 <script>
-	function toggleErrorDetails() {
-		const details = document.querySelector('.error-details');
-		const button = document.querySelector('.toggle-details');
-		if (details.style.display === 'none') {
-			details.style.display = 'block';
-			button.textContent = 'Masquer les détails';
-		} else {
-			details.style.display = 'none';
-			button.textContent = 'Afficher les détails';
-		}
-	}
-
-	function displayError(error) {
-		const errorMessage = document.getElementById('error-message');
-		const errorContent = errorMessage.querySelector('.error-content');
-		const errorType = errorMessage.querySelector('.error-type');
-		const errorTimestamp = errorMessage.querySelector('.error-timestamp');
-		const errorTrace = errorMessage.querySelector('.error-trace');
-
-		errorContent.textContent = error.message || 'Une erreur est survenue';
-		errorType.textContent = 'Type: ' + (error.type || 'Inconnu');
-		errorTimestamp.textContent = 'Date: ' + (error.timestamp || new Date().toISOString());
-		errorTrace.textContent = 'Détails: ' + JSON.stringify(error.details || {}, null, 2);
-
-		errorMessage.style.display = 'block';
-
-		// Ajouter la notification via le système de notification
-		NotificationSystem.error(error.message || 'Erreur de connexion');
-	}
-
-	// Function to store session data via AJAX
-	async function storeSessionData(userData, token) {
-		console.log('Storing session data...', {
-			userData,
-			token
-		});
-
-		try {
-			const response = await fetch('session-handler.php', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					action: 'login',
-					user: userData,
-					token: token
-				})
-			});
-
-			const data = await response.json();
-			console.log('Session handler response:', data);
-
-			if (!data.success) {
-				console.error('Session storage failed:', data.message);
-				return false;
-			}
-
-			// Verify the session was actually set
-			const sessionCheckResponse = await fetch('session-handler.php', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					action: 'check'
-				})
-			});
-
-			const sessionStatus = await sessionCheckResponse.json();
-			console.log('Session verification:', sessionStatus);
-
-			return sessionStatus.loggedIn === true;
-		} catch (error) {
-			console.error('Session storage error:', error);
-			return false;
-		}
-	}
-
 	document.addEventListener('DOMContentLoaded', function() {
-		// Get the login form
+		console.log('Page de connexion initialisée');
+
+		// Éléments du formulaire
 		const loginForm = document.getElementById('login-form');
+		const emailInput = document.getElementById('email');
+		const passwordInput = document.getElementById('password');
+		const submitButton = loginForm.querySelector('button[type="submit"]');
+		const btnText = submitButton.querySelector('.btn-text');
+		const btnLoading = submitButton.querySelector('.btn-loading');
 
-		// Add submit handler
-		loginForm.addEventListener('submit', async function(e) {
-			e.preventDefault();
+		// Fonction pour afficher une erreur
+		function displayError(message) {
+			const errorMessage = document.getElementById('error-message');
+			const errorContent = errorMessage.querySelector('.error-content');
 
-			// Show loading notification
-			NotificationSystem.info('Tentative de connexion...');
-			console.log('Tentative de connexion...');
+			errorContent.textContent = message;
+			errorMessage.style.display = 'block';
 
-			// Get form data
-			const email = document.getElementById('email').value;
-			const password = document.getElementById('password').value;
+			// Notification via le système de notification si disponible
+			if (window.NotificationSystem) {
+				NotificationSystem.error(message);
+			}
+		}
+
+		// Fonction pour masquer les erreurs
+		function hideError() {
+			const errorMessage = document.getElementById('error-message');
+			errorMessage.style.display = 'none';
+		}
+
+		// Fonction pour afficher le chargement
+		function showLoading() {
+			btnText.style.display = 'none';
+			btnLoading.style.display = 'inline-block';
+			submitButton.disabled = true;
+		}
+
+		// Fonction pour masquer le chargement
+		function hideLoading() {
+			btnText.style.display = 'inline-block';
+			btnLoading.style.display = 'none';
+			submitButton.disabled = false;
+		}
+
+		// Fonction pour stocker les données de session
+		async function storeSessionData(userData, token) {
+			console.log('Stockage des données de session...');
 
 			try {
-				// Use our API Service for login
+				const response = await fetch('session-handler.php', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						action: 'login',
+						user: userData,
+						token: token
+					})
+				});
+
+				const data = await response.json();
+
+				if (!data.success) {
+					console.error('Échec du stockage de session:', data.message);
+					return false;
+				}
+
+				// Vérifier que la session a bien été créée
+				const verificationResponse = await fetch('session-handler.php', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						action: 'check'
+					})
+				});
+
+				const verificationData = await verificationResponse.json();
+				return verificationData.loggedIn === true;
+			} catch (error) {
+				console.error('Erreur lors du stockage de session:', error);
+				return false;
+			}
+		}
+
+		// Gestionnaire de soumission du formulaire
+		loginForm.addEventListener('submit', async function(e) {
+			e.preventDefault();
+			hideError();
+			showLoading();
+
+			// Informations d'identification
+			const email = emailInput.value;
+			const password = passwordInput.value;
+
+			// Notification de tentative
+			if (window.NotificationSystem) {
+				NotificationSystem.info('Tentative de connexion...');
+			}
+
+			try {
+				// Appel à l'API via notre service
 				const result = await ApiService.login(email, password);
 
-				console.log('Login response:', result);
+				console.log('Réponse de connexion:', result);
 
 				if (result.success && result.data.success) {
-					// Success - check for user data and token in the response
+					// Vérifier la présence des informations requises
 					if (!result.data.user || !result.data.token) {
-						console.error('Missing user data or token in login response:', result.data);
-						NotificationSystem.error('Réponse de connexion incomplète. Contactez l\'administrateur.');
-						return;
+						throw new Error('Réponse incomplète du serveur d\'authentification');
 					}
 
-					console.log('Login successful, storing session data...');
-
-					// Store session data on server side before redirect
+					// Stocker les données de session
 					const sessionStored = await storeSessionData(result.data.user, result.data.token);
-					console.log('Session stored:', sessionStored);
 
 					if (!sessionStored) {
-						console.error('Failed to store session data');
-						NotificationSystem.error('Erreur lors de la création de la session. Veuillez réessayer.');
-						return;
+						throw new Error('Impossible de créer la session. Veuillez réessayer.');
 					}
 
-					NotificationSystem.success('Connexion réussie. Redirection...');
+					// Notification de succès
+					if (window.NotificationSystem) {
+						NotificationSystem.success('Connexion réussie. Redirection...');
+					}
 
-					// Short delay before redirect to ensure session is fully established
+					// Redirection vers le tableau de bord
 					setTimeout(() => {
 						window.location.href = 'dashboard.php';
 					}, 500);
 				} else {
-					// Login failed
-					const errorMessage = result.data.message || 'Erreur de connexion';
-					console.error('Login failed:', errorMessage);
-					NotificationSystem.error(errorMessage);
-					console.log('Erreur de connexion:', result.data);
+					// Erreur d'authentification
+					const errorMessage = result.data.message || 'Identifiants incorrects';
+					throw new Error(errorMessage);
 				}
 			} catch (error) {
-				// Exception occurred
-				NotificationSystem.error('Erreur technique lors de la connexion');
-				console.error('Exception:', error);
+				console.error('Erreur de connexion:', error);
+				displayError(error.message || 'Erreur lors de la connexion. Veuillez réessayer.');
+				hideLoading();
 			}
 		});
+
+		// Focus sur le champ email au chargement
+		emailInput.focus();
 	});
 </script>
 
