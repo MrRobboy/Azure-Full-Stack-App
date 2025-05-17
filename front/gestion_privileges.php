@@ -2,7 +2,7 @@
 session_start();
 
 // Redirection vers la page de connexion si non connecté
-if (!isset($_SESSION['prof_id'])) {
+if (!isset($_SESSION['user']) || !isset($_SESSION['token'])) {
 	header('Location: login.php');
 	exit();
 }

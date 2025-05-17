@@ -108,6 +108,7 @@ error_log("User logged in: " . json_encode($user));
         </div>
     </div>
 
+    <script src="js/config.js?v=5.0"></script>
     <script src="js/api-service.js"></script>
     <script src="js/notification-system.js"></script>
     <script>
