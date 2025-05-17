@@ -53,7 +53,12 @@ const ApiService = (function () {
 			};
 
 			// Ajouter le corps de la requête pour les méthodes qui le supportent
-			if (data && ["POST", "PUT", "PATCH"].includes(method)) {
+			if (
+				data &&
+				["POST", "PUT", "PATCH", "DELETE"].includes(
+					method
+				)
+			) {
 				requestOptions.body = JSON.stringify(data);
 				console.log(
 					`[${requestId}] Request data:`,
