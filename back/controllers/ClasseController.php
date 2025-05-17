@@ -189,11 +189,14 @@ class ClasseController
 	public function deleteClasse($id)
 	{
 		try {
-			error_log("Tentative de suppression de la classe ID: " . $id);
+			error_log("Tentative directe de suppression de la classe ID: " . $id);
 
-			// Vérifier si la classe existe
-			$classe = $this->classeModel->getById($id);
-			if (!$classe) {
+			// Vérifier si la classe existe avant la suppression avec une requête directe
+			$stmt = $this->db->prepare("SELECT COUNT(*) FROM CLASSE WHERE id_classe = ?");
+			$stmt->execute([$id]);
+			$count = $stmt->fetchColumn();
+
+			if ($count == 0) {
 				error_log("Classe non trouvée pour suppression, ID: " . $id);
 				return [
 					'success' => false,
@@ -206,8 +209,9 @@ class ClasseController
 			$stmt = $this->db->prepare("SELECT COUNT(*) FROM USER WHERE classe = ?");
 			if ($stmt) {
 				$stmt->execute([$id]);
-				if ($stmt->fetchColumn() > 0) {
-					error_log("Impossible de supprimer la classe ID: " . $id . " car elle contient des élèves");
+				$eleveCount = $stmt->fetchColumn();
+				if ($eleveCount > 0) {
+					error_log("Impossible de supprimer la classe ID: " . $id . " car elle contient des élèves (" . $eleveCount . ")");
 					return [
 						'success' => false,
 						'message' => 'Impossible de supprimer cette classe car elle contient des élèves. Veuillez d\'abord supprimer ou réaffecter les élèves.',
@@ -216,39 +220,70 @@ class ClasseController
 				}
 			}
 
-			// Tentative de suppression
-			$result = $this->classeModel->delete($id);
+			// Tentative de suppression directe avec la requête SQL (sans passer par le modèle)
+			try {
+				$this->db->beginTransaction();
 
-			// Vérification supplémentaire après suppression
-			if ($result === false) {
-				error_log("Échec de la suppression de la classe ID: " . $id);
+				$stmt = $this->db->prepare("DELETE FROM CLASSE WHERE id_classe = ?");
+				$result = $stmt->execute([$id]);
 
-				// Double vérification pour s'assurer que la classe existe toujours
-				$classeVerif = $this->classeModel->getById($id);
-				if ($classeVerif) {
-					error_log("La classe existe toujours après tentative de suppression: " . print_r($classeVerif, true));
+				if (!$result) {
+					error_log("Erreur d'exécution de la requête: " . print_r($stmt->errorInfo(), true));
+					$this->db->rollBack();
 					return [
 						'success' => false,
-						'message' => 'Erreur lors de la suppression de la classe. Veuillez réessayer.',
-						'data' => null
-					];
-				} else {
-					// Si la classe n'existe plus malgré l'erreur, la considérer comme supprimée
-					error_log("La classe n'existe plus après tentative de suppression (faux négatif)");
-					return [
-						'success' => true,
-						'message' => 'Classe supprimée avec succès (récupéré)',
+						'message' => 'Erreur lors de la suppression de la classe: ' . implode(', ', $stmt->errorInfo()),
 						'data' => null
 					];
 				}
-			}
 
-			error_log("Classe supprimée avec succès, ID: " . $id);
-			return [
-				'success' => true,
-				'message' => 'Classe supprimée avec succès',
-				'data' => null
-			];
+				$rowCount = $stmt->rowCount();
+				error_log("Nombre de lignes affectées par la suppression: " . $rowCount);
+
+				if ($rowCount == 0) {
+					error_log("Aucune ligne supprimée pour la classe ID: " . $id);
+					$this->db->rollBack();
+					return [
+						'success' => false,
+						'message' => 'Aucune classe n\'a été supprimée. Vérifiez l\'ID.',
+						'data' => null
+					];
+				}
+
+				$this->db->commit();
+
+				// Vérification supplémentaire après suppression
+				$stmt = $this->db->prepare("SELECT COUNT(*) FROM CLASSE WHERE id_classe = ?");
+				$stmt->execute([$id]);
+				$postCount = $stmt->fetchColumn();
+
+				if ($postCount > 0) {
+					error_log("ERREUR CRITIQUE: La classe existe toujours après suppression confirmée!");
+					return [
+						'success' => false,
+						'message' => 'Erreur critique: La classe existe toujours malgré la suppression confirmée',
+						'data' => null
+					];
+				}
+
+				error_log("Classe supprimée avec succès, ID: " . $id);
+				return [
+					'success' => true,
+					'message' => 'Classe supprimée avec succès',
+					'data' => ['id' => $id, 'rowCount' => $rowCount]
+				];
+			} catch (PDOException $e) {
+				if ($this->db->inTransaction()) {
+					$this->db->rollBack();
+				}
+				error_log("PDOException dans deleteClasse (direct): " . $e->getMessage());
+				error_log("Trace: " . $e->getTraceAsString());
+				return [
+					'success' => false,
+					'message' => 'Erreur de base de données: ' . $e->getMessage(),
+					'data' => null
+				];
+			}
 		} catch (Exception $e) {
 			error_log("Exception dans deleteClasse: " . $e->getMessage());
 			error_log("Trace: " . $e->getTraceAsString());

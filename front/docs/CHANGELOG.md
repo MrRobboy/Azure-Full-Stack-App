@@ -464,3 +464,14 @@
      - Renforcement du contrôleur ClasseController.php avec double vérification après suppression
      - Ajout de logs détaillés pour mieux diagnostiquer les problèmes de suppression
      - Amélioration de la gestion des erreurs avec traces d'exceptions complètes
+
+## [4.17.0] - 2024-05-17
+
+### Fixed
+
+- Résolution radicale du problème persistant de suppression des classes
+     - Refonte complète de la méthode deleteClasse dans ClasseController.php pour utiliser des requêtes SQL directes
+     - Abandon du modèle Classe.php pour les opérations de suppression qui posait problème
+     - Ajout d'une transaction SQL avec commit/rollback pour garantir l'intégrité des données
+     - Implémentation de plusieurs vérifications avant et après suppression
+     - Amélioration des messages d'erreur avec des informations de diagnostic détaillées
