@@ -1,5 +1,71 @@
 # Changelog
 
+## [4.10.0] - 2024-05-17
+
+### Fixed
+
+- Correction des erreurs 400 "Missing required field (id)" lors de la suppression et mise à jour des matières
+     - Mise à jour de la fonction `deleteMatiere` dans `gestion_matieres.php` pour envoyer l'ID dans le corps de la requête
+     - Mise à jour de la fonction `handleMatiereSubmit` pour envoyer l'ID dans le corps de la requête lors des opérations PUT
+
+### Changed
+
+- Suppression du chargement automatique des identifiants de test dans la page de connexion
+     - Retrait de l'alerte d'information avec les identifiants de test
+     - Suppression du bouton "Charger des identifiants de test"
+     - Suppression de la fonction `loadTestCredentials` et des éléments DOM associés
+
+## [4.9.0] - 2024-05-16
+
+### Changed
+
+- Correction de la construction de l'URL dans `api-bridge.php` : ajout automatique de `.php` à l'endpoint si absent.
+- Envoi systématique des headers CORS et de sécurité dans toutes les réponses du proxy, y compris en cas d'erreur.
+
+### Fixed
+
+- Résolution des erreurs 404 sur les endpoints `/auth/login`, `/matieres`, `/notes` en adaptant la logique du proxy pour cibler les bons fichiers PHP du backend.
+- Correction de l'absence de headers CORS et sécurité dans les réponses du proxy.
+
+### Documentation
+
+- Ajout d'une explication sur la structure des endpoints backend (fichiers PHP à la racine et non routes REST).
+- Documentation des erreurs rencontrées lors des tests :
+     - 404 sur `/api/status` (inexistant)
+     - Succès sur `/status.php` (backend OK)
+     - 404 sur `/auth/login`, `/matieres`, `/notes` (fichiers absents)
+     - Absence de headers CORS et sécurité sur les réponses du proxy
+- Mise à jour des recommandations de test dans `TESTING.md`.
+
+## Prochaines Étapes
+
+1. Documentation
+
+      - Rédaction du guide d'installation
+      - Documentation des API
+      - Guide de dépannage
+      - Documentation des métriques
+
+2. Tests
+
+      - Mise en place des tests unitaires
+      - Configuration des tests d'intégration
+      - Tests de performance automatisés
+      - Tests de sécurité automatisés
+
+3. CI/CD
+
+      - Configuration des pipelines
+      - Tests automatisés
+      - Déploiement automatique
+      - Monitoring de la qualité
+
+4. Monitoring
+      - Mise en place des alertes
+      - Tableau de bord de monitoring
+      - Métriques en temps réel
+      - Rapports de performance
+
 ## [4.0.0] - 2024-05-16
 
 ### Ajouté
@@ -367,54 +433,3 @@
 - Mise à jour de la documentation des problèmes connus
 - Ajout de la section de dépannage dans TESTING.md
 - Documentation des headers de sécurité requis
-
-## [4.9.0] - 2024-05-16
-
-### Changed
-
-- Correction de la construction de l'URL dans `api-bridge.php` : ajout automatique de `.php` à l'endpoint si absent.
-- Envoi systématique des headers CORS et de sécurité dans toutes les réponses du proxy, y compris en cas d'erreur.
-
-### Fixed
-
-- Résolution des erreurs 404 sur les endpoints `/auth/login`, `/matieres`, `/notes` en adaptant la logique du proxy pour cibler les bons fichiers PHP du backend.
-- Correction de l'absence de headers CORS et sécurité dans les réponses du proxy.
-
-### Documentation
-
-- Ajout d'une explication sur la structure des endpoints backend (fichiers PHP à la racine et non routes REST).
-- Documentation des erreurs rencontrées lors des tests :
-     - 404 sur `/api/status` (inexistant)
-     - Succès sur `/status.php` (backend OK)
-     - 404 sur `/auth/login`, `/matieres`, `/notes` (fichiers absents)
-     - Absence de headers CORS et sécurité sur les réponses du proxy
-- Mise à jour des recommandations de test dans `TESTING.md`.
-
-## Prochaines Étapes
-
-1. Documentation
-
-      - Rédaction du guide d'installation
-      - Documentation des API
-      - Guide de dépannage
-      - Documentation des métriques
-
-2. Tests
-
-      - Mise en place des tests unitaires
-      - Configuration des tests d'intégration
-      - Tests de performance automatisés
-      - Tests de sécurité automatisés
-
-3. CI/CD
-
-      - Configuration des pipelines
-      - Tests automatisés
-      - Déploiement automatique
-      - Monitoring de la qualité
-
-4. Monitoring
-      - Mise en place des alertes
-      - Tableau de bord de monitoring
-      - Métriques en temps réel
-      - Rapports de performance
