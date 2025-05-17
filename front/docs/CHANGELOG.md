@@ -494,6 +494,15 @@
      - Connexion directe à la base de données pour les opérations critiques
      - Suppression forcée avec confirmation de sécurité
 
+## [4.19.1] - 2024-05-17
+
+### Fixed
+
+- Correction d'un bug dans l'outil de diagnostic des classes
+     - Correction de l'erreur SQL "Incorrect syntax near the keyword 'USER'"
+     - Ajout de délimiteurs corrects ([]) autour du mot-clé réservé USER dans les requêtes SQL
+     - Amélioration de la robustesse des requêtes SQL Server
+
 ## [4.19.0] - 2024-05-17
 
 ### Changed

@@ -160,7 +160,7 @@ function checkClassReferences($id)
 	$references = [];
 
 	// Vérifier les élèves associés
-	$result = executeSQL("SELECT COUNT(*) AS count FROM USER WHERE classe = ?", [$id]);
+	$result = executeSQL("SELECT COUNT(*) AS count FROM [USER] WHERE classe = ?", [$id]);
 	$references['users'] = $result[0]['count'] ?? 0;
 
 	// Vérifier les examens associés
@@ -208,7 +208,7 @@ function forceDeleteClass($id)
 
 		if ($references['users'] > 0) {
 			logMessage("Désassociation de {$references['users']} utilisateur(s) de la classe", "warning");
-			$stmt = $pdo->prepare("UPDATE USER SET classe = NULL WHERE classe = ?");
+			$stmt = $pdo->prepare("UPDATE [USER] SET classe = NULL WHERE classe = ?");
 			$stmt->execute([$id]);
 			logMessage("{$stmt->rowCount()} utilisateur(s) désassocié(s)", "success");
 			$referencesCleared = true;
