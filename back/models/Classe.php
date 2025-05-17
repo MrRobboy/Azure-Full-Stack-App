@@ -141,14 +141,7 @@ class Classe
 				return false;
 			}
 
-			// Vérifier si la classe a des élèves
-			$stmt = $this->db->prepare("SELECT COUNT(*) FROM USER WHERE classe = ?");
-			$stmt->execute([$id]);
-			if ($stmt->fetchColumn() > 0) {
-				error_log("Impossible de supprimer la classe car elle contient des élèves");
-				return false;
-			}
-
+			// Exécuter la suppression
 			$stmt = $this->db->prepare("DELETE FROM CLASSE WHERE id_classe = ?");
 			if (!$stmt) {
 				error_log("Erreur de préparation de la requête: " . print_r($this->db->errorInfo(), true));

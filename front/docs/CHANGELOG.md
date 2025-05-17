@@ -1,5 +1,14 @@
 # Changelog
 
+## [4.13.0] - 2024-05-17
+
+### Fixed
+
+- Correction du problème de suppression des classes
+     - Ajout d'une vérification explicite dans le contrôleur pour détecter si une classe contient des élèves
+     - Amélioration des messages d'erreur lors de la tentative de suppression d'une classe avec élèves
+     - Simplification du modèle Classe.php en déplaçant la logique de vérification dans le contrôleur
+
 ## [4.12.0] - 2024-05-17
 
 ### Changed

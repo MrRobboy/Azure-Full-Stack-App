@@ -381,7 +381,13 @@ ob_start(); // Début de la mise en tampon
 			});
 
 			if (!result.success) {
-				throw new Error(result.error || 'Erreur lors de la suppression de la classe');
+				// Vérifier si l'erreur est liée à des élèves associés à la classe
+				if (result.message && result.message.includes('contient des élèves')) {
+					NotificationSystem.error(result.message);
+					throw new Error(result.message);
+				} else {
+					throw new Error(result.error || result.message || 'Erreur lors de la suppression de la classe');
+				}
 			}
 
 			NotificationSystem.success('Classe supprimée avec succès');

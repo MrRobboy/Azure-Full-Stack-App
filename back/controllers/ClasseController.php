@@ -1,16 +1,19 @@
 <?php
 require_once __DIR__ . '/../models/Classe.php';
 require_once __DIR__ . '/../models/Eleve.php';
+require_once __DIR__ . '/../services/DatabaseService.php';
 
 class ClasseController
 {
 	private $classeModel;
 	private $eleveModel;
+	private $db;
 
 	public function __construct()
 	{
 		$this->classeModel = new Classe();
 		$this->eleveModel = new Eleve();
+		$this->db = DatabaseService::getInstance()->getConnection();
 	}
 
 	public function getAllClasses()
@@ -186,8 +189,36 @@ class ClasseController
 	public function deleteClasse($id)
 	{
 		try {
+			error_log("Tentative de suppression de la classe ID: " . $id);
+
+			// Vérifier si la classe existe
+			$classe = $this->classeModel->getById($id);
+			if (!$classe) {
+				error_log("Classe non trouvée pour suppression, ID: " . $id);
+				return [
+					'success' => false,
+					'message' => 'Classe non trouvée',
+					'data' => null
+				];
+			}
+
+			// Vérifier si la classe a des élèves avant de tenter la suppression
+			$stmt = $this->db->prepare("SELECT COUNT(*) FROM USER WHERE classe = ?");
+			if ($stmt) {
+				$stmt->execute([$id]);
+				if ($stmt->fetchColumn() > 0) {
+					error_log("Impossible de supprimer la classe ID: " . $id . " car elle contient des élèves");
+					return [
+						'success' => false,
+						'message' => 'Impossible de supprimer cette classe car elle contient des élèves. Veuillez d\'abord supprimer ou réaffecter les élèves.',
+						'data' => null
+					];
+				}
+			}
+
 			$result = $this->classeModel->delete($id);
 			if ($result === false) {
+				error_log("Échec de la suppression de la classe ID: " . $id);
 				return [
 					'success' => false,
 					'message' => 'Erreur lors de la suppression de la classe',
@@ -195,12 +226,14 @@ class ClasseController
 				];
 			}
 
+			error_log("Classe supprimée avec succès, ID: " . $id);
 			return [
 				'success' => true,
 				'message' => 'Classe supprimée avec succès',
 				'data' => null
 			];
 		} catch (Exception $e) {
+			error_log("Exception dans deleteClasse: " . $e->getMessage());
 			return [
 				'success' => false,
 				'message' => 'Erreur serveur: ' . $e->getMessage(),
