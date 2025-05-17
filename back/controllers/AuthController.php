@@ -51,38 +51,106 @@ class AuthController
 	public function login($email, $password)
 	{
 		try {
-			error_log("Début du processus de login dans AuthController (BYPASS ACTIF)");
+			error_log("Début du processus de login dans AuthController - Vérification des identifiants");
 
-			// BYPASS: Accept any credentials
-			$mockProf = [
-				'id_prof' => 1,
-				'nom' => 'Admin',
-				'prenom' => 'User',
-				'email' => $email ?: 'admin@example.com'
-			];
+			// Vérifier si les paramètres sont présents
+			if (empty($email) || empty($password)) {
+				error_log("Champs manquants dans la requête de login");
+				throw new Exception("Veuillez remplir tous les champs", 400);
+			}
 
-			error_log("Login réussi (BYPASS), création de la session pour l'utilisateur: " . $email);
-			$_SESSION['prof_id'] = $mockProf['id_prof'];
-			$_SESSION['prof_nom'] = $mockProf['nom'];
-			$_SESSION['prof_prenom'] = $mockProf['prenom'];
-			$_SESSION['prof_email'] = $mockProf['email'];
+			// Valider le format de l'email
+			if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+				error_log("Format d'email invalide: " . $email);
+				throw new Exception("Format d'email invalide", 400);
+			}
 
-			// Générer un token JWT
-			$token = $this->generateJWT($mockProf['id_prof'], $mockProf['email']);
-			error_log("Token JWT généré pour l'utilisateur: " . $email);
+			// Vérifier les identifiants dans la base de données
+			try {
+				$prof = $this->prof->authenticate($email, $password);
 
-			// Structure de réponse adaptée au front-end
-			return [
-				'success' => true,
-				'message' => 'Connexion réussie (BYPASS ACTIF)',
-				'user' => [
-					'id' => $mockProf['id_prof'],
-					'nom' => $mockProf['nom'],
-					'prenom' => $mockProf['prenom'],
-					'email' => $mockProf['email']
-				],
-				'token' => $token
-			];
+				error_log("Authentification réussie pour l'utilisateur: " . $email);
+
+				// Créer la session utilisateur
+				$_SESSION['prof_id'] = $prof['id_prof'];
+				$_SESSION['prof_nom'] = $prof['nom'];
+				$_SESSION['prof_prenom'] = $prof['prenom'];
+				$_SESSION['prof_email'] = $prof['email'];
+
+				// Générer un token JWT
+				$token = $this->generateJWT($prof['id_prof'], $prof['email']);
+				error_log("Token JWT généré pour l'utilisateur: " . $email);
+
+				// Structure de réponse adaptée au front-end
+				return [
+					'success' => true,
+					'message' => 'Connexion réussie',
+					'user' => [
+						'id' => $prof['id_prof'],
+						'nom' => $prof['nom'],
+						'prenom' => $prof['prenom'],
+						'email' => $prof['email']
+					],
+					'token' => $token
+				];
+			} catch (Exception $authError) {
+				error_log("Erreur d'authentification: " . $authError->getMessage());
+
+				// FALLBACK: Utiliser des identifiants de test si activé
+				$useFallbackCredentials = true; // Mettre à false pour une vérification stricte
+
+				if ($useFallbackCredentials) {
+					// Credentials de test
+					$fallbackCredentials = [
+						'admin@example.com' => [
+							'password' => 'admin123',
+							'id_prof' => 1,
+							'nom' => 'Admin',
+							'prenom' => 'User'
+						],
+						'prof@example.com' => [
+							'password' => 'prof123',
+							'id_prof' => 2,
+							'nom' => 'Prof',
+							'prenom' => 'Test'
+						]
+					];
+
+					// Vérifier si l'email est dans les credentials de test
+					if (isset($fallbackCredentials[$email]) && $fallbackCredentials[$email]['password'] === $password) {
+						error_log("Utilisation des credentials de fallback pour: " . $email);
+
+						$fallbackProf = $fallbackCredentials[$email];
+
+						// Créer la session utilisateur
+						$_SESSION['prof_id'] = $fallbackProf['id_prof'];
+						$_SESSION['prof_nom'] = $fallbackProf['nom'];
+						$_SESSION['prof_prenom'] = $fallbackProf['prenom'];
+						$_SESSION['prof_email'] = $email;
+
+						// Générer un token JWT
+						$token = $this->generateJWT($fallbackProf['id_prof'], $email);
+
+						return [
+							'success' => true,
+							'message' => 'Connexion réussie (credentials de test)',
+							'user' => [
+								'id' => $fallbackProf['id_prof'],
+								'nom' => $fallbackProf['nom'],
+								'prenom' => $fallbackProf['prenom'],
+								'email' => $email
+							],
+							'token' => $token
+						];
+					}
+
+					// Credentials invalides même dans le fallback
+					throw new Exception("Email ou mot de passe incorrect", 401);
+				} else {
+					// Pas de fallback, renvoyer l'erreur originale
+					throw $authError;
+				}
+			}
 		} catch (Exception $e) {
 			error_log("Erreur dans AuthController::login: " . $e->getMessage());
 			throw $e;
@@ -109,23 +177,43 @@ class AuthController
 
 	public function isLoggedIn()
 	{
-		// Always return true to bypass authentication
-		return true;
+		try {
+			if (session_status() === PHP_SESSION_NONE) {
+				session_start();
+			}
+
+			// Vérifier si l'utilisateur a une session active
+			$isLoggedIn = isset($_SESSION['prof_id']);
+			error_log("Vérification de l'authentification: " . ($isLoggedIn ? "Utilisateur connecté" : "Utilisateur non connecté"));
+
+			return $isLoggedIn;
+		} catch (Exception $e) {
+			error_log("Erreur dans AuthController::isLoggedIn: " . $e->getMessage());
+			return false;
+		}
 	}
 
 	public function getCurrentUser()
 	{
 		try {
-			// Always return a default user
-			return [
-				'success' => true,
-				'data' => [
-					'id' => $_SESSION['prof_id'] ?? 1,
-					'nom' => $_SESSION['prof_nom'] ?? 'Admin',
-					'prenom' => $_SESSION['prof_prenom'] ?? 'User',
-					'email' => $_SESSION['prof_email'] ?? 'admin@example.com'
-				]
-			];
+			if ($this->isLoggedIn()) {
+				$userData = [
+					'id' => $_SESSION['prof_id'],
+					'nom' => $_SESSION['prof_nom'],
+					'prenom' => $_SESSION['prof_prenom'],
+					'email' => $_SESSION['prof_email']
+				];
+
+				error_log("Récupération des informations utilisateur pour: " . $userData['email']);
+
+				return [
+					'success' => true,
+					'data' => $userData
+				];
+			} else {
+				error_log("Tentative d'accès aux informations utilisateur sans session");
+				throw new Exception("Non authentifié", 401);
+			}
 		} catch (Exception $e) {
 			error_log("Erreur dans AuthController::getCurrentUser: " . $e->getMessage());
 			throw $e;
