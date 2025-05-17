@@ -235,8 +235,10 @@ require_once 'templates/base.php';
 			console.log(`Suppression de la matière #${id}`);
 			NotificationSystem.info('Suppression en cours...');
 
-			// Appel API via notre service - Envoyer l'ID dans l'URL
-			const result = await ApiService.request(`matieres/${id}`, 'DELETE');
+			// Appel API via notre service - Envoyer l'ID dans le corps de la requête
+			const result = await ApiService.request('matieres', 'DELETE', {
+				id: id
+			});
 
 			if (!result.success) {
 				throw new Error(result.error || (result.data && result.data.message) || 'Erreur lors de la suppression de la matière');
@@ -284,7 +286,8 @@ require_once 'templates/base.php';
 					nom
 				});
 
-				const result = await ApiService.request(`matieres/${id}`, 'PUT', {
+				const result = await ApiService.request('matieres', 'PUT', {
+					id: id,
 					nom: nom
 				});
 

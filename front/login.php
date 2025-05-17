@@ -41,17 +41,11 @@ ob_start();
 					<input type="password" id="password" name="password" required placeholder="Mot de passe">
 				</div>
 			</div>
-			<div class="alert alert-info small">
-				<strong>Info:</strong> <span id="credential-help-text">Chargement des identifiants de test...</span>
-			</div>
 			<button type="submit" class="btn btn-primary">
 				<span class="btn-text">Se connecter</span>
 				<span class="btn-loading" style="display: none;">
 					<i class="fas fa-spinner fa-spin"></i> Connexion en cours...
 				</span>
-			</button>
-			<button type="button" id="load-credentials" class="btn btn-secondary mt-2">
-				<i class="fas fa-sync"></i> Charger des identifiants de test
 			</button>
 		</form>
 		<div class="links">
@@ -73,50 +67,8 @@ ob_start();
 		const emailInput = document.getElementById('email');
 		const passwordInput = document.getElementById('password');
 		const submitButton = loginForm.querySelector('button[type="submit"]');
-		const loadCredentialsButton = document.getElementById('load-credentials');
-		const credentialHelpText = document.getElementById('credential-help-text');
 		const btnText = submitButton.querySelector('.btn-text');
 		const btnLoading = submitButton.querySelector('.btn-loading');
-
-		// Fonction pour charger les identifiants de test
-		async function loadTestCredentials() {
-			try {
-				credentialHelpText.textContent = "Chargement des identifiants depuis la base de données...";
-
-				const result = await ApiService.getTestCredentials();
-
-				if (!result.success) {
-					throw new Error(`Erreur HTTP: ${result.status}`);
-				}
-
-				// Vérifier que les données ont le bon format
-				if (result.data && result.data.success && result.data.credentials) {
-					// Remplir les champs avec les identifiants récupérés
-					emailInput.value = result.data.credentials.email;
-					passwordInput.value = result.data.credentials.password;
-					credentialHelpText.textContent = `Identifiants de test chargés depuis la base de données.`;
-
-					if (window.NotificationSystem) {
-						NotificationSystem.success("Identifiants de test chargés avec succès");
-					}
-				} else {
-					throw new Error("Format de réponse invalide");
-				}
-			} catch (error) {
-				console.error("Erreur lors du chargement des identifiants:", error);
-				credentialHelpText.textContent = "Impossible de charger les identifiants. Utilisez vos propres identifiants.";
-
-				if (window.NotificationSystem) {
-					NotificationSystem.error("Échec du chargement des identifiants de test");
-				}
-			}
-		}
-
-		// Charger les identifiants au chargement de la page
-		loadTestCredentials();
-
-		// Ajouter un écouteur d'événement au bouton de chargement des identifiants
-		loadCredentialsButton.addEventListener('click', loadTestCredentials);
 
 		// Fonction pour afficher une erreur
 		function displayError(message) {
