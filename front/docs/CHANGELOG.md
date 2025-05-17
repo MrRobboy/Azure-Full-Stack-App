@@ -475,3 +475,21 @@
      - Ajout d'une transaction SQL avec commit/rollback pour garantir l'intégrité des données
      - Implémentation de plusieurs vérifications avant et après suppression
      - Amélioration des messages d'erreur avec des informations de diagnostic détaillées
+
+## [4.18.0] - 2024-05-17
+
+### Added
+
+- Nouvel outil de diagnostic et de correction des classes (direct-class-delete.php)
+     - Interface web complète pour analyser les problèmes avec les classes
+     - Connexion directe à la base de données pour contourner les problèmes d'API
+     - Suppression forcée avec nettoyage des références
+     - Visualisation des classes et de leurs relations
+     - Vérification et nettoyage des références dans d'autres tables
+
+### Fixed
+
+- Résolution définitive du problème de suppression des classes
+     - Détection et nettoyage automatique des références bloquantes
+     - Connexion directe à la base de données pour les opérations critiques
+     - Suppression forcée avec confirmation de sécurité
