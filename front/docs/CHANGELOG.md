@@ -1,5 +1,24 @@
 # Changelog
 
+## [4.12.0] - 2024-05-17
+
+### Changed
+
+- Amélioration de l'interface utilisateur pour plus de cohérence
+     - Refactorisation de `dashboard.php` pour utiliser le template `base.php` comme les autres pages
+     - Harmonisation du style de `gestion_classes.php` avec celui de `gestion_matieres.php`
+     - Amélioration du design du modal de modification des classes
+     - Ajout d'icônes dans les boutons et amélioration visuelle des formulaires
+
+## [4.11.0] - 2024-05-17
+
+### Fixed
+
+- Correction des problèmes d'accès à la page de gestion des classes
+     - Suppression de la restriction de rôle "admin" qui empêchait l'accès
+     - Correction de la structure avec ajout de la mise en tampon (ob_start)
+     - Mise à jour des opérations DELETE et PUT pour envoyer l'ID dans le corps de la requête
+
 ## [4.10.0] - 2024-05-17
 
 ### Fixed

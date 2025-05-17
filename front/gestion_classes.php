@@ -13,18 +13,114 @@ ob_start(); // Début de la mise en tampon
 
 <div class="container">
 	<div class="main-content">
-		<h1>Gestion des Classes</h1>
+		<div class="page-header d-flex justify-content-between align-items-center">
+			<div>
+				<h1>Gestion des Classes</h1>
+				<p class="subtitle">Ajouter, modifier ou supprimer des classes</p>
+			</div>
+			<div id="connection-status">
+				<span id="offline-badge" class="badge bg-warning" style="display: none;">
+					<i class="fas fa-exclamation-triangle"></i> Mode hors-ligne
+				</span>
+			</div>
+		</div>
 
-		<div class="form-container">
-			<h3>Ajouter une classe</h3>
-			<form id="addClasseForm">
-				<div class="form-row">
-					<label for="nom_classe">Nom de la classe :</label>
-					<input type="text" name="nom_classe" id="nom_classe" required>
+		<div class="card mb-4">
+			<div class="card-header">
+				<h3>Liste des classes</h3>
+			</div>
+			<div class="card-body">
+				<div id="loading" class="text-center py-4">
+					<div class="spinner-border text-primary" role="status">
+						<span class="visually-hidden">Chargement...</span>
+					</div>
+					<p class="mt-2">Chargement des classes...</p>
 				</div>
-				<div class="form-row">
-					<label for="niveau">Niveau :</label>
-					<select name="niveau" id="niveau" required>
+
+				<div id="error-message" class="alert alert-danger" style="display: none;"></div>
+
+				<div id="classes-container" style="display: none;">
+					<table class="table table-striped" id="classes-table">
+						<thead>
+							<tr>
+								<th>Nom</th>
+								<th>Niveau</th>
+								<th>Numéro</th>
+								<th>Rythme</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</div>
+
+				<button id="refresh-btn" class="btn btn-outline-primary btn-sm mt-3" onclick="loadClasses()">
+					<i class="fas fa-sync-alt"></i> Rafraîchir la liste
+				</button>
+			</div>
+		</div>
+
+		<div class="card">
+			<div class="card-header">
+				<h3 id="form-title">Ajouter une classe</h3>
+			</div>
+			<div class="card-body">
+				<form id="addClasseForm">
+					<div class="form-group mb-3">
+						<label for="nom_classe">Nom de la classe :</label>
+						<input type="text" class="form-control" name="nom_classe" id="nom_classe" required>
+					</div>
+					<div class="form-group mb-3">
+						<label for="niveau">Niveau :</label>
+						<select name="niveau" id="niveau" class="form-select" required>
+							<option value="">Sélectionnez un niveau</option>
+							<option value="1ère Année">1ère Année</option>
+							<option value="2ème Année">2ème Année</option>
+							<option value="3ème Année">3ème Année</option>
+							<option value="4ème Année">4ème Année</option>
+							<option value="5ème Année">5ème Année</option>
+						</select>
+					</div>
+					<div class="form-group mb-3">
+						<label for="numero">Numéro :</label>
+						<input type="text" class="form-control" name="numero" id="numero" required>
+					</div>
+					<div class="form-group mb-3">
+						<label for="rythme">Rythme :</label>
+						<select name="rythme" id="rythme" class="form-select" required>
+							<option value="">Sélectionnez un rythme</option>
+							<option value="Initial">Initial</option>
+							<option value="Alternance">Alternance</option>
+						</select>
+					</div>
+					<div class="d-flex justify-content-between">
+						<button type="submit" class="btn btn-primary">
+							<i class="fas fa-save"></i> Ajouter
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Modal pour éditer une classe -->
+<div class="modal" id="editModal" style="display: none;">
+	<div class="modal-content">
+		<div class="modal-header">
+			<h3>Modifier la classe</h3>
+			<button type="button" class="btn-close" onclick="closeModal()" aria-label="Fermer"></button>
+		</div>
+		<div class="modal-body">
+			<form id="editClasseForm">
+				<input type="hidden" id="edit_id_classe" name="id_classe">
+				<div class="form-group mb-3">
+					<label for="edit_nom_classe">Nom de la classe :</label>
+					<input type="text" class="form-control" name="nom_classe" id="edit_nom_classe" required>
+				</div>
+				<div class="form-group mb-3">
+					<label for="edit_niveau">Niveau :</label>
+					<select name="niveau" id="edit_niveau" class="form-select" required>
 						<option value="">Sélectionnez un niveau</option>
 						<option value="1ère Année">1ère Année</option>
 						<option value="2ème Année">2ème Année</option>
@@ -33,84 +129,84 @@ ob_start(); // Début de la mise en tampon
 						<option value="5ème Année">5ème Année</option>
 					</select>
 				</div>
-				<div class="form-row">
-					<label for="numero">Numéro :</label>
-					<input type="text" name="numero" id="numero" required>
+				<div class="form-group mb-3">
+					<label for="edit_numero">Numéro :</label>
+					<input type="text" class="form-control" name="numero" id="edit_numero" required>
 				</div>
-				<div class="form-row">
-					<label for="rythme">Rythme :</label>
-					<select name="rythme" id="rythme" required>
+				<div class="form-group mb-3">
+					<label for="edit_rythme">Rythme :</label>
+					<select name="rythme" id="edit_rythme" class="form-select" required>
 						<option value="">Sélectionnez un rythme</option>
 						<option value="Initial">Initial</option>
 						<option value="Alternance">Alternance</option>
 					</select>
 				</div>
-				<button type="submit" class="btn">Ajouter la classe</button>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+					<button type="submit" class="btn btn-primary">Enregistrer</button>
+				</div>
 			</form>
 		</div>
-
-		<div class="table-responsive">
-			<h3>Liste des classes</h3>
-			<div id="loading" class="text-center">
-				<p>Chargement des classes...</p>
-			</div>
-			<div id="error-message" class="alert alert-danger" style="display: none;"></div>
-			<table class="table" id="classes-table" style="display: none;">
-				<thead>
-					<tr>
-						<th>Nom</th>
-						<th>Niveau</th>
-						<th>Numéro</th>
-						<th>Rythme</th>
-						<th>Actions</th>
-					</tr>
-				</thead>
-				<tbody></tbody>
-			</table>
-		</div>
 	</div>
 </div>
 
-<!-- Modal pour éditer une classe -->
-<div class="modal" id="editModal" style="display: none;">
-	<div class="modal-content">
-		<h3>Modifier la classe</h3>
-		<form id="editClasseForm">
-			<input type="hidden" id="edit_id_classe" name="id_classe">
-			<div class="form-row">
-				<label for="edit_nom_classe">Nom de la classe :</label>
-				<input type="text" name="nom_classe" id="edit_nom_classe" required>
-			</div>
-			<div class="form-row">
-				<label for="edit_niveau">Niveau :</label>
-				<select name="niveau" id="edit_niveau" required>
-					<option value="">Sélectionnez un niveau</option>
-					<option value="1ère Année">1ère Année</option>
-					<option value="2ème Année">2ème Année</option>
-					<option value="3ème Année">3ème Année</option>
-					<option value="4ème Année">4ème Année</option>
-					<option value="5ème Année">5ème Année</option>
-				</select>
-			</div>
-			<div class="form-row">
-				<label for="edit_numero">Numéro :</label>
-				<input type="text" name="numero" id="edit_numero" required>
-			</div>
-			<div class="form-row">
-				<label for="edit_rythme">Rythme :</label>
-				<select name="rythme" id="edit_rythme" required>
-					<option value="">Sélectionnez un rythme</option>
-					<option value="Initial">Initial</option>
-					<option value="Alternance">Alternance</option>
-				</select>
-			</div>
-			<div class="form-actions">
-				<button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
-				<button type="submit" class="btn">Enregistrer</button>
-			</div>
-		</form>
-	</div>
-</div>
+<style>
+	.subtitle {
+		color: #6c757d;
+		font-size: 1.1rem;
+		margin-bottom: 20px;
+	}
+
+	.modal {
+		display: none;
+		position: fixed;
+		z-index: 1000;
+		left: 0;
+		top: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+	}
+
+	.modal-content {
+		background-color: #fff;
+		margin: 10% auto;
+		padding: 0;
+		border-radius: 5px;
+		width: 80%;
+		max-width: 600px;
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+	}
+
+	.modal-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 15px 20px;
+		border-bottom: 1px solid #e9ecef;
+	}
+
+	.modal-body {
+		padding: 20px;
+	}
+
+	.modal-footer {
+		padding: 15px 20px;
+		border-top: 1px solid #e9ecef;
+		display: flex;
+		justify-content: flex-end;
+		gap: 10px;
+	}
+
+	.btn-action {
+		margin-right: 5px;
+	}
+
+	#offline-badge {
+		font-size: 0.9rem;
+		padding: 0.5rem 0.75rem;
+	}
+</style>
 
 <script src="js/notification-system.js?v=1.1"></script>
 <script src="js/config.js?v=5.0"></script>
@@ -123,13 +219,14 @@ ob_start(); // Début de la mise en tampon
 		// Ajouter les écouteurs d'événements
 		document.getElementById('addClasseForm').addEventListener('submit', addClasse);
 		document.getElementById('editClasseForm').addEventListener('submit', updateClasse);
+		document.getElementById('refresh-btn').addEventListener('click', loadClasses);
 	});
 
 	// Fonction pour charger les classes
 	async function loadClasses() {
 		try {
 			document.getElementById('loading').style.display = 'block';
-			document.getElementById('classes-table').style.display = 'none';
+			document.getElementById('classes-container').style.display = 'none';
 			document.getElementById('error-message').style.display = 'none';
 
 			const result = await ApiService.request('classes');
@@ -161,8 +258,12 @@ ob_start(); // Début de la mise en tampon
 						<td>${classe.numero}</td>
 						<td>${classe.rythme}</td>
 						<td>
-							<button class="btn btn-edit" onclick="editClasse(${classe.id_classe}, '${classe.nom_classe}', '${classe.niveau}', '${classe.numero}', '${classe.rythme}')">Modifier</button>
-							<button class="btn btn-danger" onclick="deleteClasse(${classe.id_classe})">Supprimer</button>
+							<button class="btn btn-sm btn-outline-primary btn-action" onclick="editClasse(${classe.id_classe}, '${classe.nom_classe}', '${classe.niveau}', '${classe.numero}', '${classe.rythme}')">
+								<i class="fas fa-edit"></i> Modifier
+							</button>
+							<button class="btn btn-sm btn-outline-danger btn-action" onclick="deleteClasse(${classe.id_classe})">
+								<i class="fas fa-trash"></i> Supprimer
+							</button>
 						</td>
 					`;
 					tbody.appendChild(tr);
@@ -170,7 +271,7 @@ ob_start(); // Début de la mise en tampon
 			}
 
 			document.getElementById('loading').style.display = 'none';
-			document.getElementById('classes-table').style.display = 'table';
+			document.getElementById('classes-container').style.display = 'block';
 
 			NotificationSystem.success('Classes chargées avec succès');
 		} catch (error) {
@@ -196,6 +297,7 @@ ob_start(); // Début de la mise en tampon
 				rythme: formData.get('rythme')
 			};
 
+			NotificationSystem.info('Ajout en cours...');
 			const result = await ApiService.request('classes', 'POST', data);
 
 			if (!result.success) {
@@ -227,6 +329,14 @@ ob_start(); // Début de la mise en tampon
 		document.getElementById('editModal').style.display = 'none';
 	}
 
+	// Fermer le modal si on clique en dehors
+	window.onclick = function(event) {
+		const modal = document.getElementById('editModal');
+		if (event.target === modal) {
+			closeModal();
+		}
+	}
+
 	// Fonction pour mettre à jour une classe
 	async function updateClasse(event) {
 		event.preventDefault();
@@ -242,6 +352,7 @@ ob_start(); // Début de la mise en tampon
 				rythme: formData.get('rythme')
 			};
 
+			NotificationSystem.info('Mise à jour en cours...');
 			const result = await ApiService.request('classes', 'PUT', data);
 
 			if (!result.success) {
@@ -264,6 +375,7 @@ ob_start(); // Début de la mise en tampon
 		}
 
 		try {
+			NotificationSystem.info('Suppression en cours...');
 			const result = await ApiService.request('classes', 'DELETE', {
 				id: id
 			});

@@ -27,28 +27,18 @@ if (isset($_GET['debug'])) {
 
 $user = $_SESSION['user'];
 error_log("User logged in: " . json_encode($user));
+
+$pageTitle = "Tableau de bord";
+ob_start(); // Début de la mise en tampon
 ?>
 
-<!DOCTYPE html>
-<html lang="fr">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tableau de bord - SchoolPEA</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="css/styles.css" rel="stylesheet">
-</head>
-
-<body>
-    <div class="container mt-4">
-        <div class="row">
-            <div class="col-12">
-                <h1>Tableau de bord</h1>
-                <div class="alert alert-info">
-                    Bienvenue, <?php echo htmlspecialchars($user['nom'] ?? 'Utilisateur'); ?>!
-                    <span class="badge bg-primary"><?php echo htmlspecialchars($user['role'] ?? 'Rôle inconnu'); ?></span>
-                </div>
+<div class="container">
+    <div class="main-content">
+        <div class="page-header">
+            <h1>Tableau de bord</h1>
+            <div class="alert alert-info">
+                Bienvenue, <?php echo htmlspecialchars($user['nom'] ?? 'Utilisateur'); ?>!
+                <span class="badge bg-primary"><?php echo htmlspecialchars($user['role'] ?? 'Rôle inconnu'); ?></span>
             </div>
         </div>
 
@@ -107,60 +97,63 @@ error_log("User logged in: " . json_encode($user));
             </div>
         </div>
     </div>
+</div>
 
-    <script src="js/config.js?v=5.0"></script>
-    <script src="js/api-service.js"></script>
-    <script src="js/notification-system.js"></script>
-    <script>
-        console.log('Dashboard initializing...');
+<script src="js/config.js?v=5.0"></script>
+<script src="js/api-service.js?v=2.0"></script>
+<script src="js/notification-system.js?v=1.1"></script>
+<script>
+    console.log('Dashboard initializing...');
 
-        // Function to fetch counts
-        async function fetchCount(endpoint, elementId) {
-            console.log(`Fetching count for ${endpoint}...`);
-            try {
-                const response = await ApiService.request(endpoint);
-                console.log(`Response for ${endpoint}:`, response);
+    // Function to fetch counts
+    async function fetchCount(endpoint, elementId) {
+        console.log(`Fetching count for ${endpoint}...`);
+        try {
+            const response = await ApiService.request(endpoint);
+            console.log(`Response for ${endpoint}:`, response);
 
-                if (response.success) {
-                    const count = response.data.length || 0;
-                    document.getElementById(elementId).textContent = count;
-                } else {
-                    console.error(`Failed to fetch ${endpoint}:`, response);
-                    document.getElementById(elementId).textContent = 'Erreur';
-                }
-            } catch (error) {
-                console.error(`Error fetching ${endpoint}:`, error);
+            if (response.success) {
+                const count = response.data.length || 0;
+                document.getElementById(elementId).textContent = count;
+            } else {
+                console.error(`Failed to fetch ${endpoint}:`, response);
                 document.getElementById(elementId).textContent = 'Erreur';
             }
+        } catch (error) {
+            console.error(`Error fetching ${endpoint}:`, error);
+            document.getElementById(elementId).textContent = 'Erreur';
         }
+    }
 
-        // Load dashboard data
-        async function loadDashboard() {
-            console.log('Loading dashboard data...');
-            try {
-                // Fetch user profile
-                const userResponse = await ApiService.getCurrentUser();
-                console.log('User profile response:', userResponse);
+    // Load dashboard data
+    async function loadDashboard() {
+        console.log('Loading dashboard data...');
+        try {
+            // Fetch user profile
+            const userResponse = await ApiService.getCurrentUser();
+            console.log('User profile response:', userResponse);
 
-                // Fetch counts in parallel
-                await Promise.all([
-                    fetchCount('matieres', 'matieres-count'),
-                    fetchCount('classes', 'classes-count'),
-                    fetchCount('examens', 'examens-count'),
-                    fetchCount('profs', 'professeurs-count')
-                ]);
-            } catch (error) {
-                console.error('Error loading dashboard:', error);
-                NotificationSystem.show('Erreur lors du chargement du tableau de bord', 'error');
-            }
+            // Fetch counts in parallel
+            await Promise.all([
+                fetchCount('matieres', 'matieres-count'),
+                fetchCount('classes', 'classes-count'),
+                fetchCount('examens', 'examens-count'),
+                fetchCount('profs', 'professeurs-count')
+            ]);
+        } catch (error) {
+            console.error('Error loading dashboard:', error);
+            NotificationSystem.error('Erreur lors du chargement du tableau de bord');
         }
+    }
 
-        // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('DOM loaded, initializing dashboard...');
-            loadDashboard();
-        });
-    </script>
-</body>
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('DOM loaded, initializing dashboard...');
+        loadDashboard();
+    });
+</script>
 
-</html>
+<?php
+$content = ob_get_clean();
+require_once 'templates/base.php';
+?>
