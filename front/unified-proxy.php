@@ -5,7 +5,12 @@
  * Ce proxy gère toutes les communications entre le frontend et le backend 
  * en résolvant les problèmes de CORS sur Azure.
  * 
- * Version: 1.0.3
+ * Version: 1.0.4
+ * 
+ * Changements dans la v1.0.4:
+ * - Utilisation d'endpoints API directs pour les ressources principales
+ * - Redirection vers api-matieres.php, api-classes.php, etc. au lieu de /api/*
+ * - Amélioration des logs pour un meilleur diagnostic
  */
 
 // Configuration proxy
@@ -81,10 +86,31 @@ if (strpos($endpoint, 'auth/login') !== false) {
 } elseif ($endpoint === 'status') {
 	$requestUrl .= STATUS_ENDPOINT;
 	logMessage('Redirection vers endpoint de statut', ['endpoint' => STATUS_ENDPOINT]);
+}
+// Endpoints principaux - utilisation des nouveaux fichiers d'API directs
+elseif ($endpoint === 'matieres' || strpos($endpoint, 'matieres/') === 0) {
+	$requestUrl .= '/api-matieres.php';
+	logMessage('Redirection vers endpoint API matieres direct', ['url' => $requestUrl]);
+} elseif ($endpoint === 'classes' || strpos($endpoint, 'classes/') === 0) {
+	$requestUrl .= '/api-classes.php';
+	logMessage('Redirection vers endpoint API classes direct', ['url' => $requestUrl]);
+} elseif ($endpoint === 'examens' || strpos($endpoint, 'examens/') === 0) {
+	$requestUrl .= '/api-examens.php';
+	logMessage('Redirection vers endpoint API examens direct', ['url' => $requestUrl]);
+} elseif ($endpoint === 'profs' || strpos($endpoint, 'profs/') === 0) {
+	$requestUrl .= '/api-profs.php';
+	logMessage('Redirection vers endpoint API profs direct', ['url' => $requestUrl]);
+} elseif ($endpoint === 'notes' || strpos($endpoint, 'notes/') === 0) {
+	$requestUrl .= '/api-notes.php';
+	logMessage('Redirection vers endpoint API notes direct', ['url' => $requestUrl]);
+} elseif ($endpoint === 'privileges' || strpos($endpoint, 'privileges/') === 0) {
+	$requestUrl .= '/api-privileges.php';
+	logMessage('Redirection vers endpoint API privileges direct', ['url' => $requestUrl]);
+} elseif ($endpoint === 'users' || strpos($endpoint, 'users/') === 0) {
+	$requestUrl .= '/api-users.php';
+	logMessage('Redirection vers endpoint API users direct', ['url' => $requestUrl]);
 } else {
-	// Pour tous les autres endpoints, toujours préfixer avec /api/ 
-	// Cette partie a été modifiée - on ne fait plus la distinction entre les endpoints principaux et les autres
-	// car tous doivent passer par /api/ sur le backend
+	// Pour tous les autres endpoints, utiliser la construction standard
 	$requestUrl .= '/api/' . $endpoint;
 	logMessage('Redirection vers endpoint API standard', ['url' => $requestUrl, 'endpoint' => $endpoint]);
 }

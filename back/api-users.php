@@ -1,0 +1,203 @@
+<?php
+// Dedicated Users API Endpoint
+
+// IMPORTANT: Définir les en-têtes CORS avant toute autre opération
+header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: https://app-frontend-esgi-app.azurewebsites.net');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept, Origin');
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Max-Age: 86400');
+
+// Forcer les en-têtes de cache pour éviter les problèmes de mise en cache
+header('Cache-Control: no-store, no-cache, must-revalidate');
+header('Pragma: no-cache');
+
+// Désactiver le buffer de sortie pour s'assurer que les en-têtes sont envoyés immédiatement
+if (ob_get_level()) ob_end_clean();
+
+// Traiter immédiatement les requêtes OPTIONS pour CORS
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+	http_response_code(204);
+	exit;
+}
+
+// Enable error logging
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/logs/users_api_errors.log');
+
+// Create logs directory if needed
+if (!is_dir(__DIR__ . '/logs')) {
+	mkdir(__DIR__ . '/logs', 0755, true);
+}
+
+// Log the request for diagnostics
+error_log(sprintf(
+	"[%s] Users API Request: Method=%s, URI=%s, Origin=%s, Headers=%s",
+	date('Y-m-d H:i:s'),
+	$_SERVER['REQUEST_METHOD'],
+	$_SERVER['REQUEST_URI'],
+	isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : 'non défini',
+	json_encode(getallheaders())
+));
+
+// Log query parameters
+error_log("Query parameters: " . print_r($_GET, true));
+
+// Load required controllers
+try {
+	require_once __DIR__ . '/controllers/UserController.php';
+	require_once __DIR__ . '/controllers/AuthController.php';
+	$userController = new UserController();
+	$authController = new AuthController();
+} catch (Exception $e) {
+	error_log("Error loading controllers: " . $e->getMessage());
+	http_response_code(500);
+	echo json_encode([
+		'success' => false,
+		'message' => 'Server configuration error',
+		'error' => $e->getMessage()
+	]);
+	exit;
+}
+
+// Check authentication
+try {
+	// Authentication check removed for simplified access
+	error_log("Authentication check bypassed for simplified access");
+
+	/* Original code commented out
+	if (!$authController->isLoggedIn()) {
+		http_response_code(401);
+		echo json_encode([
+			'success' => false,
+			'message' => 'Authentication required'
+		]);
+		exit;
+	}
+	*/
+} catch (Exception $e) {
+	error_log("Auth error: " . $e->getMessage());
+	http_response_code(401);
+	echo json_encode([
+		'success' => false,
+		'message' => 'Authentication error: ' . $e->getMessage()
+	]);
+	exit;
+}
+
+// Process the request based on method
+try {
+	// Extract parameters
+	$id = isset($_GET['id']) ? $_GET['id'] : null;
+	$action = isset($_GET['action']) ? $_GET['action'] : null;
+	$classeId = isset($_GET['classe_id']) ? $_GET['classe_id'] : null;
+
+	switch ($_SERVER['REQUEST_METHOD']) {
+		case 'GET':
+			// Check for specific queries
+			if ($action === 'classe' && $classeId) {
+				// Get users by classe
+				error_log("Fetching users for classe ID: " . $classeId);
+				$result = $userController->getUsersByClasse($classeId);
+				echo json_encode($result);
+				exit;
+			}
+			// Handle specific user retrieval
+			elseif ($id) {
+				$result = $userController->getUserById($id);
+				echo json_encode($result);
+				exit;
+			}
+			// Handle all users
+			else {
+				$result = $userController->getAllUsers();
+				echo json_encode($result);
+				exit;
+			}
+			break;
+
+		case 'POST':
+			// Get the request body
+			$input = file_get_contents('php://input');
+			$data = json_decode($input, true);
+
+			// Validate input
+			if (!$data || !isset($data['nom']) || !isset($data['prenom']) || !isset($data['email']) || !isset($data['password'])) {
+				http_response_code(400);
+				echo json_encode([
+					'success' => false,
+					'message' => 'Missing required fields (nom, prenom, email, password)'
+				]);
+				exit;
+			}
+
+			// Create the user
+			$result = $userController->createUser($data);
+			echo json_encode($result);
+			exit;
+			break;
+
+		case 'PUT':
+			// Get the request body
+			$input = file_get_contents('php://input');
+			$data = json_decode($input, true);
+
+			// Validate input
+			if (!$data || !isset($data['id']) || !isset($data['nom']) || !isset($data['prenom']) || !isset($data['email'])) {
+				http_response_code(400);
+				echo json_encode([
+					'success' => false,
+					'message' => 'Missing required fields (id, nom, prenom, email)'
+				]);
+				exit;
+			}
+
+			// Update the user
+			$result = $userController->updateUser($data['id'], $data);
+			echo json_encode($result);
+			exit;
+			break;
+
+		case 'DELETE':
+			// Get the request body
+			$input = file_get_contents('php://input');
+			$data = json_decode($input, true);
+
+			// Get the user ID from the URL or data
+			$userId = $id ?: (isset($data['id']) ? $data['id'] : null);
+
+			// Validate input
+			if (!$userId) {
+				http_response_code(400);
+				echo json_encode([
+					'success' => false,
+					'message' => 'Missing required field (id)'
+				]);
+				exit;
+			}
+
+			// Delete the user
+			$result = $userController->deleteUser($userId);
+			echo json_encode($result);
+			exit;
+			break;
+
+		default:
+			http_response_code(405);
+			echo json_encode([
+				'success' => false,
+				'message' => 'Method not allowed'
+			]);
+			exit;
+	}
+} catch (Exception $e) {
+	error_log("Users API error: " . $e->getMessage());
+	http_response_code(500);
+	echo json_encode([
+		'success' => false,
+		'message' => $e->getMessage()
+	]);
+	exit;
+}

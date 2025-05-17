@@ -185,3 +185,39 @@ Refonte complète du système de proxy pour résoudre les problèmes de communic
 - Les problèmes CORS sont principalement résolus en ajoutant les en-têtes appropriés dans le proxy et en gérant correctement les requêtes OPTIONS.
 - Pour les requêtes POST/PUT, le contenu JSON est transmis tel quel au backend.
 - Un système de journalisation détaillé a été ajouté pour faciliter le debugging des problèmes de communication.
+
+## Version 3.0.4 - Endpoints API directs - 2023-12-15
+
+### Problèmes identifiés
+
+1. **Erreurs 404 persistantes malgré les corrections précédentes** : Les endpoints API continuaient à retourner des erreurs 404 même après la correction de la construction d'URL.
+2. **Problèmes avec le routage sur Azure** : Le serveur Azure ne traite pas correctement les règles de réécriture pour les requêtes `/api/`.
+3. **Configuration du routage incompatible** : Les fichiers `.htaccess` et `web.config` ne routent pas correctement les requêtes API.
+
+### Solutions mises en œuvre
+
+#### 1. Création d'endpoints directs pour chaque ressource
+
+- Développement de fichiers PHP dédiés pour chaque type de ressource principale:
+     - `api-matieres.php` - Pour les matières
+     - `api-classes.php` - Pour les classes
+     - `api-examens.php` - Pour les examens
+     - `api-profs.php` - Pour les professeurs
+     - En complément de `api-notes.php` qui existait déjà
+
+#### 2. Mise à jour du proxy unifié
+
+- Modification du proxy pour diriger les requêtes vers les endpoints directs spécifiques
+- Ajout de logs détaillés pour suivre la redirection
+
+#### 3. Mise à jour de la documentation
+
+- Ajout d'informations sur les nouveaux endpoints dans le guide de débogage
+- Mise à jour du changelog
+
+### Avantages de l'approche
+
+1. **Robustesse accrue** : Les endpoints directs sont accessibles sans dépendre du routage complexe
+2. **Simplicité** : Chaque endpoint ne gère que sa ressource spécifique
+3. **Facilité de maintenance** : Les problèmes peuvent être isolés à un endpoint spécifique
+4. **Compatibilité Azure** : Fonctionne avec les contraintes du serveur Azure

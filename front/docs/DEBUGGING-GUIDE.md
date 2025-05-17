@@ -223,6 +223,46 @@ define('ENABLE_MOCK_DATA', true); // Activer temporairement les données simulé
 
 Pour une approche plus systématique du débogage, envisagez de développer des tests d'intégration automatisés qui vérifient régulièrement la disponibilité et le bon fonctionnement des endpoints API.
 
+## Nouveaux developments (version 3.0.4)
+
+### Nouveaux endpoints API directs
+
+Pour résoudre les problèmes de 404 sur les endpoints API, nous avons créé des scripts PHP dédiés pour chaque type de ressource:
+
+- `/back/api-matieres.php` - Endpoint pour les matières
+- `/back/api-classes.php` - Endpoint pour les classes
+- `/back/api-examens.php` - Endpoint pour les examens
+- `/back/api-profs.php` - Endpoint pour les professeurs
+- `/back/api-notes.php` - Endpoint pour les notes (existant)
+
+Le proxy unifié a été mis à jour pour rediriger les requêtes vers ces endpoints spécifiques plutôt que d'utiliser le préfixe `/api/` standard.
+
+### Pourquoi cette approche?
+
+L'approche de routage standard avec `/api/resource` était problématique, car:
+
+1. Le serveur Azure avait des problèmes avec les règles de réécriture pour le routage API
+2. Les fichiers `.htaccess` et `web.config` ne routaient pas correctement les requêtes
+3. Le routage via `routes/api.php` ne fonctionnait pas comme prévu
+
+Les endpoints directs offrent une solution plus robuste, car ils sont accessibles directement sans dépendre du routage, et chaque endpoint gère uniquement une ressource spécifique.
+
+### Comment tester
+
+Pour tester si les nouveaux endpoints fonctionnent correctement:
+
+```
+curl https://app-backend-esgi-app.azurewebsites.net/api-matieres.php
+curl https://app-backend-esgi-app.azurewebsites.net/api-classes.php
+```
+
+Le proxy unifié fait maintenant ces redirections automatiquement lorsque vous appelez:
+
+```
+fetch("unified-proxy.php?endpoint=matieres")
+fetch("unified-proxy.php?endpoint=classes")
+```
+
 ## Conclusion
 
 Le débogage efficace repose sur la compréhension des erreurs réelles plutôt que sur des suppositions. La désactivation des données simulées et l'ajout de nouveaux outils de débogage permettent une vision claire des problèmes et accélèrent leur résolution.
