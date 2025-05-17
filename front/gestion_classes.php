@@ -337,9 +337,67 @@ ob_start(); // Début de la mise en tampon
 		}
 	}
 
-	// Fonction pour mettre à jour une classe	async function updateClasse(event) {		event.preventDefault();				try {			const id = document.getElementById('edit_id_classe').value;			const formData = new FormData(event.target);			const data = {				id: id, // Le backend attend l'ID dans le corps de la requête				nom_classe: formData.get('nom_classe'),				niveau: formData.get('niveau'),				numero: formData.get('numero'),				rythme: formData.get('rythme')			};						NotificationSystem.info('Mise à jour en cours...');			const result = await ApiService.request('classes', 'PUT', data);						if (!result.success) {				throw new Error(result.error || 'Erreur lors de la mise à jour de la classe');			}						closeModal();			NotificationSystem.success('Classe mise à jour avec succès');			loadClasses();		} catch (error) {			console.error('Erreur:', error);			NotificationSystem.error(error.message);		}	}
+	// Fonction pour mettre à jour une classe
+	async function updateClasse(event) {
+		event.preventDefault();
 
-	// Fonction pour supprimer une classe	async function deleteClasse(id) {		if (!confirm('Êtes-vous sûr de vouloir supprimer cette classe ?')) {			return;		}				try {			NotificationSystem.info('Suppression en cours...');			// Le backend attend l'ID dans le corps de la requête, pas dans l'URL			const result = await ApiService.request('classes', 'DELETE', {				id: id			});						if (!result.success) {				// Vérifier si l'erreur est liée à des élèves associés à la classe				if (result.message && result.message.includes('contient des élèves')) {					NotificationSystem.error(result.message);					throw new Error(result.message);				} else {					throw new Error(result.error || result.message || 'Erreur lors de la suppression de la classe');				}			}						NotificationSystem.success('Classe supprimée avec succès');			loadClasses();		} catch (error) {			console.error('Erreur:', error);			NotificationSystem.error(error.message);		}	}
+		try {
+			const id = document.getElementById('edit_id_classe').value;
+			const formData = new FormData(event.target);
+			const data = {
+				id: id, // Le backend attend l'ID dans le corps de la requête
+				nom_classe: formData.get('nom_classe'),
+				niveau: formData.get('niveau'),
+				numero: formData.get('numero'),
+				rythme: formData.get('rythme')
+			};
+
+			NotificationSystem.info('Mise à jour en cours...');
+			const result = await ApiService.request('classes', 'PUT', data);
+
+			if (!result.success) {
+				throw new Error(result.error || 'Erreur lors de la mise à jour de la classe');
+			}
+
+			closeModal();
+			NotificationSystem.success('Classe mise à jour avec succès');
+			loadClasses();
+		} catch (error) {
+			console.error('Erreur:', error);
+			NotificationSystem.error(error.message);
+		}
+	}
+
+	// Fonction pour supprimer une classe
+	async function deleteClasse(id) {
+		if (!confirm('Êtes-vous sûr de vouloir supprimer cette classe ?')) {
+			return;
+		}
+
+		try {
+			NotificationSystem.info('Suppression en cours...');
+			// Le backend attend l'ID dans le corps de la requête, pas dans l'URL
+			const result = await ApiService.request('classes', 'DELETE', {
+				id: id
+			});
+
+			if (!result.success) {
+				// Vérifier si l'erreur est liée à des élèves associés à la classe
+				if (result.message && result.message.includes('contient des élèves')) {
+					NotificationSystem.error(result.message);
+					throw new Error(result.message);
+				} else {
+					throw new Error(result.error || result.message || 'Erreur lors de la suppression de la classe');
+				}
+			}
+
+			NotificationSystem.success('Classe supprimée avec succès');
+			loadClasses();
+		} catch (error) {
+			console.error('Erreur:', error);
+			NotificationSystem.error(error.message);
+		}
+	}
 </script>
 
 <?php
