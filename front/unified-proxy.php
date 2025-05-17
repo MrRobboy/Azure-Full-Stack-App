@@ -48,6 +48,14 @@ function logMessage($message, $data = null)
 		if (is_array($data) && isset($data['password'])) {
 			$data['password'] = '********';
 		}
+
+		// Tronquer les réponses très longues pour éviter des logs trop volumineux
+		if (is_string($data) && strlen($data) > 1000) {
+			$data = substr($data, 0, 1000) . '... [tronqué]';
+		} elseif (isset($data['response']) && is_string($data['response']) && strlen($data['response']) > 1000) {
+			$data['response'] = substr($data['response'], 0, 1000) . '... [tronqué]';
+		}
+
 		$logMessage .= ' ' . json_encode($data);
 	}
 

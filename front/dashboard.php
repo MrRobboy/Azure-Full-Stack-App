@@ -52,6 +52,26 @@ error_log("User logged in: " . json_encode($user));
             </div>
         </div>
 
+        <!-- Nav menu for quick access -->
+        <div class="row mt-4 mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Accès rapide</h5>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="gestion_privileges.php" class="btn btn-primary">Gestion des privilèges</a>
+                            <a href="gestion_users.php" class="btn btn-primary">Gestion des utilisateurs</a>
+                            <a href="gestion_classes.php" class="btn btn-primary">Gestion des classes</a>
+                            <a href="gestion_matieres.php" class="btn btn-primary">Gestion des matières</a>
+                            <a href="gestion_profs.php" class="btn btn-primary">Gestion des professeurs</a>
+                            <a href="gestion_notes.php" class="btn btn-primary">Gestion des notes</a>
+                            <a href="gestion_exams.php" class="btn btn-primary">Gestion des examens</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row mt-4">
             <div class="col-md-3">
                 <div class="card">
@@ -123,10 +143,10 @@ error_log("User logged in: " . json_encode($user));
 
                 // Fetch counts in parallel
                 await Promise.all([
-                    fetchCount('api/matieres', 'matieres-count'),
-                    fetchCount('api/classes', 'classes-count'),
-                    fetchCount('api/examens', 'examens-count'),
-                    fetchCount('api/professeurs', 'professeurs-count')
+                    fetchCount('matieres', 'matieres-count'),
+                    fetchCount('classes', 'classes-count'),
+                    fetchCount('examens', 'examens-count'),
+                    fetchCount('profs', 'professeurs-count')
                 ]);
             } catch (error) {
                 console.error('Error loading dashboard:', error);

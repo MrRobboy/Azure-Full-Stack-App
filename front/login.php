@@ -31,15 +31,18 @@ ob_start();
 				<label for="email">Email</label>
 				<div class="input-group">
 					<span class="input-group-icon"><i class="fas fa-envelope"></i></span>
-					<input type="email" id="email" name="email" required>
+					<input type="email" id="email" name="email" required value="admin@example.com">
 				</div>
 			</div>
 			<div class="form-group">
 				<label for="password">Mot de passe</label>
 				<div class="input-group">
 					<span class="input-group-icon"><i class="fas fa-lock"></i></span>
-					<input type="password" id="password" name="password" required>
+					<input type="password" id="password" name="password" required value="admin123">
 				</div>
+			</div>
+			<div class="alert alert-info small">
+				<strong>Info:</strong> Identifiants de test pré-remplis pour faciliter l'accès.
 			</div>
 			<button type="submit" class="btn btn-primary">
 				<span class="btn-text">Se connecter</span>
