@@ -230,6 +230,49 @@ try {
 			exit;
 		}
 	}
+	// Check if this is a test credentials request
+	else if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'test-credentials') {
+		// Get a random professor or use a default one for testing
+		try {
+			$database = new Database();
+			$db = $database->getConnection();
+			$query = "SELECT TOP 1 email, 'prof123' AS default_password FROM prof ORDER BY id_prof";
+			$stmt = $db->prepare($query);
+			$stmt->execute();
+
+			$result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+			if ($result) {
+				echo json_encode([
+					'success' => true,
+					'credentials' => [
+						'email' => $result['email'],
+						'password' => $result['default_password']
+					]
+				]);
+			} else {
+				// Fallback to default if no professors in DB
+				echo json_encode([
+					'success' => true,
+					'credentials' => [
+						'email' => 'admin@example.com',
+						'password' => 'admin123'
+					]
+				]);
+			}
+		} catch (PDOException $e) {
+			error_log('Database error: ' . $e->getMessage());
+			// Fallback to default credentials if DB error
+			echo json_encode([
+				'success' => true,
+				'credentials' => [
+					'email' => 'admin@example.com',
+					'password' => 'admin123'
+				]
+			]);
+		}
+		exit;
+	}
 	// Invalid request method
 	else {
 		http_response_code(405);

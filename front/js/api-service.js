@@ -132,12 +132,22 @@ const ApiService = (function () {
 		return request("user/profile", "GET");
 	}
 
+	/**
+	 * Récupère des identifiants de test depuis la base de données
+	 * @returns {Promise<Object>} - Identifiants de test
+	 */
+	async function getTestCredentials() {
+		console.log("🔑 Fetching test credentials from database");
+		return request("auth/test-credentials", "GET");
+	}
+
 	// API publique
 	return {
 		request,
 		login,
 		logout,
-		getCurrentUser
+		getCurrentUser,
+		getTestCredentials
 	};
 })();
 

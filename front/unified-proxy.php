@@ -88,6 +88,9 @@ $requestUrl = API_BASE_URL;
 if (strpos($endpoint, 'auth/login') !== false) {
 	$requestUrl .= AUTH_ENDPOINT;
 	logMessage('Redirection vers endpoint d\'authentification spécial', ['endpoint' => AUTH_ENDPOINT]);
+} elseif ($endpoint === 'auth/test-credentials' || isset($_GET['action']) && $_GET['action'] === 'test-credentials') {
+	$requestUrl .= AUTH_ENDPOINT . '?action=test-credentials';
+	logMessage('Redirection vers endpoint de test credentials', ['endpoint' => AUTH_ENDPOINT . '?action=test-credentials']);
 } elseif (strpos($endpoint, 'auth/user') !== false || $endpoint === 'user/profile') {
 	$requestUrl .= USER_ENDPOINT;
 	logMessage('Redirection vers endpoint utilisateur', ['endpoint' => USER_ENDPOINT]);

@@ -221,3 +221,15 @@ Refonte complète du système de proxy pour résoudre les problèmes de communic
 2. **Simplicité** : Chaque endpoint ne gère que sa ressource spécifique
 3. **Facilité de maintenance** : Les problèmes peuvent être isolés à un endpoint spécifique
 4. **Compatibilité Azure** : Fonctionne avec les contraintes du serveur Azure
+
+### v3.0.5 (Date actuelle)
+
+- **Amélioration**: Ajout d'un système de chargement dynamique des identifiants de test depuis la base de données
+- **Modification**: Suppression des identifiants de test codés en dur dans login.php
+- **Ajout**: Création d'un endpoint API pour récupérer des identifiants de test valides
+- **Ajout**: Bouton de rechargement des identifiants de test sur la page de connexion
+- **Sécurité**: Les identifiants de test sont maintenant directement extraits de la base de données
+
+### v3.0.4 (Date précédente)
+
+- **Correction**: Solution définitive pour les problèmes de routing sur Azure avec des endpoints API directs

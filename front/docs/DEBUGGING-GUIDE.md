@@ -263,6 +263,30 @@ fetch("unified-proxy.php?endpoint=matieres")
 fetch("unified-proxy.php?endpoint=classes")
 ```
 
+## Identification et Authentification
+
+### Identifiants de Test Dynamiques
+
+À partir de la version 3.0.5, l'application dispose d'un système de chargement dynamique des identifiants de test depuis la base de données. Cela permet de:
+
+1. **Faciliter les tests** - Les identifiants valides sont automatiquement chargés
+2. **Améliorer la sécurité** - Les identifiants ne sont plus codés en dur dans les fichiers source
+3. **Utiliser des données réelles** - Les tests sont effectués avec des comptes réellement présents en base de données
+
+Pour utiliser cette fonctionnalité:
+
+- Sur la page de connexion, les identifiants sont automatiquement chargés au démarrage
+- Si le chargement échoue, utilisez le bouton "Charger des identifiants de test"
+- Ces identifiants sont extraits de la table PROF de la base de données
+
+Si le chargement des identifiants échoue:
+
+- Vérifiez que la base de données contient au moins un enregistrement dans la table PROF
+- Vérifiez que le proxy unifié est correctement configuré
+- Vérifiez les logs du serveur pour des erreurs éventuelles
+
+### Problèmes courants d'authentification
+
 ## Conclusion
 
 Le débogage efficace repose sur la compréhension des erreurs réelles plutôt que sur des suppositions. La désactivation des données simulées et l'ajout de nouveaux outils de débogage permettent une vision claire des problèmes et accélèrent leur résolution.
