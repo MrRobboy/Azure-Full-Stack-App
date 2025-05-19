@@ -109,14 +109,20 @@ if (isset($_SESSION['prof_id'])) {
 				const responseData = await response.json();
 
 				if (responseData.success) {
-					// Stocker les informations de session
-					if (responseData.data) {
-						sessionStorage.setItem('prof_id', responseData.data.id_prof);
-						sessionStorage.setItem('prof_nom', responseData.data.nom);
-						sessionStorage.setItem('prof_prenom', responseData.data.prenom);
-						sessionStorage.setItem('prof_role', responseData.data.role || 'Enseignant');
+					// Stocker les informations dans la session PHP
+					const sessionResponse = await fetch('set-session.php', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify(responseData.data)
+					});
+
+					if (sessionResponse.ok) {
+						window.location.href = 'dashboard.php';
+					} else {
+						window.location.href = 'login.php?error=' + encodeURIComponent('Erreur lors de la création de la session');
 					}
-					window.location.href = 'dashboard.php';
 				} else {
 					window.location.href = 'login.php?error=' + encodeURIComponent(responseData.message || 'Erreur de connexion');
 				}

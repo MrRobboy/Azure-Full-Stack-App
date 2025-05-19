@@ -1,5 +1,17 @@
 <?php
 session_start();
+
+// Vérifier si l'utilisateur est connecté
+if (!isset($_SESSION['prof_id'])) {
+    header('Location: login.php');
+    exit();
+}
+
+// Récupérer les informations de l'utilisateur
+$prof_id = $_SESSION['prof_id'];
+$prof_nom = $_SESSION['prof_nom'] ?? 'Professeur';
+$prof_prenom = $_SESSION['prof_prenom'] ?? '';
+$prof_role = $_SESSION['prof_role'] ?? 'Enseignant';
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -42,8 +54,8 @@ session_start();
 
     <main class="container">
         <div class="welcome-section">
-            <h1 id="welcomeTitle">Bienvenue</h1>
-            <p class="lead" id="userRole">Chargement...</p>
+            <h1>Bienvenue, <?php echo htmlspecialchars($prof_prenom . ' ' . $prof_nom); ?></h1>
+            <p class="lead"><?php echo htmlspecialchars($prof_role); ?></p>
         </div>
 
         <div class="dashboard-stats">
@@ -114,23 +126,6 @@ session_start();
             <p>&copy; 2024 Gestion Scolaire. Tous droits réservés.</p>
         </div>
     </footer>
-
-    <script>
-        // Vérifier si l'utilisateur est connecté
-        if (!sessionStorage.getItem('prof_id')) {
-            window.location.href = 'login.php';
-        }
-
-        // Récupérer les informations de session
-        const prof_id = sessionStorage.getItem('prof_id');
-        const prof_nom = sessionStorage.getItem('prof_nom') || 'Professeur';
-        const prof_prenom = sessionStorage.getItem('prof_prenom') || '';
-        const prof_role = sessionStorage.getItem('prof_role') || 'Enseignant';
-
-        // Mettre à jour l'affichage
-        document.getElementById('welcomeTitle').textContent = `Bienvenue, ${prof_prenom} ${prof_nom}`;
-        document.getElementById('userRole').textContent = prof_role;
-    </script>
 </body>
 
 </html>
