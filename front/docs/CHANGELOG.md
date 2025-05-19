@@ -457,13 +457,42 @@
 
 ## [4.16.0] - 2024-05-17
 
-### Fixed
+### Nettoyage et Optimisation
 
-- Correction en profondeur du problème persistant de suppression des classes
-     - Amélioration du modèle Classe.php avec ajout de vérification du nombre de lignes affectées par la requête DELETE
-     - Renforcement du contrôleur ClasseController.php avec double vérification après suppression
-     - Ajout de logs détaillés pour mieux diagnostiquer les problèmes de suppression
-     - Amélioration de la gestion des erreurs avec traces d'exceptions complètes
+- **Suppression des fichiers JWT** :
+
+     - Supprimé `simplified-jwt-bridge.php`
+     - Supprimé `improved-jwt-bridge.php`
+     - Supprimé `test-jwt-bridge.php`
+     - Supprimé `jwt-auth-bridge.php`
+     - Supprimé les références à JWT dans le code
+
+- **Nettoyage des proxies obsolètes** :
+
+     - Supprimé `simple-proxy.php`
+     - Supprimé `enhanced-proxy.php`
+     - Supprimé `optimal-proxy.php`
+     - Supprimé `new-proxy.php`
+     - Centralisation sur `unified-proxy.php`
+
+- **Optimisation du proxy unifié** :
+     - Amélioration du système de mapping des endpoints
+     - Ajout d'un système de logging avec IDs de requête
+     - Meilleure gestion des erreurs
+     - Support amélioré des headers CORS
+     - Code plus propre et mieux organisé
+
+### Sécurité
+
+- Masquage des informations sensibles dans les logs
+- Meilleure gestion des headers d'autorisation
+- Validation plus stricte des requêtes
+
+### Maintenance
+
+- Code plus facile à maintenir avec une structure claire
+- Meilleure traçabilité des requêtes avec les IDs
+- Logs plus détaillés et mieux formatés
 
 ## [4.17.0] - 2024-05-17
 

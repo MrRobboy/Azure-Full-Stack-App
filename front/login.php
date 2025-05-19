@@ -1,213 +1,120 @@
 <?php
 session_start();
 
-// If user is already logged in, redirect to dashboard
-if (isset($_SESSION['user']) && !empty($_SESSION['token'])) {
+// Si l'utilisateur est déjà connecté, rediriger vers le tableau de bord
+if (isset($_SESSION['prof_id'])) {
 	header('Location: dashboard.php');
-	exit;
+	exit();
 }
-
-$pageTitle = "Connexion";
-ob_start();
 ?>
+<!DOCTYPE html>
+<html lang="fr">
 
 <head>
-	<!-- Load our API service -->
-	<script src="js/api-service.js"></script>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Connexion - Gestion Scolaire</title>
+	<link rel="stylesheet" href="css/common.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
-<div class="login-container">
-	<div class="login-card">
-		<h2>Connexion</h2>
-		<div id="error-message" class="alert alert-danger" style="display: none;">
-			<div class="error-header">
-				<i class="fas fa-exclamation-circle"></i>
-				<span class="error-title">Erreur</span>
-			</div>
-			<div class="error-content"></div>
+<body>
+	<header class="header">
+		<div class="header-container">
+			<a href="index.php" class="logo">
+				<img src="images/school-badge.png" alt="Logo École" class="school-badge">
+				Gestion Scolaire
+			</a>
 		</div>
-		<form id="login-form">
-			<div class="form-group">
-				<label for="email">Email</label>
-				<div class="input-group">
-					<span class="input-group-icon"><i class="fas fa-envelope"></i></span>
-					<input type="email" id="email" name="email" required placeholder="Email de l'utilisateur">
+	</header>
+
+	<main class="login-container">
+		<div class="login-card">
+			<h2><i class="fas fa-sign-in-alt"></i> Connexion</h2>
+
+			<?php if (isset($_GET['error'])): ?>
+				<div class="alert alert-danger">
+					<i class="fas fa-exclamation-circle"></i>
+					<?php echo htmlspecialchars($_GET['error']); ?>
 				</div>
-			</div>
-			<div class="form-group">
-				<label for="password">Mot de passe</label>
-				<div class="input-group">
-					<span class="input-group-icon"><i class="fas fa-lock"></i></span>
-					<input type="password" id="password" name="password" required placeholder="Mot de passe">
+			<?php endif; ?>
+
+			<form id="loginForm" method="POST" action="unified-proxy.php">
+				<input type="hidden" name="endpoint" value="login">
+
+				<div class="form-group">
+					<div class="input-group">
+						<i class="fas fa-user input-group-icon"></i>
+						<input type="text"
+							class="form-control"
+							id="username"
+							name="username"
+							placeholder="Nom d'utilisateur"
+							required>
+					</div>
 				</div>
+
+				<div class="form-group">
+					<div class="input-group">
+						<i class="fas fa-lock input-group-icon"></i>
+						<input type="password"
+							class="form-control"
+							id="password"
+							name="password"
+							placeholder="Mot de passe"
+							required>
+					</div>
+				</div>
+
+				<div class="form-group">
+					<button type="submit" class="btn btn-primary" style="width: 100%;">
+						<i class="fas fa-sign-in-alt"></i>
+						Se connecter
+					</button>
+				</div>
+			</form>
+
+			<div class="text-center mt-3">
+				<a href="index.php" class="btn btn-secondary">
+					<i class="fas fa-arrow-left"></i>
+					Retour à l'accueil
+				</a>
 			</div>
-			<button type="submit" class="btn btn-primary">
-				<span class="btn-text">Se connecter</span>
-				<span class="btn-loading" style="display: none;">
-					<i class="fas fa-spinner fa-spin"></i> Connexion en cours...
-				</span>
-			</button>
-		</form>
-		<div class="links">
-			<a href="login.php">Connexion standard</a>
-			<a href="index.php">Accueil</a>
 		</div>
-	</div>
-</div>
+	</main>
 
-<script src="js/config.js?v=5.0"></script>
-<script src="js/api-service.js?v=2.0"></script>
-<script src="js/notification-system.js?v=1.1"></script>
-<script>
-	document.addEventListener('DOMContentLoaded', function() {
-		console.log('Page de connexion initialisée');
+	<script>
+		document.getElementById('loginForm').addEventListener('submit', async function(e) {
+			e.preventDefault();
 
-		// Éléments du formulaire
-		const loginForm = document.getElementById('login-form');
-		const emailInput = document.getElementById('email');
-		const passwordInput = document.getElementById('password');
-		const submitButton = loginForm.querySelector('button[type="submit"]');
-		const btnText = submitButton.querySelector('.btn-text');
-		const btnLoading = submitButton.querySelector('.btn-loading');
-
-		// Fonction pour afficher une erreur
-		function displayError(message) {
-			const errorMessage = document.getElementById('error-message');
-			const errorContent = errorMessage.querySelector('.error-content');
-
-			errorContent.textContent = message;
-			errorMessage.style.display = 'block';
-
-			// Notification via le système de notification si disponible
-			if (window.NotificationSystem) {
-				NotificationSystem.error(message);
-			}
-		}
-
-		// Fonction pour masquer les erreurs
-		function hideError() {
-			const errorMessage = document.getElementById('error-message');
-			errorMessage.style.display = 'none';
-		}
-
-		// Fonction pour afficher le chargement
-		function showLoading() {
-			btnText.style.display = 'none';
-			btnLoading.style.display = 'inline-block';
-			submitButton.disabled = true;
-		}
-
-		// Fonction pour masquer le chargement
-		function hideLoading() {
-			btnText.style.display = 'inline-block';
-			btnLoading.style.display = 'none';
-			submitButton.disabled = false;
-		}
-
-		// Fonction pour stocker les données de session
-		async function storeSessionData(userData, token) {
-			console.log('Stockage des données de session...');
+			const submitButton = this.querySelector('button[type="submit"]');
+			const originalText = submitButton.innerHTML;
 
 			try {
-				const response = await fetch('session-handler.php', {
+				submitButton.disabled = true;
+				submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion en cours...';
+
+				const formData = new FormData(this);
+				const response = await fetch('unified-proxy.php', {
 					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						action: 'login',
-						user: userData,
-						token: token
-					})
+					body: formData
 				});
 
 				const data = await response.json();
 
-				if (!data.success) {
-					console.error('Échec du stockage de session:', data.message);
-					return false;
-				}
-
-				// Vérifier que la session a bien été créée
-				const verificationResponse = await fetch('session-handler.php', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						action: 'check'
-					})
-				});
-
-				const verificationData = await verificationResponse.json();
-				return verificationData.loggedIn === true;
-			} catch (error) {
-				console.error('Erreur lors du stockage de session:', error);
-				return false;
-			}
-		}
-
-		// Gestionnaire de soumission du formulaire
-		loginForm.addEventListener('submit', async function(e) {
-			e.preventDefault();
-			hideError();
-			showLoading();
-
-			// Informations d'identification
-			const email = emailInput.value;
-			const password = passwordInput.value;
-
-			// Notification de tentative
-			if (window.NotificationSystem) {
-				NotificationSystem.info('Tentative de connexion...');
-			}
-
-			try {
-				// Appel à l'API via notre service
-				const result = await ApiService.login(email, password);
-
-				console.log('Réponse de connexion:', result);
-
-				if (result.success && result.data.success) {
-					// Vérifier la présence des informations requises
-					if (!result.data.user || !result.data.token) {
-						throw new Error('Réponse incomplète du serveur d\'authentification');
-					}
-
-					// Stocker les données de session
-					const sessionStored = await storeSessionData(result.data.user, result.data.token);
-
-					if (!sessionStored) {
-						throw new Error('Impossible de créer la session. Veuillez réessayer.');
-					}
-
-					// Notification de succès
-					if (window.NotificationSystem) {
-						NotificationSystem.success('Connexion réussie. Redirection...');
-					}
-
-					// Redirection vers le tableau de bord
-					setTimeout(() => {
-						window.location.href = 'dashboard.php';
-					}, 500);
+				if (data.success) {
+					window.location.href = 'dashboard.php';
 				} else {
-					// Erreur d'authentification
-					const errorMessage = result.data.message || 'Identifiants incorrects';
-					throw new Error(errorMessage);
+					window.location.href = 'login.php?error=' + encodeURIComponent(data.message || 'Erreur de connexion');
 				}
 			} catch (error) {
-				console.error('Erreur de connexion:', error);
-				displayError(error.message || 'Erreur lors de la connexion. Veuillez réessayer.');
-				hideLoading();
+				window.location.href = 'login.php?error=' + encodeURIComponent('Erreur de connexion au serveur');
+			} finally {
+				submitButton.disabled = false;
+				submitButton.innerHTML = originalText;
 			}
 		});
+	</script>
+</body>
 
-		// Focus sur le champ email au chargement
-		emailInput.focus();
-	});
-</script>
-
-<?php
-$content = ob_get_clean();
-require_once 'templates/base.php';
-?>
+</html>
