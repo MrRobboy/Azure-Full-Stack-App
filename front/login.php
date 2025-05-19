@@ -112,57 +112,78 @@ if (isset($_SESSION['prof_id'])) {
 				});
 
 				console.log('Statut de la réponse:', response.status);
-				console.log('Headers de la réponse:', Object.fromEntries(response.headers.entries()));
+				const responseData = await response.json();
+				console.log('Réponse complète:', responseData);
 
 				if (!response.ok) {
-					throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`);
+					throw new Error(responseData.message || `Erreur HTTP: ${response.status}`);
 				}
 
-				const responseData = await response.json();
-				console.log('Réponse du serveur:', responseData);
-
-				if (responseData.success) {
-					// Préparer les données pour la session
-					const sessionData = {
-						id_prof: responseData.data.id_prof,
-						nom: responseData.data.nom,
-						prenom: responseData.data.prenom,
-						role: responseData.data.role || 'Enseignant'
-					};
-					console.log('Données de session à envoyer:', sessionData);
-
-					// Stocker les informations dans la session PHP
-					const sessionResponse = await fetch('set-session.php', {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json'
-						},
-						body: JSON.stringify(sessionData)
-					});
-
-					console.log('Statut de la réponse session:', sessionResponse.status);
-
-					if (!sessionResponse.ok) {
-						throw new Error(`Erreur HTTP session: ${sessionResponse.status} ${sessionResponse.statusText}`);
-					}
-
-					const sessionResult = await sessionResponse.json();
-					console.log('Réponse de set-session.php:', sessionResult);
-
-					if (sessionResult.success) {
-						window.location.href = 'dashboard.php';
-					} else {
-						throw new Error(sessionResult.message || 'Erreur lors de la création de la session');
-					}
-				} else {
+				if (!responseData.success) {
 					throw new Error(responseData.message || 'Erreur de connexion');
 				}
+
+				if (!responseData.data) {
+					throw new Error('Données de réponse invalides');
+				}
+
+				// Vérifier que toutes les données nécessaires sont présentes
+				const requiredFields = ['id_prof', 'nom', 'prenom'];
+				const missingFields = requiredFields.filter(field => !responseData.data[field]);
+
+				if (missingFields.length > 0) {
+					throw new Error(`Données manquantes: ${missingFields.join(', ')}`);
+				}
+
+				// Préparer les données pour la session
+				const sessionData = {
+					id_prof: responseData.data.id_prof,
+					nom: responseData.data.nom,
+					prenom: responseData.data.prenom,
+					role: responseData.data.role || 'Enseignant'
+				};
+
+				console.log('Données de session à envoyer:', sessionData);
+
+				// Stocker les informations dans la session PHP
+				const sessionResponse = await fetch('set-session.php', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify(sessionData)
+				});
+
+				const sessionResult = await sessionResponse.json();
+				console.log('Réponse de set-session.php:', sessionResult);
+
+				if (!sessionResponse.ok || !sessionResult.success) {
+					throw new Error(sessionResult.message || 'Erreur lors de la création de la session');
+				}
+
+				// Redirection vers le dashboard
+				window.location.href = 'dashboard.php';
+
 			} catch (error) {
 				console.error('Erreur détaillée:', error);
-				window.location.href = 'login.php?error=' + encodeURIComponent(error.message || 'Erreur de connexion au serveur');
+				// Afficher l'erreur dans la div d'alerte
+				const errorDiv = document.createElement('div');
+				errorDiv.className = 'alert alert-danger';
+				errorDiv.innerHTML = `
+					<i class="fas fa-exclamation-circle"></i>
+					${error.message}
+				`;
+				// Supprimer l'ancienne alerte si elle existe
+				const oldAlert = document.querySelector('.alert');
+				if (oldAlert) {
+					oldAlert.remove();
+				}
+				// Insérer la nouvelle alerte après le titre
+				const title = document.querySelector('h2');
+				title.parentNode.insertBefore(errorDiv, title.nextSibling);
 			} finally {
 				submitButton.disabled = false;
-				submitButton.innerHTML = originalText;
+				submitButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Se connecter';
 			}
 		});
 	</script>
