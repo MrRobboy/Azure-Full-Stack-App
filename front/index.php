@@ -1,104 +1,170 @@
-<!DOCTYPE html>
-<html lang="fr">
+<?php
+session_start();
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Accueil - Gestion Scolaire</title>
-	<link rel="stylesheet" href="css/common.css">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
+// Si l'utilisateur est déjà connecté, rediriger vers le tableau de bord
+if (isset($_SESSION['prof_id'])) {
+	header('Location: dashboard.php');
+	exit();
+}
 
-<body>
-	<header class="header">
-		<div class="header-container">
-			<a href="index.php" class="logo">
-				<img src="images/school-badge.png" alt="Logo École" class="school-badge">
-				Gestion Scolaire
-			</a>
-			<nav class="nav-menu">
-				<a href="login.php" class="nav-link">
-					<i class="fas fa-sign-in-alt"></i>
-					Connexion
-				</a>
-			</nav>
-		</div>
-	</header>
+$pageTitle = "Accueil";
+ob_start();
+?>
 
-	<main class="container">
-		<div class="welcome-section">
-			<h1>Bienvenue sur la plateforme de gestion scolaire</h1>
-			<p class="lead">Un outil complet pour gérer efficacement votre établissement scolaire</p>
-		</div>
-
-		<div class="dashboard-stats">
-			<div class="stat-card">
-				<i class="fas fa-users fa-2x"></i>
-				<h3>Élèves</h3>
-				<p class="value">250+</p>
-				<p>Élèves inscrits</p>
-			</div>
-			<div class="stat-card">
-				<i class="fas fa-chalkboard-teacher fa-2x"></i>
-				<h3>Enseignants</h3>
-				<p class="value">20+</p>
-				<p>Professeurs actifs</p>
-			</div>
-			<div class="stat-card">
-				<i class="fas fa-book fa-2x"></i>
-				<h3>Classes</h3>
-				<p class="value">12</p>
-				<p>Classes actives</p>
-			</div>
-		</div>
-
-		<div class="features-grid">
-			<div class="card">
-				<div class="card-header">
-					<h3><i class="fas fa-user-graduate"></i> Gestion des élèves</h3>
+<div class="container mt-5">
+	<div class="row justify-content-center">
+		<div class="col-md-8">
+			<div class="card shadow">
+				<div class="card-header bg-primary text-white">
+					<h2 class="m-0">Bienvenue sur l'application de gestion des notes</h2>
 				</div>
 				<div class="card-body">
-					<p>Gérez facilement les inscriptions, les notes et les informations des élèves.</p>
-					<a href="login.php" class="btn btn-primary">
-						<i class="fas fa-arrow-right"></i>
-						Accéder
-					</a>
-				</div>
-			</div>
+					<p class="lead">Cette application permet aux enseignants de gérer les notes des élèves de manière simple et efficace.</p>
 
-			<div class="card">
-				<div class="card-header">
-					<h3><i class="fas fa-chalkboard"></i> Gestion des classes</h3>
-				</div>
-				<div class="card-body">
-					<p>Organisez les classes, les emplois du temps et les effectifs.</p>
-					<a href="login.php" class="btn btn-primary">
-						<i class="fas fa-arrow-right"></i>
-						Accéder
-					</a>
-				</div>
-			</div>
+					<hr>
 
-			<div class="card">
-				<div class="card-header">
-					<h3><i class="fas fa-book-open"></i> Gestion des matières</h3>
+					<h3>Accès rapide</h3>
+					<div class="row mt-4">
+						<div class="col-md-6 mb-3">
+							<div class="card h-100">
+								<div class="card-body">
+									<h5 class="card-title">Espace Enseignant</h5>
+									<p class="card-text">Accédez à votre espace pour gérer les notes et les examens.</p>
+									<a href="login.php" class="btn btn-primary">Se connecter</a>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6 mb-3">
+							<div class="card h-100">
+								<div class="card-body">
+									<h5 class="card-title">Test du Proxy</h5>
+									<p class="card-text">Testez le système de proxy unifié pour vérifier la connexion avec le backend.</p>
+									<a href="test-unified-proxy.php" class="btn btn-info">Lancer les tests</a>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<hr>
+
+					<h3>Documentation</h3>
+					<ul class="list-group mt-3">
+						<li class="list-group-item d-flex justify-content-between align-items-center">
+							Guide du proxy unifié
+							<a href="docs/PROXY-GUIDE.md" class="btn btn-sm btn-outline-primary">Consulter</a>
+						</li>
+						<li class="list-group-item d-flex justify-content-between align-items-center">
+							Guide de migration
+							<a href="docs/MIGRATION-GUIDE.md" class="btn btn-sm btn-outline-primary">Consulter</a>
+						</li>
+						<li class="list-group-item d-flex justify-content-between align-items-center">
+							Guide de débogage
+							<a href="docs/DEBUGGING-GUIDE.md" class="btn btn-sm btn-outline-primary">Consulter</a>
+						</li>
+						<li class="list-group-item d-flex justify-content-between align-items-center">
+							Changelog
+							<a href="docs/CHANGELOG-v3.md" class="btn btn-sm btn-outline-primary">Consulter</a>
+						</li>
+					</ul>
 				</div>
-				<div class="card-body">
-					<p>Gérez les matières, les programmes et les coefficients.</p>
-					<a href="login.php" class="btn btn-primary">
-						<i class="fas fa-arrow-right"></i>
-						Accéder
-					</a>
+				<div class="card-footer text-muted">
+					Version 3.0.2 - Sans données simulées
 				</div>
 			</div>
 		</div>
-	</main>
+	</div>
+</div>
 
-	<footer class="footer">
-		<div class="container">
-			<p>&copy; 2024 Gestion Scolaire. Tous droits réservés.</p>
-		</div>
-	</footer>
-</body>
+<style>
+	.hero {
+		background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+		color: white;
+		padding: 4rem 2rem;
+		text-align: center;
+		border-radius: var(--border-radius);
+		margin-bottom: 2rem;
+	}
 
-</html>
+	.hero-content {
+		max-width: 1200px;
+		margin: 0 auto;
+	}
+
+	.hero h1 {
+		font-size: 2.5rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.hero-description {
+		font-size: 1.2rem;
+		margin-bottom: 3rem;
+		max-width: 800px;
+		margin-left: auto;
+		margin-right: auto;
+	}
+
+	.hero-features {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+		gap: 2rem;
+		margin-bottom: 3rem;
+	}
+
+	.feature-card {
+		background: rgba(255, 255, 255, 0.1);
+		padding: 2rem;
+		border-radius: var(--border-radius);
+		transition: transform 0.3s ease;
+	}
+
+	.feature-card:hover {
+		transform: translateY(-5px);
+	}
+
+	.feature-card i {
+		margin-bottom: 1rem;
+		color: var(--accent-color);
+	}
+
+	.feature-card h3 {
+		margin-bottom: 0.5rem;
+		font-size: 1.2rem;
+	}
+
+	.feature-card p {
+		font-size: 0.9rem;
+		opacity: 0.9;
+	}
+
+	.hero-actions {
+		margin-top: 2rem;
+	}
+
+	.btn-lg {
+		padding: 1rem 2rem;
+		font-size: 1.2rem;
+	}
+
+	@media (max-width: 768px) {
+		.hero {
+			padding: 2rem 1rem;
+		}
+
+		.hero h1 {
+			font-size: 2rem;
+		}
+
+		.hero-description {
+			font-size: 1rem;
+		}
+
+		.hero-features {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>
+
+<?php
+$content = ob_get_clean();
+require_once 'templates/base.php';
+?>

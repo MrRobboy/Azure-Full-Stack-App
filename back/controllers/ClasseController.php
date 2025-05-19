@@ -206,7 +206,7 @@ class ClasseController
 			}
 
 			// Vérifier si la classe a des élèves avant de tenter la suppression
-			$stmt = $this->db->prepare("SELECT COUNT(*) FROM STUDENT WHERE classe = ?");
+			$stmt = $this->db->prepare("SELECT COUNT(*) FROM USER WHERE classe = ?");
 			if ($stmt) {
 				$stmt->execute([$id]);
 				$eleveCount = $stmt->fetchColumn();
@@ -215,21 +215,6 @@ class ClasseController
 					return [
 						'success' => false,
 						'message' => 'Impossible de supprimer cette classe car elle contient des élèves. Veuillez d\'abord supprimer ou réaffecter les élèves.',
-						'data' => null
-					];
-				}
-			}
-
-			// Vérifier si la classe a des examens avant de tenter la suppression
-			$stmt = $this->db->prepare("SELECT COUNT(*) FROM EXAM WHERE classe = ?");
-			if ($stmt) {
-				$stmt->execute([$id]);
-				$examCount = $stmt->fetchColumn();
-				if ($examCount > 0) {
-					error_log("Impossible de supprimer la classe ID: " . $id . " car elle contient des examens (" . $examCount . ")");
-					return [
-						'success' => false,
-						'message' => 'Impossible de supprimer cette classe car elle contient des examens. Veuillez d\'abord supprimer les examens associés.',
 						'data' => null
 					];
 				}
