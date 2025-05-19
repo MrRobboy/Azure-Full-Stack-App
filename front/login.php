@@ -93,19 +93,28 @@ if (isset($_SESSION['prof_id'])) {
 				submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connexion en cours...';
 
 				const formData = new FormData(this);
-				const response = await fetch('unified-proxy.php', {
+				const data = {
+					username: formData.get('username'),
+					password: formData.get('password')
+				};
+
+				const response = await fetch('unified-proxy.php?endpoint=auth/login', {
 					method: 'POST',
-					body: formData
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify(data)
 				});
 
-				const data = await response.json();
+				const responseData = await response.json();
 
-				if (data.success) {
+				if (responseData.success) {
 					window.location.href = 'dashboard.php';
 				} else {
-					window.location.href = 'login.php?error=' + encodeURIComponent(data.message || 'Erreur de connexion');
+					window.location.href = 'login.php?error=' + encodeURIComponent(responseData.message || 'Erreur de connexion');
 				}
 			} catch (error) {
+				console.error('Erreur de connexion:', error);
 				window.location.href = 'login.php?error=' + encodeURIComponent('Erreur de connexion au serveur');
 			} finally {
 				submitButton.disabled = false;
