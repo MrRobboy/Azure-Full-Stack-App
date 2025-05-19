@@ -109,6 +109,13 @@ if (isset($_SESSION['prof_id'])) {
 				const responseData = await response.json();
 
 				if (responseData.success) {
+					// Stocker les informations de session
+					if (responseData.data) {
+						sessionStorage.setItem('prof_id', responseData.data.id_prof);
+						sessionStorage.setItem('prof_nom', responseData.data.nom);
+						sessionStorage.setItem('prof_prenom', responseData.data.prenom);
+						sessionStorage.setItem('prof_role', responseData.data.role || 'Enseignant');
+					}
 					window.location.href = 'dashboard.php';
 				} else {
 					window.location.href = 'login.php?error=' + encodeURIComponent(responseData.message || 'Erreur de connexion');
