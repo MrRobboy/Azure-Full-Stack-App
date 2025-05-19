@@ -46,8 +46,8 @@ if (isset($_SESSION['prof_id'])) {
 						<input type="text"
 							class="form-control"
 							id="username"
-							name="username"
-							placeholder="Nom d'utilisateur"
+							name="email"
+							placeholder="Email"
 							required>
 					</div>
 				</div>
@@ -94,7 +94,7 @@ if (isset($_SESSION['prof_id'])) {
 
 				const formData = new FormData(this);
 				const data = {
-					username: formData.get('username'),
+					email: formData.get('email'),
 					password: formData.get('password')
 				};
 
