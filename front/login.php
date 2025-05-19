@@ -98,6 +98,11 @@ if (isset($_SESSION['prof_id'])) {
 					password: formData.get('password')
 				};
 
+				console.log('Tentative de connexion avec:', {
+					email: data.email,
+					password: '***'
+				});
+
 				const response = await fetch('unified-proxy.php?endpoint=auth/login', {
 					method: 'POST',
 					headers: {
@@ -105,6 +110,13 @@ if (isset($_SESSION['prof_id'])) {
 					},
 					body: JSON.stringify(data)
 				});
+
+				console.log('Statut de la réponse:', response.status);
+				console.log('Headers de la réponse:', Object.fromEntries(response.headers.entries()));
+
+				if (!response.ok) {
+					throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`);
+				}
 
 				const responseData = await response.json();
 				console.log('Réponse du serveur:', responseData);
@@ -128,22 +140,26 @@ if (isset($_SESSION['prof_id'])) {
 						body: JSON.stringify(sessionData)
 					});
 
+					console.log('Statut de la réponse session:', sessionResponse.status);
+
+					if (!sessionResponse.ok) {
+						throw new Error(`Erreur HTTP session: ${sessionResponse.status} ${sessionResponse.statusText}`);
+					}
+
 					const sessionResult = await sessionResponse.json();
 					console.log('Réponse de set-session.php:', sessionResult);
 
-					if (sessionResponse.ok && sessionResult.success) {
+					if (sessionResult.success) {
 						window.location.href = 'dashboard.php';
 					} else {
-						console.error('Erreur session:', sessionResult);
-						window.location.href = 'login.php?error=' + encodeURIComponent(sessionResult.message || 'Erreur lors de la création de la session');
+						throw new Error(sessionResult.message || 'Erreur lors de la création de la session');
 					}
 				} else {
-					console.error('Erreur connexion:', responseData);
-					window.location.href = 'login.php?error=' + encodeURIComponent(responseData.message || 'Erreur de connexion');
+					throw new Error(responseData.message || 'Erreur de connexion');
 				}
 			} catch (error) {
-				console.error('Erreur:', error);
-				window.location.href = 'login.php?error=' + encodeURIComponent('Erreur de connexion au serveur');
+				console.error('Erreur détaillée:', error);
+				window.location.href = 'login.php?error=' + encodeURIComponent(error.message || 'Erreur de connexion au serveur');
 			} finally {
 				submitButton.disabled = false;
 				submitButton.innerHTML = originalText;
