@@ -25,6 +25,7 @@ function logMessage($message, $data = null)
 
 // Log des données reçues
 logMessage('Début de la requête set-session.php');
+logMessage('Méthode HTTP:', $_SERVER['REQUEST_METHOD']);
 
 // Récupérer les données JSON envoyées
 $json = file_get_contents('php://input');
@@ -33,39 +34,25 @@ logMessage('Données JSON reçues:', $json);
 $data = json_decode($json, true);
 logMessage('Données décodées:', $data);
 
-if ($data) {
-	try {
-		// Vérifier que les champs requis sont présents
-		if (!isset($data['id_prof']) || !isset($data['nom']) || !isset($data['prenom'])) {
-			throw new Exception('Champs manquants dans les données');
-		}
+if ($data && isset($data['id_prof']) && isset($data['nom']) && isset($data['prenom'])) {
+	// Stocker les informations dans la session
+	$_SESSION['prof_id'] = $data['id_prof'];
+	$_SESSION['prof_nom'] = $data['nom'];
+	$_SESSION['prof_prenom'] = $data['prenom'];
+	$_SESSION['prof_role'] = $data['role'] ?? 'Enseignant';
 
-		// Stocker les informations dans la session
-		$_SESSION['prof_id'] = $data['id_prof'];
-		$_SESSION['prof_nom'] = $data['nom'];
-		$_SESSION['prof_prenom'] = $data['prenom'];
-		$_SESSION['prof_role'] = $data['role'] ?? 'Enseignant';
-
-		logMessage('Session créée avec succès:', $_SESSION);
-
-		// Répondre avec succès
-		http_response_code(200);
-		echo json_encode(['success' => true]);
-	} catch (Exception $e) {
-		logMessage('Erreur lors de la création de la session: ' . $e->getMessage());
-		http_response_code(400);
-		echo json_encode([
-			'success' => false,
-			'message' => 'Erreur lors de la création de la session: ' . $e->getMessage()
-		]);
-	}
+	logMessage('Session créée avec succès:', $_SESSION);
+	http_response_code(200);
+	echo json_encode(['success' => true]);
 } else {
-	logMessage('Données invalides ou vides');
-	// Répondre avec une erreur
+	logMessage('Données invalides ou champs manquants');
 	http_response_code(400);
 	echo json_encode([
 		'success' => false,
-		'message' => 'Données invalides',
-		'received_data' => $json
+		'message' => 'Données invalides ou champs manquants',
+		'debug' => [
+			'received_data' => $json,
+			'decoded_data' => $data
+		]
 	]);
 }

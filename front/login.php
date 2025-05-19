@@ -107,24 +107,35 @@ if (isset($_SESSION['prof_id'])) {
 				});
 
 				const responseData = await response.json();
+				console.log('Réponse du serveur:', responseData);
 
 				if (responseData.success) {
+					// Préparer les données pour la session
+					const sessionData = {
+						id_prof: responseData.data.id_prof,
+						nom: responseData.data.nom,
+						prenom: responseData.data.prenom,
+						role: responseData.data.role || 'Enseignant'
+					};
+					console.log('Données de session à envoyer:', sessionData);
+
 					// Stocker les informations dans la session PHP
 					const sessionResponse = await fetch('set-session.php', {
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json'
 						},
-						body: JSON.stringify(responseData.data)
+						body: JSON.stringify(sessionData)
 					});
 
-					const sessionData = await sessionResponse.json();
+					const sessionResult = await sessionResponse.json();
+					console.log('Réponse de set-session.php:', sessionResult);
 
-					if (sessionResponse.ok && sessionData.success) {
+					if (sessionResponse.ok && sessionResult.success) {
 						window.location.href = 'dashboard.php';
 					} else {
-						console.error('Erreur session:', sessionData);
-						window.location.href = 'login.php?error=' + encodeURIComponent(sessionData.message || 'Erreur lors de la création de la session');
+						console.error('Erreur session:', sessionResult);
+						window.location.href = 'login.php?error=' + encodeURIComponent(sessionResult.message || 'Erreur lors de la création de la session');
 					}
 				} else {
 					console.error('Erreur connexion:', responseData);
