@@ -39,9 +39,7 @@ if (isset($_SESSION['prof_id'])) {
 				</div>
 			<?php endif; ?>
 
-			<form id="loginForm" method="POST" action="unified-proxy.php">
-				<input type="hidden" name="endpoint" value="login">
-
+			<form id="loginForm" method="POST" action="unified-proxy.php?endpoint=auth/login">
 				<div class="form-group">
 					<div class="input-group">
 						<i class="fas fa-user input-group-icon"></i>
