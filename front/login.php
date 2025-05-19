@@ -118,16 +118,20 @@ if (isset($_SESSION['prof_id'])) {
 						body: JSON.stringify(responseData.data)
 					});
 
-					if (sessionResponse.ok) {
+					const sessionData = await sessionResponse.json();
+
+					if (sessionResponse.ok && sessionData.success) {
 						window.location.href = 'dashboard.php';
 					} else {
-						window.location.href = 'login.php?error=' + encodeURIComponent('Erreur lors de la création de la session');
+						console.error('Erreur session:', sessionData);
+						window.location.href = 'login.php?error=' + encodeURIComponent(sessionData.message || 'Erreur lors de la création de la session');
 					}
 				} else {
+					console.error('Erreur connexion:', responseData);
 					window.location.href = 'login.php?error=' + encodeURIComponent(responseData.message || 'Erreur de connexion');
 				}
 			} catch (error) {
-				console.error('Erreur de connexion:', error);
+				console.error('Erreur:', error);
 				window.location.href = 'login.php?error=' + encodeURIComponent('Erreur de connexion au serveur');
 			} finally {
 				submitButton.disabled = false;
